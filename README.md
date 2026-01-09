@@ -18,15 +18,26 @@ The best part of any trading card game is collecting and trading the cards. This
 
 ### Design
 
-![Design image](placeholder.png)
+![Design image](HomepageMockup.png)
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+Above is a mockup of the home page. Users will be able to browse cards and play with the card creator without signing in, but viewing others' profiles and submitting card designs to the database will require them to be using an account. Below is a mockup of the trading page, where users can make offers of cards. When both users have finalized their offers they can accept or decline the trade and the cards will be transferred between their decks.
+
+![Trading page](TradingPageMockup.png)
+
+Below is a diagram of how the server would handle a successful trade between users.
 
 ```mermaid
 sequenceDiagram
-    actor You
-    actor Website
-    You->>Website: Replace this with your design
+    actor Beavis
+    actor Butt-head
+    Beavis->>Server: Offer
+    Server --> Butt-head: Display offer
+    Butt-head->>Server: Offer
+    Server-->Beavis: Display offer
+    Beavis->>Server: Accept offer
+    Butt-head->>Server: Accept offer
+    Server-->Beavis: Transfer cards
+    Server-->Butt-head: Transfer cards
 ```
 
 ### Features
@@ -43,6 +54,7 @@ sequenceDiagram
 - Value multipliers (holographic cards, etc.)
 - Users can choose their favorite cards to feature on their public profiles
 - User wallets and a "bank" that buys cards at slightly beneath market value and sells them at slightly above
+- Displaying the net value of a user's deck
 - A playable game
 
 ### Technologies
