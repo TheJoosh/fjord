@@ -1,31 +1,20 @@
 # Fjord
 
-[My Notes](notes.md)
-
-A brief description of the application here. Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
-
-> [!NOTE]
-> This is a template for your startup application. You must modify this `README.md` file for each phase of your development. You only need to fill in the section for each deliverable when that deliverable is submitted in Canvas. Without completing the section for a deliverable, the TA will not know what to look for when grading your submission. Feel free to add additional information to each deliverable description, but make sure you at least have the list of rubric items and a description of what you did for each item.
-
-> [!NOTE]
-> If you are not familiar with Markdown then you should review the [documentation](https://docs.github.com/en/get-started/writing-on-github/getting-started-with-writing-and-formatting-on-github/basic-writing-and-formatting-syntax) before continuing.
+A web application that simulates the collecting and trading aspect of a trading card game. A database of cards will be kept with different rarity levels. Users can design and submit new cards and open packs as a reward. The packs contain randomly selected cards that will appear with different frequencies based on their rarity value. These cards are added to the user's deck and given a "value" based on the actual quantity of that card that exist in the decks of all users. That value will update each time a pack is opened. Users can also trade cards with each other.
 
 ## 🚀 Specification Deliverable
 
-> [!NOTE]
-> Fill in this sections as the submission artifact for this deliverable. You can refer to this [example](https://github.com/webprogramming260/startup-example/blob/main/README.md) for inspiration.
-
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] Proper use of Markdown
-- [ ] A concise and compelling elevator pitch
-- [ ] Description of key features
-- [ ] Description of how you will use each technology
-- [ ] One or more rough sketches of your application. Images must be embedded in this file using Markdown image references.
+- `[x]` Proper use of Markdown
+- `[x]` A concise and compelling elevator pitch
+- `[x]` Description of key features
+- `[x]` Description of how you will use each technology
+- `[x]` One or more rough sketches of your application. Images must be embedded in this file using Markdown image references.
 
 ### Elevator pitch
 
-Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+The best part of any trading card game is collecting and trading the cards. This application simulates the experience of opening packs of cards and trading them with your friends. Users can also participate in the design process by creating their own cards, enabling them to open more packs. Each card has a rarity level that will affect its value based on how many of each card actually exist in each user's deck.
 
 ### Design
 
@@ -40,22 +29,32 @@ sequenceDiagram
     You->>Website: Replace this with your design
 ```
 
-### Key features
+### Features
 
-- Describe your key feature
-- Describe your key feature
-- Describe your key feature
+#### Key Features
+- Secure login
+- Ability to open decks of 10 cards, once per user per day
+- Ability to view the decks of other users
+- Card designer to crowdsource new cards, reward with an additional pack to open per card submitted
+- Trading functionality, where users can make offers of one or more cards to trade directly with others
+- Backend economy that keeps track of the quantity of each card in each user's deck and assigns each card a dollar value based on rarity
+
+#### Stretch Goals
+- Value multipliers (holographic cards, etc.)
+- Users can choose their favorite cards to feature on their public profiles
+- User wallets and a "bank" that buys cards at slightly beneath market value and sells them at slightly above
+- A playable game
 
 ### Technologies
 
 I am going to use the required technologies in the following ways.
 
-- **HTML** - Description here
-- **CSS** - Description here
-- **React** - Description here
-- **Service** - Description here
-- **DB/Login** - Description here
-- **WebSocket** - Description here
+- **HTML** - At least 4 HTML pages (Login page, trading page, browsing page, card design page)
+- **CSS** - App styling to make features accessible on desktop and mobile
+- **React** - Login, trade functionality, card designer
+- **Service** - Backend service for login, generating new card packs, submitting new card designs
+- **DB/Login** - Stores usernames/password, cards with counts/rarities/values
+- **WebSocket** - Card values must be updated and visible immediately after each pack is opened, card database can be browsed and users' decks can be viewed
 
 ## 🚀 AWS deliverable
 
