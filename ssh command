@@ -1,0 +1,1 @@
+ssh -i C:\Users\joshb\OneDrive\Documents\KEYPAIR\leif.pem ubuntu@35.169.167.50
