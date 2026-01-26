@@ -1,6 +1,6 @@
 # CS 260 Notes
 
-[My startup - Simon](https://simon.cs260.click)
+[My startup - Fjord](https://fjordcards.click)
 
 ## Helpful links
 
@@ -10,7 +10,7 @@
 
 ## AWS
 
-My IP address is: 54.81.96.130
+IP address: 35.169.167.50
 Launching my AMI I initially put it on a private subnet. Even though it had a public IP address and the security group was right, I wasn't able to connect to it.
 
 ## Caddy
