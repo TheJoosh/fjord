@@ -78,15 +78,15 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **HTML pages** - I did not complete this part of the deliverable.
-- [ ] **Proper HTML element usage** - I did not complete this part of the deliverable.
-- [ ] **Links** - I did not complete this part of the deliverable.
-- [ ] **Text** - I did not complete this part of the deliverable.
-- [ ] **3rd party API placeholder** - I did not complete this part of the deliverable.
-- [ ] **Images** - I did not complete this part of the deliverable.
-- [ ] **Login placeholder** - I did not complete this part of the deliverable.
-- [ ] **DB data placeholder** - I did not complete this part of the deliverable.
-- [ ] **WebSocket placeholder** - I did not complete this part of the deliverable.
+- [x] **HTML pages** - 5 pages: index, deck, packs, designer, trade
+- [x] **Proper HTML element usage** - Correct HTML structure on every page
+- [x] **Links** - Every page links to every other page
+- [x] **Text** - Text on every page
+- [x] **3rd party API placeholder** - Card submission to pool, card packs generated from pool and added to users' decks
+- [x] **Images** - Logo on home page, image submission in card design form
+- [x] **Login placeholder** - Login form on home page
+- [x] **DB data placeholder** - Card decks, card values, card packs, etc. reference information in databases
+- [x] **WebSocket placeholder** - User-to-user trading page
 
 ## 🚀 CSS deliverable
 
