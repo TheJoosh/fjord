@@ -82,7 +82,7 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 - [x] **Proper HTML element usage** - Correct HTML structure on every page
 - [x] **Links** - Every page links to every other page
 - [x] **Text** - Text on every page
-- [x] **3rd party API placeholder** - Card submission to pool, card packs generated from pool and added to users' decks
+- [x] **3rd party API placeholder** - Image upload feature will include option to use stock photos using imgur API
 - [x] **Images** - Logo on home page, image submission in card design form
 - [x] **Login placeholder** - Login form on home page
 - [x] **DB data placeholder** - Card decks, card values, card packs, etc. reference information in databases
