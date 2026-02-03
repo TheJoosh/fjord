@@ -7,6 +7,7 @@
   justify-content: flex-end;
   align-items: bottom;
   position: relative;
+  z-index: 3;
 }
 
 .card-image {
@@ -15,6 +16,10 @@
   justify-content: flex-end;
   z-index: 1;
   position: absolute;
+  top: 0;
+  left: 0;
+  border-radius: 13px;
+  overflow: hidden;
 }
 
 .card-image img{
@@ -22,11 +27,16 @@
   width: 100%;
   object-fit: cover;
   object-position: top;
+  border: 1px;
+  border-radius: inherit;
 }
 
 .card-content {
   display: flex;
   height: 140px;
+  width: 298px;
+  border-radius: 0px 0px 13px 13px;
+  background-color: rgb(0, 0, 0, 0.6);
   justify-content: flex-start;
   z-index: 2;
   position: absolute;
@@ -34,12 +44,16 @@
 
 .card-name {
   font-size: large;
-
+  color: whitesmoke;
 }
 
 .card-type {
   font-size: medium;
+  color: whitesmoke;
+}
 
+.card-cost {
+  color: whitesmoke;
 }
 
 @media screen and (max-width: 600px) {
