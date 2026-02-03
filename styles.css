@@ -1,8 +1,45 @@
 .card {
+  display: flex;
   width: 300px;
   height: 420px;
   border-radius: 14px;
   margin-top: 20px;
+  justify-content: flex-end;
+  align-items: bottom;
+  position: relative;
+}
+
+.card-image {
+  height: 418px;
+  width: 298px;
+  justify-content: flex-end;
+  z-index: 1;
+  position: absolute;
+}
+
+.card-image img{
+  height: 100%;
+  width: 100%;
+  object-fit: cover;
+  object-position: top;
+}
+
+.card-content {
+  display: flex;
+  height: 140px;
+  justify-content: flex-start;
+  z-index: 2;
+  position: absolute;
+}
+
+.card-name {
+  font-size: large;
+
+}
+
+.card-type {
+  font-size: medium;
+
 }
 
 @media screen and (max-width: 600px) {
@@ -11,5 +48,4 @@
     height: 140px;
     border-radius: 5px;
   }
-
 }
