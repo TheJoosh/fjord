@@ -112,7 +112,7 @@
 
 .card-description {
   font-family: "Cinzel";
-  font-size: 10px;
+  font-size: 12px;
   width: 278px;
   color: whitesmoke;
   border-top: 1px solid whitesmoke;
@@ -174,7 +174,7 @@
   }
 
   .card-description {
-    font-size: 5px;
+    font-size: 6px;
     width: 148px;
     padding: 5px;
     top: 30px;
