@@ -138,6 +138,9 @@ header {
 }
 
 footer {
+  display: flex;
+  justify-content: space-around;
+  padding: 1%;
   font-family: "Cinzel";
   color: whitesmoke;
   background-image: url("wood.jpg");
@@ -151,6 +154,10 @@ footer {
 
 a:visited {
   color: whitesmoke;
+}
+
+a {
+  text-decoration: none;
 }
 
 menu {
@@ -181,7 +188,10 @@ h1 {
 }
 
 main {
+  display: flex;
+  padding: 1%;
   font-family: "Cinzel";
+  color: whitesmoke;
   background-color: #36454F;
 }
 
