@@ -124,6 +124,17 @@
 
 header {
   font-family: "Cinzel";
+  color: whitesmoke;
+  background-image: url("wood.jpg");
+  width: initial;
+  background-position: center;
+  background-size: cover;
+  background-color: #582f0e;
+  background-blend-mode: multiply;
+}
+
+a:visited {
+  color: whitesmoke;
 }
 
 @media screen and (max-width: 600px) {
