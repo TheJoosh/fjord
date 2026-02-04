@@ -186,7 +186,8 @@ h1 {
 }
 
 main {
-  min-height: 80vh;
+  display: flex;
+  flex-direction: column;
   padding-top: 1%;
   padding-bottom: 1%;
   font-family: "Cinzel";
@@ -196,6 +197,16 @@ main {
 
 .other {
   min-height: 45%;
+}
+
+.cardpack {
+  height: 420px;
+  width: 300px;
+  border: 2px solid whitesmoke;
+  border-radius: 15px;
+  padding: 10px;
+  margin: 20px;
+  background-color: rgb(0, 0, 0, 0.6);
 }
 
 @media screen and (max-width: 600px) {
