@@ -123,6 +123,9 @@
 }
 
 header {
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
   padding-top: 1%;
   font-family: "Cinzel";
   color: whitesmoke;
@@ -143,6 +146,7 @@ footer {
   background-size: cover;
   background-color: #582f0e;
   background-blend-mode: multiply;
+  background-position: bottom;
 }
 
 a:visited {
@@ -152,9 +156,9 @@ a:visited {
 menu {
   display: flex;
   list-style: none;
-  padding: 0;
-  margin: 0;
-  justify-content: space-around;
+  padding: 20px;
+  justify-content: space-between;
+  flex-wrap: wrap;
 }
 
 li {
@@ -166,10 +170,19 @@ li {
   padding-bottom: 5px;
   padding-right: 10px;
   padding-left: 10px;
+  margin-top: 2px;
+  margin-bottom: 2px;
+  margin-right: 10px;
+  margin-left: 10px;
 }
 
 h1 {
   justify-content: center;
+}
+
+main {
+  font-family: "Cinzel";
+  background-color: #36454F;
 }
 
 @media screen and (max-width: 600px) {
