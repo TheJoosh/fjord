@@ -273,9 +273,38 @@ main {
   background-size: cover;
 }
 
+.designer {
+  display: flex;
+  padding: 20px;
+  align-items: center;
+  justify-content: space-around;
+  margin-bottom: 20px;
+}
+
+.design-form {
+  display: flex;
+  flex-direction: column;
+  align-items: start;
+  margin-bottom: 20px;
+  font-size: larger;
+}
+
 .open {
   bottom: 10px;
   position: absolute;
+  font-family: "Cinzel";
+  font-size: 20px;
+  background-color: #582f0e;
+  background-image: url("wood.jpg");
+  background-size: cover;
+  background-position: center;
+  background-blend-mode: multiply;
+  color: whitesmoke;
+  border-radius: 10px;
+  border: 2px solid whitesmoke;
+}
+
+button {
   font-family: "Cinzel";
   font-size: 20px;
   background-color: #582f0e;
