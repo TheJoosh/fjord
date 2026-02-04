@@ -124,7 +124,7 @@ header {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding-top: 1%;
+  padding-top: 0.5%;
   font-family: "Cinzel";
   color: whitesmoke;
   background-image: url("wood.jpg");
