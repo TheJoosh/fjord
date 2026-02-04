@@ -122,6 +122,10 @@
   position: absolute;
 }
 
+header {
+  font-family: "Cinzel";
+}
+
 @media screen and (max-width: 600px) {
   .card {
     width: 150px;
