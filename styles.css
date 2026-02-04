@@ -399,4 +399,8 @@ button {
     top: 30px;
     left: 5px;
   }
+
+  .designer {
+    flex-direction: column;;
+  }
 }
