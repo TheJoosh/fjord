@@ -133,7 +133,7 @@ header {
   padding-top: 0.5%;
   font-family: "Cinzel";
   color: whitesmoke;
-  background-image: url("wood.jpg");
+  background-image: url("../public/wood.jpg");
   width: initial;
   background-position: center;
   background-size: cover;
@@ -147,7 +147,7 @@ footer {
   padding: 1%;
   font-family: "Cinzel";
   color: whitesmoke;
-  background-image: url("wood.jpg");
+  background-image: url("../public/wood.jpg");
   width: initial;
   background-position: center;
   background-size: cover;
@@ -262,25 +262,25 @@ main {
 }
 
 .default {
-  background-image: url("Card Images/thor.png");
+  background-image: url("../public/Card Images/thor.png");
   background-blend-mode: multiply;
   background-size: cover;
 }
 
 .saga {
-  background-image: url("Card Images/frost-giant.png");
+  background-image: url("../public/Card Images/frost-giant.png");
   background-blend-mode: multiply;
   background-size: cover;
 }
 
 .mythbound {
-  background-image: url("Card Images/mythologyart-odin-10069805_1280.png");
+  background-image: url("../public/Card Images/mythologyart-odin-10069805_1280.png");
   background-blend-mode: multiply;
   background-size: cover;
 }
 
 .heroic {
-  background-image: url("Card Images/loki.png");
+  background-image: url("../public/Card Images/loki.png");
   background-blend-mode: multiply;
   background-size: cover;
 }
@@ -307,7 +307,7 @@ main {
   font-family: "Cinzel";
   font-size: 20px;
   background-color: #582f0e;
-  background-image: url("wood.jpg");
+  background-image: url("../public/wood.jpg");
   background-size: cover;
   background-position: center;
   background-blend-mode: multiply;
@@ -320,7 +320,7 @@ button {
   font-family: "Cinzel";
   font-size: 20px;
   background-color: #582f0e;
-  background-image: url("wood.jpg");
+  background-image: url("../public/wood.jpg");
   background-size: cover;
   background-position: center;
   background-blend-mode: multiply;
@@ -338,7 +338,7 @@ button {
   font-size: 20px;
   font-weight: 600;
   background-color: #582f0e;
-  background-image: url("wood.jpg");
+  background-image: url("../public/wood.jpg");
   background-size: cover;
   background-position: center;
   background-blend-mode: multiply;
