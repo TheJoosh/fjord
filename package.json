@@ -4,7 +4,9 @@
   "description": "A web application that simulates the collecting and trading aspect of a trading card game. A database of cards will be kept with different rarity levels. Users can design and submit new cards and open packs as a reward. The packs contain randomly selected cards that will appear with different frequencies based on their rarity value. These cards are added to the user's deck and given a \"value\" based on the actual quantity of that card that exist in the decks of all users. That value will update each time a pack is opened. Users can also trade cards with each other.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
   "repository": {
     "type": "git",
