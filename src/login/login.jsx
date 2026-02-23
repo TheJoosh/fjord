@@ -1,7 +1,7 @@
 import React from 'react';
 
 import { Unauthenticated } from './unauthenticated';
-import { Authenticated } from './authenticated';
+import { Deck } from '../deck/deck';
 import { AuthState } from './authState';
 
 export function Login({ userName, authState, onAuthChange }) {
