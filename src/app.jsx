@@ -19,10 +19,22 @@ export default function App() {
                 <nav>
                     <menu>
                     <li><NavLink to="/">Home</NavLink></li>
-                    <li><NavLink to="/packs">Open Card Packs</NavLink></li>
-                    <li><NavLink to="/deck">View Deck</NavLink></li>
-                    <li><NavLink to="/trades">Trade</NavLink></li>
-                    <li><NavLink to="/designer">Design Cards</NavLink></li>
+
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/packs">Open Card Packs</NavLink></li>
+                    )}
+                    
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/deck">View Deck</NavLink></li>
+                    )}
+                    
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/trades">Trade</NavLink></li>
+                    )}
+                    
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/designer">Design Cards</NavLink></li>
+                    )}
                     </menu>
                 </nav>
                 
@@ -38,7 +50,7 @@ export default function App() {
                     setUserName(userName);
 
                     }}
-                    
+
                 />} exact />
                 <Route path='/deck' element={<Deck />} />
                 <Route path='/designer' element={<Designer />} />
