@@ -14,7 +14,7 @@ export function Unauthenticated() {
   return (
     <main>
       <div className="column login">
-        …{/* logo/headings omitted for brevity */}
+        <h2>Welcome to the Fjords! Begin your voyage today.</h2>
         <form className="login-form" onSubmit={handleSubmit}>
           <div>
             <span>Username</span>
