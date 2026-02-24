@@ -6,9 +6,9 @@ import { AuthState } from './authState';
 
 export function Login({ userName, authState, onAuthChange }) {
   return (
-    <main className='container-fluid bg-secondary text-center'>
+    <main>
       <div>
-        {authState !== AuthState.Unknown && <h1>Welcome to the Fjords</h1>}
+        {authState !== AuthState.Unknown}
         {authState === AuthState.Authenticated && (
           <Deck userName={userName} onLogout={() => onAuthChange(userName, AuthState.Unauthenticated)} />
         )}
