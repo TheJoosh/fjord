@@ -80,21 +80,7 @@ export function Deck({ userName }) {
                             <div className="card-stats">5/3</div>
                         </div>
                     </div>
-                    <div className="col">
-                        <div className="fj-card">Card 6</div>
-                    </div>
-                    <div className="col">
-                        <div className="fj-card">Card 7</div>
-                    </div>
-                    <div className="col">
-                        <div className="fj-card">Card 8</div>
-                    </div>
-                    <div className="col">
-                        <div className="fj-card">Card 9</div>
-                    </div>
-                    <div className="col">
-                        <div className="fj-card">Card 10</div>
-                    </div>
+                    
                 </div>
             </div>
 
