@@ -1,7 +1,7 @@
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
-import { BrowserRouter, NavLink, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { Login } from './login/login';
 import { AuthState } from './login/authState';
 import { Deck } from './deck/deck';
@@ -14,6 +14,14 @@ export default function App() {
   const [userName, setUserName] = React.useState(localStorage.getItem('userName') || '');
   const currentAuthState = userName ? AuthState.Authenticated : AuthState.Unauthenticated;
   const [authState, setAuthState] = React.useState(currentAuthState);
+  const navigate = useNavigate();
+
+  const logout = () => {
+    setAuthState(AuthState.Unauthenticated);
+    setUserName('');
+    localStorage.removeItem('userName');
+    navigate('/');
+  };
 
   return (
     <BrowserRouter>
@@ -36,6 +44,9 @@ export default function App() {
                     
                     {authState === AuthState.Authenticated && (
                         <li><NavLink to="/designer">Design Cards</NavLink></li>
+                    )}
+                    {authState === AuthState.Authenticated && (
+                        <li><button className="nav-link btn btn-link text-light p-0" onClick={logout}>Logout</button></li>
                     )}
                     </menu>
                 </nav>
