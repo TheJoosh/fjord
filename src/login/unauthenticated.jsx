@@ -1,13 +1,55 @@
 import React from 'react';
 
 // component used when the user is not signed in
-export function Unauthenticated() {
+export function Unauthenticated({ userName, onLogin }) {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
+  const [message, setMessage] = React.useState('');
+
+  // load users from localStorage
+  const loadUsers = () => {
+    try {
+      return JSON.parse(localStorage.getItem('users')) || {};
+    } catch {
+      return {};
+    }
+  };
+
+  const saveUsers = users => {
+    localStorage.setItem('users', JSON.stringify(users));
+  };
 
   const handleSubmit = e => {
     e.preventDefault();
-    // TODO: validate creds / call API...
+    const users = loadUsers();
+    if (!email || !password) {
+      setMessage('Please enter both username and password.');
+      return;
+    }
+    if (users[email] && users[email] === password) {
+      setMessage('');
+      onLogin(email);
+    } else {
+      setMessage('Invalid credentials');
+    }
+  };
+
+  const handleCreateAccount = () => {
+    const users = loadUsers();
+    if (!email || !password) {
+      setMessage('Please enter both username and password.');
+      return;
+    }
+    if (users[email]) {
+      setMessage('Username already exists.');
+      return;
+    }
+    users[email] = password;
+    saveUsers(users);
+    setMessage('Account created. Logging you in...');
+    // reset the form
+    setEmail('');
+    setPassword('');
     onLogin(email);
   };
 
@@ -35,9 +77,10 @@ export function Unauthenticated() {
             />
           </div>
           <button type="submit">Log in</button>
-          <button type="button" onClick={() => {}}>
+          <button type="button" onClick={handleCreateAccount}>
             Create account
           </button>
+          {message && <p className="login-message">{message}</p>}
         </form>
       </div>
         <div className="header-image">
