@@ -1,7 +1,7 @@
 import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
-import { BrowserRouter, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { Login } from './login/login';
 import { AuthState } from './login/authState';
 import { Deck } from './deck/deck';
@@ -24,8 +24,6 @@ export default function App() {
   };
 
   return (
-    <BrowserRouter>
-  
     <div className="body bg-dark text-light">
         <header>
                 <h1>Fjord</h1>
@@ -77,10 +75,8 @@ export default function App() {
                 <br />
                 <NavLink to="https://github.com/TheJoosh/fjord">GitHub</NavLink>
             </footer>
-    </div>;
-
-    </BrowserRouter>
-);
+    </div>
+  );
 }
 
 function NotFound() {
