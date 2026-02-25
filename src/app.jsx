@@ -31,10 +31,6 @@ export default function App() {
                     )}
                     
                     {authState === AuthState.Authenticated && (
-                        <li><NavLink to="/deck">View Deck</NavLink></li>
-                    )}
-                    
-                    {authState === AuthState.Authenticated && (
                         <li><NavLink to="/trades">Trade</NavLink></li>
                     )}
                     
