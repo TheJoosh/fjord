@@ -1,10 +1,11 @@
 import React from 'react';
 
-export function Deck() {
+export function Deck({ userName }) {
+  const title = userName ? `${userName}'s Deck` : "User's Deck";
   return (
     <main>
             <div className="user">
-                <h2>User's Deck</h2>
+                <h2>{title}</h2>
             </div>
 
             <div className="container-fluid">

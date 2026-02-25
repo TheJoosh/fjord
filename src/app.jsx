@@ -54,7 +54,7 @@ export default function App() {
                     }}
 
                 />} exact />
-                <Route path='/deck' element={<Deck />} />
+                <Route path='/deck' element={<Deck userName={userName} />} />
                 <Route path='/designer' element={<Designer />} />
                 <Route path='/trades' element={<Trades />} />
                 <Route path='/packs' element={<Packs />} />
