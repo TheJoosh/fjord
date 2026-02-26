@@ -166,7 +166,6 @@ export function Designer() {
 
                     {abilities === 'Flight' && (
                         <div>
-                            <span>Strength Requirement:</span>
                             <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
                         </div>
                     )}
