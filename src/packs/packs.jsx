@@ -1,11 +1,13 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import '../app.css';
-import { getUser } from '../data/users';
-import { drawWeightedCards } from '../data/cards';
+import { getUser, users } from '../data/users';
+import { drawWeightedCards, recalcCardValues } from '../data/cards';
 import { Card } from '../deck/card';
 
 export function Packs({ userName }) {
+    recalcCardValues(users);
+
     const user = getUser(userName);
     const packs = user?.packs || {};
     const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
@@ -175,6 +177,9 @@ export function Packs({ userName }) {
                                     strength={card.strength}
                                     endurance={card.endurance}
                                 />
+                                <div className="card-value mt-1">
+                                    <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                                </div>
                             </div>
                         ))}
                     </div>
