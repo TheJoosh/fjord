@@ -393,6 +393,26 @@ main {
   margin-top: 8px;
 }
 
+/* Make the class select use same wood/header background and white text */
+.design-form select {
+  background-image: url("../public/wood.jpg");
+  background-size: cover;
+  background-position: center;
+  background-color: #582f0e;
+  background-blend-mode: multiply;
+  color: whitesmoke;
+  border: 1px solid rgba(255,255,255,0.12);
+  padding: 8px 10px;
+  border-radius: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.design-form select option {
+  background-color: #582f0e;
+  color: whitesmoke;
+}
+
 /* Put the file-upload button above the selected filename so the name can
    appear on its own line and wrap if necessary. Works in modern browsers. */
 .design-form input[type="file"] {
