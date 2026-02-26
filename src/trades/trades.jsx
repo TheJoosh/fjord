@@ -7,6 +7,7 @@ export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
+    const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
         const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
         recalcCardValues(users);
@@ -57,7 +58,8 @@ export function Trades({ userName }) {
             setOwnedDeckCards(buildOwnedDeckCards());
         }, [isDeckOverlayOpen, buildOwnedDeckCards]);
 
-        const handleDeckCardClick = (cardName) => {
+        const handleDeckCardClick = (clickedCard) => {
+            const cardName = clickedCard?.name;
             if (!ownedCardsStorageKey || !cardName) return;
 
             const currentQty = Math.max(0, parseInt(activeUser?.cards?.[cardName], 10) || 0);
@@ -106,7 +108,20 @@ export function Trades({ userName }) {
 
             localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
             setOwnedDeckCards(buildOwnedDeckCards());
+
+            setSelectedTradeCards((prev) => ([
+                ...prev,
+                {
+                    ...clickedCard,
+                    tradeEntryId: `${clickedCard.name}-${Date.now()}-${Math.random()}`,
+                },
+            ]));
         };
+
+        const userTradeValue = selectedTradeCards.reduce((sum, card) => {
+            const value = card && typeof card.value === 'number' ? card.value : 0;
+            return sum + value;
+        }, 0);
 
   return (
         <main className="trades-page">
@@ -147,27 +162,29 @@ export function Trades({ userName }) {
             <h2 className="user_name">{currentUserLabel}</h2>
             <section className="yoUser">
             <div className="container-fluid">
-                <div className="row">
-                    <div className="col">
-                        <div className="fj-card">
-                            <div className="card-image">
-                                <img src="Card Images/thor.png" alt="Thor, God of Thunder"/>
+                <div className="row deck-row">
+                    {selectedTradeCards.map((card) => (
+                        <div key={card.tradeEntryId} className="col deck-col">
+                            <Card
+                                image={card.image}
+                                name={card.name}
+                                cost={card.cost}
+                                rarity={card.rarity}
+                                cardType={card.cardType}
+                                description={card.description}
+                                strength={card.strength}
+                                endurance={card.endurance}
+                            />
+                            <div className="card-value mt-1">
+                                <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
                             </div>
-                            <div className="card-cost">5</div>
-                            <div className="card-content">
-                                <h1 className="card-name">Thor, God of Thunder</h1>
-                                <span className="card-type">Legendary Warrior</span>
-                                <span className="card-description">Passive - the strength of all enemy warriors is reduced by 1 while this card is in play</span>
-                            </div>
-                            <div className="card-stats">5/3</div>
                         </div>
-                        <button className="remove">Remove Card</button>
-                    </div>
+                    ))}
                 </div>
             </div>
                 
 
-            <h3 className="value">Trade Value: $0.00</h3>
+            <h3 className="value">Trade Value: ${userTradeValue.toFixed(2)}</h3>
         </section>
 
             <button className="picker" onClick={() => setIsDeckOverlayOpen(true)}>Pick from your deck</button>
@@ -189,7 +206,7 @@ export function Trades({ userName }) {
                                     <button
                                         type="button"
                                         className="trade-deck-card-btn"
-                                        onClick={() => handleDeckCardClick(card.name)}
+                                        onClick={() => handleDeckCardClick(card)}
                                         title="Remove 1 from your deck"
                                     >
                                         <Card
