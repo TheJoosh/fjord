@@ -6,6 +6,7 @@ export function Designer() {
     const [title, setTitle] = useState('');
     const [cardType, setCardType] = useState('');
     const [cost, setCost] = useState('');
+    const [balance, setBalance] = useState('');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -29,6 +30,22 @@ export function Designer() {
             setCost(num.toString());
         }
     }
+
+    function calculateStats() {
+        if (!cost || !balance) return { strength: '-', endurance: '-' };
+        const costNum = parseInt(cost, 10);
+        
+        if (balance === 'Standard') {
+            return { strength: costNum, endurance: costNum };
+        } else if (balance === 'Aggressive') {
+            return { strength: costNum + 1, endurance: Math.max(1, costNum - 1) };
+        } else if (balance === 'Defensive') {
+            return { strength: Math.max(1, costNum - 1), endurance: costNum + 1 };
+        }
+        return { strength: '-', endurance: '-' };
+    }
+
+    const stats = calculateStats();
 
     return (
         <main>
@@ -57,6 +74,16 @@ export function Designer() {
                     </div>
 
                     <div>
+                        <label htmlFor="card_balance">Balance:</label>
+                        <select id="card_balance" name="balance" required onChange={e => setBalance(e.target.options[e.target.selectedIndex].text)}>
+                            <option value="">-- Select Balance --</option>
+                            <option value="standard">Standard</option>
+                            <option value="aggressive">Aggressive</option>
+                            <option value="defensive">Defensive</option>
+                        </select>
+                    </div>
+
+                    <div>
                         <span>Description:</span>
                         <textarea placeholder="Description" ></textarea>
                     </div>
@@ -72,7 +99,7 @@ export function Designer() {
                     <textarea placeholder="Abilities" required></textarea>
                 </div>
 
-                <Card image={previewImage || "Default.png"} strength={"-"} endurance={"-"} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={"Description"}/>
+                <Card image={previewImage || "Default.png"} strength={stats.strength} endurance={stats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={"Description"}/>
             </div>
 
         </main>
