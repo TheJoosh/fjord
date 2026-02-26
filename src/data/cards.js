@@ -7,6 +7,7 @@ export const cardsByRarity = {
         "This is a placeholder card. Please replace it with your own design!",
       strength: "-",
       endurance: "-",
+      value: 0,
     },
     Legendary: {
     "Loki, God of Mischief": {
@@ -57,6 +58,7 @@ export const cardsByRarity = {
         "Spell - each turn, one slain allied card can return to your hand",
       strength: 6,
       endurance: 4,
+      value: 0,
     },
   },
   Loric: {
@@ -68,6 +70,7 @@ export const cardsByRarity = {
         "Passive - the endurance of all enemy cards is reduced by 1 while this card is in play",
       strength: 4,
       endurance: 3,
+        value: 0,
     },
     "Erik the Red": {
       image: "Erik the Red.png",
@@ -77,6 +80,7 @@ export const cardsByRarity = {
         "Command - can temporarily increase the strength of any two allied cards by 1 each turn",
       strength: 2,
       endurance: 2,
+        value: 0,
     },
   },
   Rare: {
@@ -88,6 +92,7 @@ export const cardsByRarity = {
         "Passive - the endurance of all allied cards is increased by 1 while this card is in play",
       strength: 3,
       endurance: 4,
+        value: 0,
     },
     "Valkyrie": {
       image: "Valkyrie2.png",
@@ -97,6 +102,7 @@ export const cardsByRarity = {
         "Flight - requires +2 strength to be blocked by a card without flight",
       strength: 4,
       endurance: 2,
+        value: 0,
     },
     "Leif Erikson": {
       image: "Leif Erikson.png",
@@ -106,6 +112,7 @@ export const cardsByRarity = {
         "Command - can temporarily increase the endurance of any two allied cards by 1 each turn",
       strength: 3,
       endurance: 3,
+        value: 0,
     },
   },
   Uncommon: {
@@ -116,6 +123,7 @@ export const cardsByRarity = {
       description: "Berserk - gains +1 strength while attacking",
       strength: 1,
       endurance: 2,
+        value: 0,
     },
     "Bear Shaman": {
       image: "Bear Shaman.png",
@@ -124,6 +132,7 @@ export const cardsByRarity = {
       description: "Berserk - gains +2 strength while attacking",
       strength: 4,
       endurance: 2,
+        value: 0,
     },
     "Dökkálfr": {
       image: "Dokkalfr.png",
@@ -133,6 +142,7 @@ export const cardsByRarity = {
         "Spell - cannot be blocked during its first turn attacking",
       strength: 3,
       endurance: 1,
+        value: 0,
     },
     "Ljósálfr": {
       image: "Ljosalfr.png",
@@ -142,6 +152,7 @@ export const cardsByRarity = {
         "Spell - can raise its endurance to 5 once per game; resets on death",
       strength: 2,
       endurance: 2,
+        value: 0,
     },
     "Dvergr": {
       image: "Dvergr.png",
@@ -151,6 +162,7 @@ export const cardsByRarity = {
         "Forge - permanently increases the strength of any one allied card by 1 when played",
       strength: 3,
       endurance: 1,
+        value: 0,
     },
   },
   Common: {
@@ -162,11 +174,12 @@ export const cardsByRarity = {
         "Swift - this card can attack on the same turn it enters play",
       strength: 2,
       endurance: 1,
+        value: 0,
     },
   },
 };
 
-// Helper lookup by name
+
 export function getCardByName(name) {
   for (const rarity in cardsByRarity) {
     if (cardsByRarity[rarity][name]) {
@@ -176,11 +189,9 @@ export function getCardByName(name) {
   return null;
 }
 
-// given an object of users (like the one exported from users.js),
-// compute total quantities for each card and update the `value` field
-// on every entry in cardsByRarity according to the supplied formula.
+
 export function recalcCardValues(usersObj) {
-  // rarity score mapping
+  
   const rarityScores = {
     Common: 2,
     Uncommon: 4,
@@ -190,7 +201,7 @@ export function recalcCardValues(usersObj) {
     Legendary: 12,
   };
 
-  // accumulate totals T across all users
+  
   const totals = {};
   for (const user of Object.values(usersObj || {})) {
     if (user.cards) {
@@ -200,7 +211,7 @@ export function recalcCardValues(usersObj) {
     }
   }
 
-  // helper to compute value for a single card
+  
   const compute = (rarity, name) => {
     const R = rarityScores[rarity] || 0;
     const T = totals[name] || 0;
@@ -210,6 +221,7 @@ export function recalcCardValues(usersObj) {
 
   for (const [rarity, group] of Object.entries(cardsByRarity)) {
     for (const [name, data] of Object.entries(group)) {
+      if (typeof data !== 'object' || data === null) continue;
       data.value = compute(rarity, name);
     }
   }
