@@ -225,6 +225,12 @@ li {
   margin-left: 10px;
 }
 
+.card-value {
+  color: whitesmoke;
+  font-size: 12px;
+  text-align: center;
+}
+
 h1 {
   justify-content: center;
 }
