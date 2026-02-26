@@ -78,7 +78,7 @@ export function Designer() {
         return { strength, endurance };
     }
 
-    const displayStats = (abilities === 'Passive' || abilities === 'Forge') ? calculatePassiveStats() : stats;
+    const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight') ? calculatePassiveStats() : stats;
 
     function generatePassiveDescription() {
         if (!passiveModifierType) {
@@ -143,7 +143,7 @@ export function Designer() {
                             <option value="">-- Select Ability --</option>
                             <option value="berserk">Berserk</option>
                             <option value="command">Command</option>
-                            <option value="flight">Flight</option>
+                            <option value="flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
                             <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
                             <option value="passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
                             <option value="spell">Spell</option>
@@ -158,15 +158,22 @@ export function Designer() {
                         </div>
                     )}
 
+                    {abilities === 'Flight' && (
+                        <div>
+                            <span>Strength Requirement:</span>
+                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
+                        </div>
+                    )}
+
                     {abilities === 'Forge' && (
                         <div>
-                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
+                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
                         </div>
                     )}
 
                     {abilities === 'Passive' && (
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
                             <select id="passive_type" name="passive_type" onChange={e => setPassiveModifierType(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
                                 <option value="">-- Select Type --</option>
                                 <option value="fate">Maximum Fate</option>
@@ -184,7 +191,7 @@ export function Designer() {
                     )}
 
                 </form>
-                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : `${abilities} - `) : "Description"}/>
             </div>
 
         </main>
