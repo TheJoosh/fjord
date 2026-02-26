@@ -3,7 +3,7 @@ import { Card } from '../deck/card';
 import { addCardToRarity } from '../data/cards';
 import { users } from '../data/users';
 
-export function Designer() { 
+export function Designer({ userName }) { 
     const imageInputRef = useRef(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [title, setTitle] = useState('');
@@ -390,7 +390,7 @@ export function Designer() {
                 value: 0,
             });
 
-            const activeUserName = localStorage.getItem('userName');
+            const activeUserName = userName || localStorage.getItem('userName');
             if (activeUserName) {
                 const designedMapKey = 'usersDesigned';
                 let designedMap = {};
