@@ -213,7 +213,16 @@ export function Designer() {
                     {cost && balance && (
                         <div>
                             <label htmlFor="card_abilities">Abilities:</label>
-                            <select id="card_abilities" name="abilities" required onChange={e => setAbilities(e.target.options[e.target.selectedIndex].text)}>
+                            <select id="card_abilities" name="abilities" required onChange={e => {
+                                const selectedAbility = e.target.options[e.target.selectedIndex].text;
+                                setAbilities(selectedAbility);
+                                if (selectedAbility === 'Command') {
+                                    setPassiveTarget('');
+                                    if (passiveModifierType === 'Maximum Fate') {
+                                        setPassiveModifierType('');
+                                    }
+                                }
+                            }}>
                                 <option value="">-- Select Ability --</option>
                                 <option value="berserk">Berserk</option>
                                 <option value="command" disabled={Number(cost) < 2}>Command</option>
@@ -249,6 +258,16 @@ export function Designer() {
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                             <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
                             <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <select id="command_passive_type" name="command_passive_type" onChange={e => {
+                                const selectedType = e.target.options[e.target.selectedIndex].text;
+                                setPassiveModifierType(selectedType);
+                                setPassiveTarget('');
+                            }} style={{ flex: 1, minWidth: 'auto' }}>
+                                <option value="">-- Select Type --</option>
+                                <option value="fate" disabled>Maximum Fate</option>
+                                <option value="strength">Strength</option>
+                                <option value="endurance">Endurance</option>
+                            </select>
                         </div>
                     )}
 
@@ -278,7 +297,7 @@ export function Designer() {
                     )}
 
                 </form>
-                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${commandValue || 1} allied cards by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : `${abilities} - `) : "Description"}/>
             </div>
 
         </main>
