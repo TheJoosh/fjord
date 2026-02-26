@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../deck/card';
 import { addCardToRarity } from '../data/cards';
+import { users } from '../data/users';
 
 export function Designer() { 
     const imageInputRef = useRef(null);
@@ -388,6 +389,32 @@ export function Designer() {
                 endurance: displayStats.endurance,
                 value: 0,
             });
+
+            const activeUserName = localStorage.getItem('userName');
+            if (activeUserName) {
+                const designedMapKey = 'usersDesigned';
+                let designedMap = {};
+
+                try {
+                    const rawDesignedMap = localStorage.getItem(designedMapKey);
+                    designedMap = rawDesignedMap ? JSON.parse(rawDesignedMap) : {};
+                } catch {
+                    designedMap = {};
+                }
+
+                const fallbackDesigned = parseInt(users?.[activeUserName]?.designed, 10) || 0;
+                const currentDesigned = parseInt(designedMap?.[activeUserName], 10);
+                const safeCurrentDesigned = Number.isNaN(currentDesigned) ? fallbackDesigned : currentDesigned;
+                const nextDesigned = safeCurrentDesigned + 1;
+
+                designedMap[activeUserName] = nextDesigned;
+                localStorage.setItem(designedMapKey, JSON.stringify(designedMap));
+                localStorage.setItem(`designed:${activeUserName}`, String(nextDesigned));
+
+                if (users?.[activeUserName]) {
+                    users[activeUserName].designed = nextDesigned;
+                }
+            }
         } catch (error) {
             console.error('Unable to save designed card', error);
             return;
