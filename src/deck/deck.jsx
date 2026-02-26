@@ -6,6 +6,12 @@ import { getUser, users } from '../data/users';
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
+  const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
+  const sortOptions = ['Value', 'Rarity', 'Name'];
+  const [sortBy, setSortBy] = React.useState(() => {
+    const saved = localStorage.getItem(sortByStorageKey);
+    return sortOptions.includes(saved) ? saved : 'Rarity';
+  });
   
   recalcCardValues(users);
 
@@ -34,9 +40,21 @@ export function Deck({ userName }) {
   const rarityOrder = Object.keys(cardsByRarity || {});
   const typeOrder = ['God', 'Beast', 'Chieftan', 'Warrior'];
 
-  owned.sort((a, b) => {
+  const sortedOwned = [...owned].sort((a, b) => {
     const aCard = a.card;
     const bCard = b.card;
+
+    if (sortBy === 'Value') {
+      const av = aCard && typeof aCard.value === 'number' ? aCard.value : 0;
+      const bv = bCard && typeof bCard.value === 'number' ? bCard.value : 0;
+      const vDiff = bv - av;
+      if (vDiff !== 0) return vDiff;
+      return a.name.localeCompare(b.name);
+    }
+
+    if (sortBy === 'Name') {
+      return a.name.localeCompare(b.name);
+    }
 
     const aR = aCard ? aCard.rarity : '';
     const bR = bCard ? bCard.rarity : '';
@@ -61,10 +79,29 @@ export function Deck({ userName }) {
     localStorage.setItem(ownedCardsStorageKey, JSON.stringify(owned));
   }, [ownedCardsStorageKey, owned]);
 
+  React.useEffect(() => {
+    localStorage.setItem(sortByStorageKey, sortBy);
+  }, [sortByStorageKey, sortBy]);
+
+  React.useEffect(() => {
+    const saved = localStorage.getItem(sortByStorageKey);
+    setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+  }, [sortByStorageKey]);
+
   return (
     <main>
       <div className="user">
-        <h2>{title}</h2>
+        <div className="user-header-row">
+          <h2>{title}</h2>
+          <label className="sort-by-control">
+            <span>Sort By</span>
+            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              {sortOptions.map((option) => (
+                <option key={option} value={option}>{option}</option>
+              ))}
+            </select>
+          </label>
+        </div>
         {userName && (
           <div className="deck-value">
             Deck Value: ${deckValue.toFixed(2)}
@@ -74,7 +111,7 @@ export function Deck({ userName }) {
 
       <div className="container-fluid">
         <div className="row deck-row">
-          {owned.flatMap(entry => {
+          {sortedOwned.flatMap(entry => {
             const card = entry.card;
             if (!card) return [];
             const qty = entry.qty || 0;
