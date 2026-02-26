@@ -1,7 +1,27 @@
 import React from 'react';
+import { Card } from '../deck/card';
+import { getCardByName, recalcCardValues } from '../data/cards';
+import { getUser, users } from '../data/users';
 
 export function Trades({ userName }) {
-    const currentUserLabel = userName || 'User';
+        const currentUserLabel = userName || 'User';
+        const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
+
+        recalcCardValues(users);
+        const activeUser = getUser(userName);
+
+        const ownedDeckCards = activeUser
+            ? Object.keys(activeUser.cards || {})
+                    .map((name) => {
+                        const qty = Math.max(0, parseInt(activeUser.cards[name], 10) || 0);
+                        const card = getCardByName(name);
+                        if (!card || qty <= 0) return null;
+                        return { ...card, qty };
+                    })
+                    .filter(Boolean)
+                    .sort((a, b) => a.name.localeCompare(b.name))
+            : [];
+
   return (
         <main className="trades-page">
 
@@ -64,7 +84,45 @@ export function Trades({ userName }) {
             <h3 className="value">Trade Value: $0.00</h3>
         </section>
 
-            <button className="picker">Pick from your deck</button>
+            <button className="picker" onClick={() => setIsDeckOverlayOpen(true)}>Pick from your deck</button>
+
+        {isDeckOverlayOpen && (
+            <div className="pexels-overlay" onClick={() => setIsDeckOverlayOpen(false)}>
+                <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
+                    <div className="pexels-overlay-header">
+                        <h3>{currentUserLabel}'s Deck</h3>
+                        <button type="button" className="pexels-overlay-close" onClick={() => setIsDeckOverlayOpen(false)}>Close</button>
+                    </div>
+
+                    {!ownedDeckCards.length ? (
+                        <div className="pexels-overlay-state">No cards found in this deck.</div>
+                    ) : (
+                        <div className="row deck-row pack-overlay-cards">
+                            {ownedDeckCards.map((card) => (
+                                <div key={card.name} className="col deck-col pack-overlay-col">
+                                    <Card
+                                        image={card.image}
+                                        name={card.name}
+                                        cost={card.cost}
+                                        rarity={card.rarity}
+                                        cardType={card.cardType}
+                                        description={card.description}
+                                        strength={card.strength}
+                                        endurance={card.endurance}
+                                    />
+                                    <div className="card-value mt-1">
+                                        <div className="card-meta-row">
+                                            <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                                            <small className="card-quantity">Quantity: {card.qty}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </div>
+        )}
         
 
     </main>
