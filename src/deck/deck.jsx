@@ -71,6 +71,14 @@ export function Deck({ userName }) {
       })).filter(x => x.qty > 0)
     : [];
 
+  const ownedFromUser = user
+    ? Object.keys(user.cards || {}).map(name => ({
+        name,
+        qty: Math.max(0, parseInt(user.cards[name], 10) || 0),
+        card: getCardByName(name),
+      })).filter(x => x.qty > 0)
+    : [];
+
   const rarityOrder = Object.keys(cardsByRarity || {});
   const typeOrder = ['God', 'Beast', 'Chieftan', 'Warrior'];
 
@@ -110,8 +118,8 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     if (!ownedCardsStorageKey) return;
-    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(owned));
-  }, [ownedCardsStorageKey, owned]);
+    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(ownedFromUser));
+  }, [ownedCardsStorageKey, ownedFromUser]);
 
   React.useEffect(() => {
     localStorage.setItem(sortByStorageKey, sortBy);
