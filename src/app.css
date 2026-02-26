@@ -386,6 +386,38 @@ main {
   box-sizing: border-box;
 }
 
+.pexels-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pexels-query {
+  min-width: 180px;
+}
+
+.pexels-logo-btn {
+  padding: 0;
+  border-radius: 8px;
+  border: 2px solid whitesmoke;
+  background: transparent;
+  background-image: none;
+  line-height: 0;
+  overflow: hidden;
+}
+
+.pexels-logo-btn img {
+  display: block;
+  height: 34px;
+  width: auto;
+}
+
+.pexels-error {
+  color: crimson;
+  font-size: 12px;
+}
+
 .design-form textarea {
   min-height: 80px;
   width: 100%;
