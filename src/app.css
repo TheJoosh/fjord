@@ -867,6 +867,27 @@ button {
   align-items: flex-start;
 }
 
+.card-stack {
+  position: relative;
+  padding-right: 10px;
+  padding-bottom: 10px;
+}
+
+.card-stack-main {
+  position: relative;
+  z-index: 2;
+}
+
+.card-stack-ghost {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  opacity: 1;
+  filter: brightness(0.4);
+  pointer-events: none;
+  z-index: 1;
+}
+
 .deck-col.pack-overlay-col {
   flex: 0 0 195px;
   max-width: 195px;
@@ -880,5 +901,15 @@ button {
   }
   .deck-col {
     flex: 0 0 150px;
+  }
+
+  .card-stack {
+    padding-right: 6px;
+    padding-bottom: 6px;
+  }
+
+  .card-stack-ghost {
+    top: 6px;
+    left: 6px;
   }
 }
