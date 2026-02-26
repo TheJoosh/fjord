@@ -78,7 +78,7 @@ export function Designer() {
         return { strength, endurance };
     }
 
-    const displayStats = abilities === 'Passive' ? calculatePassiveStats() : stats;
+    const displayStats = (abilities === 'Passive' || abilities === 'Forge') ? calculatePassiveStats() : stats;
 
     function generatePassiveDescription() {
         if (!passiveModifierType) {
@@ -144,8 +144,8 @@ export function Designer() {
                             <option value="berserk">Berserk</option>
                             <option value="command">Command</option>
                             <option value="flight">Flight</option>
-                            <option value="forge">Forge</option>
-                            <option value="passive">Passive</option>
+                            <option value="forge" disabled={balance === 'Standard'}>Forge</option>
+                            <option value="passive" disabled={balance === 'Standard'}>Passive</option>
                             <option value="spell">Spell</option>
                             <option value="swift">Swift</option>
                         </select>
@@ -155,6 +155,13 @@ export function Designer() {
                         <div>
                             <span>Spell Description:</span>
                             <textarea value={spellDescription} onChange={e => setSpellDescription(e.target.value)} placeholder="Enter spell description" maxLength="85" style={{ minHeight: '60px', resize: 'vertical' }}></textarea>
+                        </div>
+                    )}
+
+                    {abilities === 'Forge' && (
+                        <div>
+                            <span>Strength Boost:</span>
+                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
                         </div>
                     )}
 
@@ -178,7 +185,7 @@ export function Designer() {
                     )}
 
                 </form>
-                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Passive" ? generatePassiveDescription() : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : `${abilities} - `) : "Description"}/>
             </div>
 
         </main>
