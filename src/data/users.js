@@ -1,4 +1,24 @@
 export const users = {
+  Tradey: {
+    cards: {
+      "Loki, God of Mischief": 1,
+      "Thor, God of Thunder": 1,
+      "Odin, King of the Gods": 1,
+      "Thrym, Frost Giant King": 1,
+      "Níðhǫggr, Curse Striker": 5,
+      "Ratatoskr, The Messenger": 5,
+      "Erik the Red": 5,
+      "Dvergr": 5,
+      "Drengr": 20,
+      "Shield Maiden": 15,
+      "Valkyrie": 5,
+      "Bear Shaman": 5,
+      "Leif Erikson": 5,
+      "Ragnar Lothbrok": 2,
+      "Dökkálfr": 6,
+      "Ljósálfr": 7,
+    },
+  },
   Gary: {
     password: "gary123",
     cards: {
