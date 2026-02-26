@@ -1,11 +1,16 @@
 import React from 'react';
 import { Card } from './card';
-import { getCardByName, cardsByRarity } from '../data/cards';
-import { getUser } from '../data/users';
+import { getCardByName, cardsByRarity, recalcCardValues } from '../data/cards';
+import { getUser, users } from '../data/users';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   
+  // recalc values based on current holdings before rendering
+  React.useEffect(() => {
+    recalcCardValues(users);
+  }, []);
+
   const user = getUser(userName);
 
   // build list of owned cards with quantities
