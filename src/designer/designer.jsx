@@ -123,11 +123,13 @@ export function Designer() {
                                 <option value="strength">Strength</option>
                                 <option value="endurance">Endurance</option>
                             </select>
-                            <select id="passive_target" name="passive_target" onChange={e => setPassiveTarget(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
-                                <option value="">-- Select Target --</option>
-                                <option value="enemy">Enemy</option>
-                                <option value="allied">Allied</option>
-                            </select>
+                            {passiveModifierType !== 'Maximum Fate' && (
+                                <select id="passive_target" name="passive_target" onChange={e => setPassiveTarget(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
+                                    <option value="">-- Select Target --</option>
+                                    <option value="enemy">Enemy</option>
+                                    <option value="allied">Allied</option>
+                                </select>
+                            )}
                         </div>
                     )}
 
