@@ -3,7 +3,7 @@ import { Card } from '../deck/card';
 
 export function Designer() {
     const [previewImage, setPreviewImage] = useState(null);
-    const [title, setTitle] = useState('Your Card');
+    const [title, setTitle] = useState('');
     const [cardType, setCardType] = useState('');
 
     function handleFileChange(e) {
