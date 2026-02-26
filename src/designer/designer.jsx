@@ -242,7 +242,7 @@ export function Designer() {
                                 }
                             }}>
                                 <option value="">-- Select Ability --</option>
-                                <option value="berserk">Berserk</option>
+                                <option value="berserk" disabled={balance === 'Standard' && cost === '1'}>Berserk</option>
                                 <option value="command" disabled={Number(cost) < 2}>Command</option>
                                 <option value="flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
                                 <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
