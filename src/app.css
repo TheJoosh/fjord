@@ -231,6 +231,12 @@ li {
   text-align: center;
 }
 
+.deck-value {
+  color: whitesmoke;
+  font-size: 14px;
+  margin-top: 4px;
+}
+
 h1 {
   justify-content: center;
 }
