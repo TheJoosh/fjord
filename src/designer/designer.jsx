@@ -8,6 +8,7 @@ export function Designer() {
     const [cost, setCost] = useState('');
     const [balance, setBalance] = useState('');
     const [abilities, setAbilities] = useState('');
+    const [spellDescription, setSpellDescription] = useState('');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -103,12 +104,19 @@ export function Designer() {
                         </select>
                     </div>
 
+                    {abilities === 'Spell' && (
+                        <div>
+                            <span>Spell Description:</span>
+                            <input value={spellDescription} onChange={e => setSpellDescription(e.target.value)} type="text" placeholder="Enter spell description" maxLength="120" />
+                        </div>
+                    )}
+
                     <div>
                         <span>Cost:</span>
                         <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
                     </div>
                 </form>
-                <Card image={previewImage || "Default.png"} strength={stats.strength} endurance={stats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={stats.strength} endurance={stats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : `${abilities} - `) : "Description"}/>
             </div>
 
         </main>
