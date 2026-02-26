@@ -6,10 +6,7 @@ import { getUser, users } from '../data/users';
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   
-  // recalc values based on current holdings before rendering
-  React.useEffect(() => {
-    recalcCardValues(users);
-  }, []);
+  recalcCardValues(users);
 
   const user = getUser(userName);
 
@@ -72,7 +69,7 @@ export function Deck({ userName }) {
                   endurance={card.endurance}
                 />
                 <div className="card-value mt-1">
-                  <small>Value: {card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                  <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
                 </div>
               </div>
             ));
