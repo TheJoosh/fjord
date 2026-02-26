@@ -113,6 +113,19 @@ export function Designer() {
         }
     }, [cost, balance, abilities, passiveValue, commandValue]);
 
+    useEffect(() => {
+        if (!abilities) return;
+
+        const standardOneDisabled = balance === 'Standard' && cost === '1';
+        const invalidSelectedAbility =
+            ((abilities === 'Forge' || abilities === 'Passive' || abilities === 'Flight') && standardOneDisabled) ||
+            (abilities === 'Command' && Number(cost) < 2);
+
+        if (invalidSelectedAbility) {
+            setAbilities('');
+        }
+    }, [cost, balance, abilities]);
+
     function calculatePassiveStats() {
         if (stats.strength === '-' || stats.endurance === '-') {
             return stats;
@@ -211,11 +224,11 @@ export function Designer() {
     function calculateRarity() {
         const rarityScore = calculateRarityScore();
 
-        if (rarityScore <= 3) return 'Common';
-        if (rarityScore <= 6) return 'Uncommon';
-        if (rarityScore <= 9) return 'Rare';
-        if (rarityScore <= 12) return 'Loric';
-        if (rarityScore <= 15) return 'Mythical';
+        if (rarityScore <= 2) return 'Common';
+        if (rarityScore <= 4) return 'Uncommon';
+        if (rarityScore <= 6) return 'Rare';
+        if (rarityScore <= 8) return 'Loric';
+        if (rarityScore <= 10) return 'Mythical';
         return 'Legendary';
     }
 
@@ -271,7 +284,7 @@ export function Designer() {
                     {cost && balance && (
                         <div>
                             <label htmlFor="card_abilities">Abilities:</label>
-                            <select id="card_abilities" name="abilities" required onChange={e => {
+                            <select id="card_abilities" name="abilities" value={abilities} required onChange={e => {
                                 const selectedAbility = e.target.options[e.target.selectedIndex].text;
                                 setAbilities(selectedAbility);
                                 if (selectedAbility === 'Command') {
