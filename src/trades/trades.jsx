@@ -7,6 +7,7 @@ export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
     const [requestUserInput, setRequestUserInput] = React.useState('');
+    const [requestUserError, setRequestUserError] = React.useState('');
     const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
@@ -153,7 +154,17 @@ export function Trades({ userName }) {
 
         const handleRequestTradeUser = () => {
             const matchedUserName = resolveUserNameFromStorage(requestUserInput);
-            if (!matchedUserName) return;
+            if (!matchedUserName) {
+                setRequestUserError('User not found');
+                return;
+            }
+
+            if (userName && matchedUserName.toLowerCase() === userName.toLowerCase()) {
+                setRequestUserError('You cannot request a trade with yourself');
+                return;
+            }
+
+            setRequestUserError('');
             setOtherUserLabel(matchedUserName);
             setIsRequestOverlayOpen(false);
         };
@@ -352,7 +363,12 @@ export function Trades({ userName }) {
                             className="pexels-query"
                             placeholder="Input username"
                             value={requestUserInput}
-                            onChange={(e) => setRequestUserInput(e.target.value)}
+                            onChange={(e) => {
+                                setRequestUserInput(e.target.value);
+                                if (requestUserError) {
+                                    setRequestUserError('');
+                                }
+                            }}
                             onKeyDown={(e) => {
                                 if (e.key !== 'Enter') return;
                                 e.preventDefault();
@@ -361,6 +377,7 @@ export function Trades({ userName }) {
                         />
                         <button type="button" onClick={handleRequestTradeUser}>Request</button>
                     </div>
+                    {requestUserError && <div className="pexels-error">{requestUserError}</div>}
                 </div>
             </div>
         )}
