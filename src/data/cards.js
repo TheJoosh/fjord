@@ -228,3 +228,63 @@ export function recalcCardValues(usersObj) {
 
   return cardsByRarity;
 }
+
+
+export function drawWeightedCards(
+  quantity,
+  commonWeight,
+  uncommonWeight,
+  rareWeight,
+  loricWeight,
+  mythicalWeight,
+  legendaryWeight
+) {
+  const count = Math.max(0, parseInt(quantity, 10) || 0);
+
+  const weightedRarities = [
+    { rarity: 'Common', weight: Math.max(0, Number(commonWeight) || 0) },
+    { rarity: 'Uncommon', weight: Math.max(0, Number(uncommonWeight) || 0) },
+    { rarity: 'Rare', weight: Math.max(0, Number(rareWeight) || 0) },
+    { rarity: 'Loric', weight: Math.max(0, Number(loricWeight) || 0) },
+    { rarity: 'Mythical', weight: Math.max(0, Number(mythicalWeight) || 0) },
+    { rarity: 'Legendary', weight: Math.max(0, Number(legendaryWeight) || 0) },
+  ].filter(entry => {
+    if (entry.weight <= 0) return false;
+    const group = cardsByRarity[entry.rarity];
+    return group && Object.keys(group).length > 0;
+  });
+
+  if (count === 0 || weightedRarities.length === 0) {
+    return [];
+  }
+
+  const totalWeight = weightedRarities.reduce((sum, entry) => sum + entry.weight, 0);
+  if (totalWeight <= 0) {
+    return [];
+  }
+
+  const chooseRarity = () => {
+    let roll = Math.random() * totalWeight;
+    for (const entry of weightedRarities) {
+      roll -= entry.weight;
+      if (roll < 0) {
+        return entry.rarity;
+      }
+    }
+    return weightedRarities[weightedRarities.length - 1].rarity;
+  };
+
+  const picks = [];
+  for (let i = 0; i < count; i++) {
+    const rarity = chooseRarity();
+    const group = cardsByRarity[rarity] || {};
+    const names = Object.keys(group);
+    if (names.length === 0) continue;
+
+    const randomName = names[Math.floor(Math.random() * names.length)];
+    const cardData = group[randomName];
+    picks.push({ rarity, name: randomName, ...cardData });
+  }
+
+  return picks;
+}
