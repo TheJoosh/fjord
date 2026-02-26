@@ -9,6 +9,7 @@ export function Trades({ userName }) {
     const [requestUserInput, setRequestUserInput] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
     const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
+    const [otherTradeCards, setOtherTradeCards] = React.useState([]);
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
         const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
@@ -164,8 +165,54 @@ export function Trades({ userName }) {
                 return;
             }
 
+            const buildPoolFromDeck = (targetUserName) => {
+                const storageKey = `ownedCards:${targetUserName}`;
+                let sourceEntries = [];
+
+                try {
+                    const raw = localStorage.getItem(storageKey);
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    sourceEntries = Array.isArray(parsed) ? parsed : [];
+                } catch {
+                    sourceEntries = [];
+                }
+
+                if (!sourceEntries.length) {
+                    const fallbackUser = getUser(targetUserName);
+                    sourceEntries = Object.entries(fallbackUser?.cards || {}).map(([name, qty]) => ({
+                        name,
+                        qty: Math.max(0, parseInt(qty, 10) || 0),
+                    }));
+                }
+
+                const pool = [];
+                for (const entry of sourceEntries) {
+                    if (!entry?.name) continue;
+                    const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
+                    const card = getCardByName(entry.name);
+                    if (!card || qty <= 0) continue;
+                    for (let i = 0; i < qty; i += 1) {
+                        pool.push({ ...card });
+                    }
+                }
+
+                return pool;
+            };
+
+            const pool = buildPoolFromDeck(matchedUserName);
+            const shuffled = [...pool].sort(() => Math.random() - 0.5);
+            const pickCount = Math.min(
+                shuffled.length,
+                Math.max(1, Math.floor(Math.random() * 5) + 1)
+            );
+            const pickedCards = shuffled.slice(0, pickCount).map((card, index) => ({
+                ...card,
+                otherTradeEntryId: `${card.name}-${Date.now()}-${index}-${Math.random()}`,
+            }));
+
             setRequestUserError('');
             setOtherUserLabel(matchedUserName);
+            setOtherTradeCards(pickedCards);
             setIsRequestOverlayOpen(false);
         };
 
@@ -234,6 +281,11 @@ export function Trades({ userName }) {
             return sum + value;
         }, 0);
 
+        const otherTradeValue = otherTradeCards.reduce((sum, card) => {
+            const value = card && typeof card.value === 'number' ? card.value : 0;
+            return sum + value;
+        }, 0);
+
         const handleCancelTrade = () => {
             if (!selectedTradeCards.length) return;
 
@@ -291,12 +343,29 @@ export function Trades({ userName }) {
         <h2 className="other_user">{otherUserLabel}</h2>
         <section className="other">
             <div className="container-fluid">
-                <div className="row">
+                <div className="row deck-row">
+                    {otherTradeCards.map((card) => (
+                        <div key={card.otherTradeEntryId} className="col deck-col">
+                            <Card
+                                image={card.image}
+                                name={card.name}
+                                cost={card.cost}
+                                rarity={card.rarity}
+                                cardType={card.cardType}
+                                description={card.description}
+                                strength={card.strength}
+                                endurance={card.endurance}
+                            />
+                            <div className="card-value mt-1">
+                                <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </div>
                 
 
-            <h3 className="value">Trade Value: $0.00</h3>
+            <h3 className="value">Trade Value: ${otherTradeValue.toFixed(2)}</h3>
         </section>
 
         <button className="accept">
