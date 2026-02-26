@@ -186,6 +186,32 @@ export function Designer() {
         return numberWords[parsed] || value;
     }
 
+    function calculateRarityScore() {
+        const parsedCost = parseInt(cost, 10);
+        const safeCost = isNaN(parsedCost) ? 0 : parsedCost;
+        const parsedPassive = parseInt(passiveValue, 10);
+        const parsedCommand = parseInt(commandValue, 10);
+        const safePassive = isNaN(parsedPassive) ? 0 : parsedPassive;
+        const safeCommand = isNaN(parsedCommand) ? 0 : parsedCommand;
+        const abilityWeight = safePassive + safeCommand;
+        const novelty = isNamedCharacter ? 2 : 0;
+
+        return 2 * safeCost + abilityWeight + novelty;
+    }
+
+    function calculateRarity() {
+        const rarityScore = calculateRarityScore();
+
+        if (rarityScore <= 3) return 'Common';
+        if (rarityScore <= 6) return 'Uncommon';
+        if (rarityScore <= 9) return 'Rare';
+        if (rarityScore <= 12) return 'Loric';
+        if (rarityScore <= 15) return 'Mythical';
+        return 'Legendary';
+    }
+
+    const calculatedRarity = calculateRarity();
+
     return (
         <main>
 
@@ -326,7 +352,7 @@ export function Designer() {
                     )}
 
                 </form>
-                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : abilities === "Berserk" ? `Berserk - gains +${passiveValue || 1} strength while attacking` : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : abilities === "Berserk" ? `Berserk - gains +${passiveValue || 1} strength while attacking` : `${abilities} - `) : "Description"}/>
             </div>
 
         </main>
