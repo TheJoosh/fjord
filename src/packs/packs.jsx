@@ -2,7 +2,7 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import '../app.css';
 import { getUser, users } from '../data/users';
-import { drawWeightedCards, recalcCardValues } from '../data/cards';
+import { drawWeightedCards, getCardByName, recalcCardValues } from '../data/cards';
 import { Card } from '../deck/card';
 
 export function Packs({ userName }) {
@@ -24,6 +24,34 @@ export function Packs({ userName }) {
         setIsPackOverlayOpen(true);
     };
 
+    const applyGeneratedCardsToValueCalculation = (generatedCards) => {
+        const simulatedUsers = {};
+
+        for (const [name, data] of Object.entries(users || {})) {
+            simulatedUsers[name] = {
+                ...data,
+                cards: { ...(data.cards || {}) },
+                packs: { ...(data.packs || {}) },
+            };
+        }
+
+        if (userName && simulatedUsers[userName]) {
+            for (const card of generatedCards) {
+                if (!card?.name) continue;
+                simulatedUsers[userName].cards[card.name] =
+                    (parseInt(simulatedUsers[userName].cards[card.name], 10) || 0) + 1;
+            }
+        }
+
+        recalcCardValues(simulatedUsers);
+
+        return generatedCards.map((card) => {
+            if (!card?.name) return card;
+            const updatedCard = getCardByName(card.name);
+            return updatedCard ? { ...card, value: updatedCard.value } : card;
+        });
+    };
+
     const claimOpenedCards = () => {
         if (!openedCards.length) {
             setIsPackOverlayOpen(false);
@@ -36,6 +64,7 @@ export function Packs({ userName }) {
                 if (!card?.name) continue;
                 user.cards[card.name] = (parseInt(user.cards[card.name], 10) || 0) + 1;
             }
+            recalcCardValues(users);
         }
 
         if (ownedCardsStorageKey) {
@@ -79,7 +108,7 @@ export function Packs({ userName }) {
     const openNormalPack = () => {
         if (defaultPackCount <= 0) return;
         const cards = drawWeightedCards(10, 47, 28, 14, 7, 3, 1);
-        showOpenedCards(cards);
+        showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = defaultPackCount - 1;
         setDefaultPackCount(nextCount);
         if (user?.packs) user.packs['Default Pack'] = nextCount;
@@ -88,7 +117,7 @@ export function Packs({ userName }) {
     const openSagaPack = () => {
         if (sagaPackCount <= 0) return;
         const cards = drawWeightedCards(10, 30, 29, 22, 11, 6, 2);
-        showOpenedCards(cards);
+        showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = sagaPackCount - 1;
         setSagaPackCount(nextCount);
         if (user?.packs) user.packs['Saga Pack'] = nextCount;
@@ -97,7 +126,7 @@ export function Packs({ userName }) {
     const openHeroicPack = () => {
         if (heroicPackCount <= 0) return;
         const cards = drawWeightedCards(8, 0, 35, 30, 18, 12, 5);
-        showOpenedCards(cards);
+        showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = heroicPackCount - 1;
         setHeroicPackCount(nextCount);
         if (user?.packs) user.packs['Heroic Pack'] = nextCount;
@@ -106,7 +135,7 @@ export function Packs({ userName }) {
     const openMythboundPack = () => {
         if (mythboundPackCount <= 0) return;
         const cards = drawWeightedCards(5, 0, 0, 40, 30, 20, 10);
-        showOpenedCards(cards);
+        showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = mythboundPackCount - 1;
         setMythboundPackCount(nextCount);
         if (user?.packs) user.packs['Mythbound Pack'] = nextCount;
