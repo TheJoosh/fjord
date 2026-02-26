@@ -8,6 +8,7 @@ import { Card } from '../deck/card';
 export function Packs({ userName }) {
     const user = getUser(userName);
     const packs = user?.packs || {};
+    const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
     const [defaultPackCount, setDefaultPackCount] = React.useState(packs['Default Pack'] ?? 0);
     const [sagaPackCount, setSagaPackCount] = React.useState(packs['Saga Pack'] ?? 0);
@@ -19,6 +20,58 @@ export function Packs({ userName }) {
     const showOpenedCards = (cards) => {
         setOpenedCards(cards || []);
         setIsPackOverlayOpen(true);
+    };
+
+    const claimOpenedCards = () => {
+        if (!openedCards.length) {
+            setIsPackOverlayOpen(false);
+            return;
+        }
+
+        if (user) {
+            user.cards = user.cards || {};
+            for (const card of openedCards) {
+                if (!card?.name) continue;
+                user.cards[card.name] = (parseInt(user.cards[card.name], 10) || 0) + 1;
+            }
+        }
+
+        if (ownedCardsStorageKey) {
+            let existingOwned = [];
+            try {
+                const raw = localStorage.getItem(ownedCardsStorageKey);
+                existingOwned = raw ? JSON.parse(raw) : [];
+            } catch {
+                existingOwned = [];
+            }
+
+            const byName = new Map();
+            for (const entry of existingOwned) {
+                if (!entry?.name) continue;
+                byName.set(entry.name, {
+                    name: entry.name,
+                    qty: Math.max(0, parseInt(entry.qty, 10) || 0),
+                    card: entry.card || null,
+                });
+            }
+
+            for (const card of openedCards) {
+                if (!card?.name) continue;
+                const prev = byName.get(card.name);
+                if (prev) {
+                    prev.qty += 1;
+                    prev.card = card;
+                } else {
+                    byName.set(card.name, { name: card.name, qty: 1, card });
+                }
+            }
+
+            const nextOwned = Array.from(byName.values()).filter(entry => entry.qty > 0);
+            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+        }
+
+        setOpenedCards([]);
+        setIsPackOverlayOpen(false);
     };
 
     const openNormalPack = () => {
@@ -106,7 +159,7 @@ export function Packs({ userName }) {
                 <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
                     <div className="pexels-overlay-header">
                         <h3>Your Cards</h3>
-                        <button type="button" className="pexels-overlay-close" onClick={() => setIsPackOverlayOpen(false)}>Claim Cards</button>
+                        <button type="button" className="pexels-overlay-close" onClick={claimOpenedCards}>Claim Cards</button>
                     </div>
 
                     <div className="row deck-row pack-overlay-cards">
