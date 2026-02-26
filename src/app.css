@@ -352,9 +352,65 @@ main {
 .design-form {
   display: flex;
   flex-direction: column;
-  align-items: start;
+  align-items: flex-start;
+  gap: 12px;
   margin-bottom: 20px;
   font-size: larger;
+  width: 360px;
+}
+
+/* Layout individual rows inside the design form and space form controls */
+.design-form > div {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+}
+
+.design-form input[type="text"],
+.design-form input[type="number"],
+.design-form select,
+.design-form textarea,
+.design-form input[type="file"] {
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background-color: rgba(255,255,255,0.04);
+  color: whitesmoke;
+  min-width: 220px;
+  box-sizing: border-box;
+}
+
+.design-form textarea {
+  min-height: 80px;
+  width: 100%;
+  max-width: 100%;
+  resize: vertical;
+}
+
+.design-form button[type="submit"],
+.design-form button {
+  margin-top: 8px;
+}
+
+/* Put the file-upload button above the selected filename so the name can
+   appear on its own line and wrap if necessary. Works in modern browsers. */
+.design-form input[type="file"] {
+  display: block;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+.design-form input[type="file"]::file-selector-button {
+  display: block;
+  margin-bottom: 6px;
+  padding: 8px 10px;
+}
+
+.design-form input[type="file"]::-webkit-file-upload-button {
+  display: block;
+  margin-bottom: 6px;
+  padding: 8px 10px;
 }
 
 .open {
