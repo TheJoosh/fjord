@@ -3,10 +3,17 @@ import React from 'react';
 export function Card({ image, name, cost, rarity, cardType, description, strength, endurance }) {
   const stats = strength === '-' && endurance === '-' ? '-/-' : `${strength}/${endurance}`;
 
+  // Support both local filenames (assumed in Card Images/) and data URLs / absolute URLs.
+  const src = image
+    ? (typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http') || image.includes('/'))
+        ? image
+        : `Card Images/${image}`)
+    : '';
+
   return (
     <div className="fj-card">
       <div className="card-image">
-        <img src={`Card Images/${image}`} alt={name} />
+        <img src={src} alt={name} />
       </div>
       <div className="card-cost">{cost}</div>
       <div className="card-content">
