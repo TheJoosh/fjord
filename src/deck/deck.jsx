@@ -6,6 +6,7 @@ import { getUser, users } from '../data/users';
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
+  const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const [showDuplicates, setShowDuplicates] = React.useState(true);
@@ -14,14 +15,46 @@ export function Deck({ userName }) {
     return sortOptions.includes(saved) ? saved : 'Rarity';
   });
   
-  recalcCardValues(users);
-
   const user = getUser(userName);
+
+  let selectedTradeCards = [];
+  if (tradeSelectionStorageKey) {
+    try {
+      const raw = localStorage.getItem(tradeSelectionStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      selectedTradeCards = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      selectedTradeCards = [];
+    }
+  }
+
+  const effectiveCards = { ...(user?.cards || {}) };
+  for (const card of selectedTradeCards) {
+    if (!card?.name) continue;
+    effectiveCards[card.name] = (parseInt(effectiveCards[card.name], 10) || 0) + 1;
+  }
+
+  const simulatedUsers = Object.fromEntries(
+    Object.entries(users || {}).map(([name, data]) => [
+      name,
+      {
+        ...data,
+        cards: { ...(data.cards || {}) },
+        packs: { ...(data.packs || {}) },
+      },
+    ])
+  );
+
+  if (userName && simulatedUsers[userName]) {
+    simulatedUsers[userName].cards = { ...effectiveCards };
+  }
+
+  recalcCardValues(simulatedUsers);
 
   // calculate total deck value
   let deckValue = 0;
   if (user) {
-    for (const [name, qty] of Object.entries(user.cards || {})) {
+    for (const [name, qty] of Object.entries(effectiveCards)) {
       const card = getCardByName(name);
       if (card && typeof card.value === 'number') {
         deckValue += card.value * (parseInt(qty, 10) || 0);
@@ -31,9 +64,9 @@ export function Deck({ userName }) {
 
   // build list of owned cards with quantities
   const owned = user
-    ? Object.keys(user.cards || {}).map(name => ({
+    ? Object.keys(effectiveCards || {}).map(name => ({
         name,
-        qty: Math.max(0, parseInt(user.cards[name], 10) || 0),
+        qty: Math.max(0, parseInt(effectiveCards[name], 10) || 0),
         card: getCardByName(name),
       })).filter(x => x.qty > 0)
     : [];
