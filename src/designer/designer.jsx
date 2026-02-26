@@ -413,6 +413,34 @@ export function Designer() {
 
                 if (users?.[activeUserName]) {
                     users[activeUserName].designed = nextDesigned;
+                    users[activeUserName].packs = users[activeUserName].packs || {};
+
+                    let rewardPackKey = 'Default Pack';
+                    if (nextDesigned % 50 === 0) {
+                        rewardPackKey = 'Mythbound Pack';
+                    } else if (nextDesigned % 20 === 0) {
+                        rewardPackKey = 'Heroic Pack';
+                    } else if (nextDesigned % 5 === 0) {
+                        rewardPackKey = 'Saga Pack';
+                    }
+
+                    users[activeUserName].packs[rewardPackKey] =
+                        (parseInt(users[activeUserName].packs[rewardPackKey], 10) || 0) + 1;
+
+                    const userPacksStorageKey = 'usersPacks';
+                    let packsMap = {};
+                    try {
+                        const rawPacksMap = localStorage.getItem(userPacksStorageKey);
+                        packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
+                    } catch {
+                        packsMap = {};
+                    }
+
+                    packsMap[activeUserName] = {
+                        ...(packsMap[activeUserName] || {}),
+                        ...users[activeUserName].packs,
+                    };
+                    localStorage.setItem(userPacksStorageKey, JSON.stringify(packsMap));
                 }
             }
         } catch (error) {
