@@ -518,16 +518,68 @@ main {
 
 .pack-overlay-cards {
   gap: 0;
+  --bs-gutter-x: 1px;
+  --bs-gutter-y: 1px;
 }
 
 .pack-overlay-col {
-  flex: 0 0 255px;
+  flex: 0 0 195px;
+  padding-left: 1px;
+  padding-right: 1px;
 }
 
 .pack-overlay-col .fj-card {
+  width: 195px;
+  height: 273px;
   margin-top: 0;
-  transform-origin: top left;
-  scale: 0.65;
+}
+
+.pack-overlay-col .card-image {
+  width: 195px;
+  height: 273px;
+}
+
+.pack-overlay-col .card-content {
+  width: 195px;
+  height: 91px;
+}
+
+.pack-overlay-col .card-name {
+  font-size: 13px;
+  top: 6px;
+  left: 6px;
+}
+
+.pack-overlay-col .card-type {
+  font-size: 9px;
+  top: 20px;
+  left: 6px;
+}
+
+.pack-overlay-col .card-cost {
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  border-width: 4px;
+  top: 6px;
+  right: 6px;
+}
+
+.pack-overlay-col .card-stats {
+  width: 26px;
+  height: 26px;
+  font-size: 9px;
+  border-width: 3px;
+  bottom: 98px;
+  right: 6px;
+}
+
+.pack-overlay-col .card-description {
+  width: 181px;
+  font-size: 8px;
+  padding: 6px;
+  top: 39px;
+  left: 6px;
 }
 
 .design-form textarea {
