@@ -28,6 +28,8 @@ export function Designer() {
         const value = e.target.value;
         if (value === '') {
             setCost('');
+            setBalance('');
+            setAbilities('');
             return;
         }
         const num = parseInt(value, 10);
@@ -127,29 +129,33 @@ export function Designer() {
                         <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
                     </div>
 
-                    <div>
-                        <label htmlFor="card_balance">Balance:</label>
-                        <select id="card_balance" name="balance" required onChange={e => setBalance(e.target.options[e.target.selectedIndex].text)}>
-                            <option value="">-- Select Balance --</option>
-                            <option value="standard">Standard</option>
-                            <option value="aggressive">Aggressive</option>
-                            <option value="defensive">Defensive</option>
-                        </select>
-                    </div>
+                    {cost && (
+                        <div>
+                            <label htmlFor="card_balance">Balance:</label>
+                            <select id="card_balance" name="balance" required onChange={e => setBalance(e.target.options[e.target.selectedIndex].text)}>
+                                <option value="">-- Select Balance --</option>
+                                <option value="standard">Standard</option>
+                                <option value="aggressive">Aggressive</option>
+                                <option value="defensive">Defensive</option>
+                            </select>
+                        </div>
+                    )}
 
-                    <div>
-                        <label htmlFor="card_abilities">Abilities:</label>
-                        <select id="card_abilities" name="abilities" required onChange={e => setAbilities(e.target.options[e.target.selectedIndex].text)}>
-                            <option value="">-- Select Ability --</option>
-                            <option value="berserk">Berserk</option>
-                            <option value="command">Command</option>
-                            <option value="flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
-                            <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
-                            <option value="passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
-                            <option value="spell">Spell</option>
-                            <option value="swift">Swift</option>
-                        </select>
-                    </div>
+                    {cost && balance && (
+                        <div>
+                            <label htmlFor="card_abilities">Abilities:</label>
+                            <select id="card_abilities" name="abilities" required onChange={e => setAbilities(e.target.options[e.target.selectedIndex].text)}>
+                                <option value="">-- Select Ability --</option>
+                                <option value="berserk">Berserk</option>
+                                <option value="command">Command</option>
+                                <option value="flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
+                                <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
+                                <option value="passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
+                                <option value="spell">Spell</option>
+                                <option value="swift">Swift</option>
+                            </select>
+                        </div>
+                    )}
 
                     {abilities === 'Spell' && (
                         <div>
