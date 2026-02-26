@@ -72,7 +72,7 @@ export default function App() {
                 />} exact />
                 <Route path='/deck' element={<Deck userName={userName} />} />
                                 <Route path='/designer' element={<Designer userName={userName} />} />
-                <Route path='/trades' element={<Trades />} />
+                <Route path='/trades' element={<Trades userName={userName} />} />
                 <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='*' element={<NotFound />} />
             </Routes>
