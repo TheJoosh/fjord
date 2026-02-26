@@ -378,6 +378,23 @@ main {
   min-height: 45%;
 }
 
+.trades-page {
+  padding-left: 12px;
+  padding-right: 12px;
+}
+
+.trades-page h2,
+.trades-page h3,
+.trades-page button,
+.trades-page section {
+  padding: 8px;
+}
+
+.trades-page .value {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
 .cardpack {
   height: 420px;
   width: 300px;

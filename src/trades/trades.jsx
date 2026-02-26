@@ -2,7 +2,7 @@ import React from 'react';
 
 export function Trades() {
   return (
-    <main>
+        <main className="trades-page">
 
         <button className="request">Request trade</button>
         <h2 className="other_user">Other User</h2>
