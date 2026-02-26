@@ -9,6 +9,7 @@ export function Designer() {
     const [balance, setBalance] = useState('');
     const [abilities, setAbilities] = useState('');
     const [spellDescription, setSpellDescription] = useState('');
+    const [passiveValue, setPassiveValue] = useState('');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -108,6 +109,12 @@ export function Designer() {
                         <div>
                             <span>Spell Description:</span>
                             <textarea value={spellDescription} onChange={e => setSpellDescription(e.target.value)} placeholder="Enter spell description" maxLength="85" style={{ minHeight: '60px', resize: 'vertical' }}></textarea>
+                        </div>
+                    )}
+
+                    {abilities === 'Passive' && (
+                        <div>
+                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
                         </div>
                     )}
 
