@@ -440,6 +440,11 @@ main {
   padding: 16px;
 }
 
+.pack-overlay-panel {
+  width: min(1050px, 100%);
+  height: min(2000px, 100%);
+}
+
 .pexels-overlay-header {
   display: flex;
   align-items: center;

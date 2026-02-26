@@ -103,7 +103,7 @@ export function Packs({ userName }) {
 
         {isPackOverlayOpen && (
             <div className="pexels-overlay" onClick={() => setIsPackOverlayOpen(false)}>
-                <div className="pexels-overlay-panel" onClick={e => e.stopPropagation()}>
+                <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
                     <div className="pexels-overlay-header">
                         <h3>Pack Results</h3>
                         <button type="button" className="pexels-overlay-close" onClick={() => setIsPackOverlayOpen(false)}>Close</button>
