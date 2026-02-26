@@ -4,6 +4,7 @@ import { Card } from '../deck/card';
 export function Designer() { 
     const [previewImage, setPreviewImage] = useState(null);
     const [title, setTitle] = useState('');
+    const [isNamedCharacter, setIsNamedCharacter] = useState(false);
     const [cardType, setCardType] = useState('');
     const [cost, setCost] = useState('');
     const [balance, setBalance] = useState('');
@@ -195,9 +196,13 @@ export function Designer() {
                         <input onChange={handleFileChange} type="file" id="image_uploads" name="image_uploads" accept="image/png, image/jpeg" />
                     </div>
 
-                    <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                         <span>Title:</span>
                         <input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="Card Title" required />
+                        <label htmlFor="named_character" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
+                            <input id="named_character" type="checkbox" checked={isNamedCharacter} onChange={e => setIsNamedCharacter(e.target.checked)} />
+                            <span>Named Character?</span>
+                        </label>
                     </div>
 
                     <div>
