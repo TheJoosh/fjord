@@ -1,5 +1,6 @@
 export const cardsByRarity = {
     Placeholder: {
+    "Placeholder": {
       image: "Placeholder.png",
       cardType: "Card",
       cost: "-",
@@ -8,6 +9,7 @@ export const cardsByRarity = {
       strength: "-",
       endurance: "-",
       value: 0,
+    },
     },
     Legendary: {
     "Loki, God of Mischief": {
@@ -179,6 +181,52 @@ export const cardsByRarity = {
   },
 };
 
+const CARDS_STORAGE_KEY = 'cardsByRarity';
+
+function canUseLocalStorage() {
+  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
+function hydrateCardsByRarityFromStorage() {
+  if (!canUseLocalStorage()) return;
+
+  try {
+    const raw = localStorage.getItem(CARDS_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        for (const key of Object.keys(cardsByRarity)) {
+          delete cardsByRarity[key];
+        }
+        Object.assign(cardsByRarity, parsed);
+      }
+    }
+  } catch {
+    // Ignore malformed localStorage data and continue with in-memory defaults.
+  }
+
+  localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(cardsByRarity));
+}
+
+export function persistCardsByRarity() {
+  if (!canUseLocalStorage()) return;
+  localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(cardsByRarity));
+}
+
+export function addCardToRarity(rarity, name, cardData) {
+  if (!rarity || !name || !cardData) return false;
+
+  if (!cardsByRarity[rarity] || typeof cardsByRarity[rarity] !== 'object') {
+    cardsByRarity[rarity] = {};
+  }
+
+  cardsByRarity[rarity][name] = { ...cardData };
+  persistCardsByRarity();
+  return true;
+}
+
+hydrateCardsByRarityFromStorage();
+
 
 export function getCardByName(name) {
   for (const rarity in cardsByRarity) {
@@ -226,6 +274,7 @@ export function recalcCardValues(usersObj) {
     }
   }
 
+  persistCardsByRarity();
   return cardsByRarity;
 }
 
