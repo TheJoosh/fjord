@@ -433,6 +433,27 @@ main {
   padding: 8px 10px;
 }
 
+/* Make number input spinner arrows larger and more visible */
+.design-form input[type="number"] {
+  -moz-appearance: textfield;
+  padding-right: 30px;
+}
+
+.design-form input[type="number"]::-webkit-inner-spin-button,
+.design-form input[type="number"]::-webkit-outer-spin-button {
+  opacity: 1;
+  width: 24px;
+  height: 24px;
+  cursor: pointer;
+  position: relative;
+  right: 2px;
+}
+
+.design-form input[type="number"]::-webkit-inner-spin-button:hover,
+.design-form input[type="number"]::-webkit-outer-spin-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
 .open {
   bottom: 10px;
   position: absolute;
