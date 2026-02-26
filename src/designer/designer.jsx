@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../deck/card';
 import { addCardToRarity } from '../data/cards';
 
 export function Designer() { 
+    const imageInputRef = useRef(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [title, setTitle] = useState('');
     const [isNamedCharacter, setIsNamedCharacter] = useState(false);
@@ -372,15 +373,47 @@ export function Designer() {
         const cardName = title.trim();
         if (!cardName) return;
 
-        addCardToRarity(calculatedRarity, cardName, {
-            image: previewImage || "Default.png",
-            cardType,
-            cost: parseInt(cost, 10) || cost,
-            description: previewDescription,
-            strength: displayStats.strength,
-            endurance: displayStats.endurance,
-            value: 0,
-        });
+        const submittedImage =
+            typeof previewImage === 'string' && previewImage.startsWith('data:')
+                ? 'Default.png'
+                : (previewImage || "Default.png");
+
+        try {
+            addCardToRarity(calculatedRarity, cardName, {
+                image: submittedImage,
+                cardType,
+                cost: parseInt(cost, 10) || cost,
+                description: previewDescription,
+                strength: displayStats.strength,
+                endurance: displayStats.endurance,
+                value: 0,
+            });
+        } catch (error) {
+            console.error('Unable to save designed card', error);
+            return;
+        }
+
+        setPreviewImage(null);
+        setTitle('');
+        setIsNamedCharacter(false);
+        setCardType('');
+        setCost('');
+        setBalance('');
+        setAbilities('');
+        setSpellDescription('');
+        setPassiveValue('1');
+        setCommandValue('1');
+        setPassiveModifierType('');
+        setPassiveTarget('');
+        setPexelsQuery('');
+        setPexelsError('');
+        setPexelsResults([]);
+        setIsPexelsOverlayOpen(false);
+        setIsFetchingPexels(false);
+
+        if (imageInputRef.current) {
+            imageInputRef.current.value = '';
+        }
     }
 
     return (
@@ -390,7 +423,7 @@ export function Designer() {
                 <form className ="design-form" onSubmit={handleSubmitCard}>
                     <div>
                         <span>Image:</span>
-                        <input onChange={handleFileChange} type="file" id="image_uploads" name="image_uploads" accept="image/png, image/jpeg" />
+                        <input ref={imageInputRef} onChange={handleFileChange} type="file" id="image_uploads" name="image_uploads" accept="image/png, image/jpeg" />
                         <div className="pexels-actions">
                             <input
                                 className="pexels-query"
