@@ -5,6 +5,7 @@ import { getUser, users } from '../data/users';
 
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
+    const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
         const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
@@ -218,7 +219,7 @@ export function Trades({ userName }) {
   return (
         <main className="trades-page">
 
-        <button className="request">Request trade</button>
+        <button className="request" onClick={() => setIsRequestOverlayOpen(true)}>Request trade</button>
         <h2 className="other_user">Other User</h2>
         <section className="other">
             <div className="container-fluid">
@@ -280,6 +281,18 @@ export function Trades({ userName }) {
         </section>
 
             <button className="picker" onClick={() => setIsDeckOverlayOpen(true)}>Pick from your deck</button>
+
+        {isRequestOverlayOpen && (
+            <div className="pexels-overlay" onClick={() => setIsRequestOverlayOpen(false)}>
+                <div className="pexels-overlay-panel" onClick={e => e.stopPropagation()}>
+                    <div className="pexels-overlay-header">
+                        <h3>Request Trade</h3>
+                        <button type="button" className="pexels-overlay-close" onClick={() => setIsRequestOverlayOpen(false)}>Close</button>
+                    </div>
+                    <input type="text" className="pexels-query" placeholder="Input username" />
+                </div>
+            </div>
+        )}
 
         {isDeckOverlayOpen && (
             <div className="pexels-overlay" onClick={() => setIsDeckOverlayOpen(false)}>
