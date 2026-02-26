@@ -12,12 +12,64 @@ export function Packs({ userName }) {
     const packs = user?.packs || {};
     const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
-    const [defaultPackCount, setDefaultPackCount] = React.useState(packs['Default Pack'] ?? 0);
-    const [sagaPackCount, setSagaPackCount] = React.useState(packs['Saga Pack'] ?? 0);
-    const [heroicPackCount, setHeroicPackCount] = React.useState(packs['Heroic Pack'] ?? 0);
-    const [mythboundPackCount, setMythboundPackCount] = React.useState(packs['Mythbound Pack'] ?? 0);
+    const getPacksFromStorage = (activeUserName, fallbackPacks) => {
+        if (!activeUserName) return { ...(fallbackPacks || {}) };
+
+        try {
+            const rawPacksMap = localStorage.getItem('usersPacks');
+            const packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
+            const storedPacks = packsMap?.[activeUserName];
+            if (storedPacks && typeof storedPacks === 'object') {
+                return {
+                    'Default Pack': parseInt(storedPacks['Default Pack'], 10) || 0,
+                    'Saga Pack': parseInt(storedPacks['Saga Pack'], 10) || 0,
+                    'Heroic Pack': parseInt(storedPacks['Heroic Pack'], 10) || 0,
+                    'Mythbound Pack': parseInt(storedPacks['Mythbound Pack'], 10) || 0,
+                };
+            }
+        } catch {
+            // Ignore malformed localStorage and fallback to in-memory packs.
+        }
+
+        return {
+            'Default Pack': parseInt(fallbackPacks?.['Default Pack'], 10) || 0,
+            'Saga Pack': parseInt(fallbackPacks?.['Saga Pack'], 10) || 0,
+            'Heroic Pack': parseInt(fallbackPacks?.['Heroic Pack'], 10) || 0,
+            'Mythbound Pack': parseInt(fallbackPacks?.['Mythbound Pack'], 10) || 0,
+        };
+    };
+
+    const persistPacksToStorage = (activeUserName, nextPacks) => {
+        if (!activeUserName) return;
+
+        let packsMap = {};
+        try {
+            const rawPacksMap = localStorage.getItem('usersPacks');
+            packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
+        } catch {
+            packsMap = {};
+        }
+
+        packsMap[activeUserName] = { ...nextPacks };
+        localStorage.setItem('usersPacks', JSON.stringify(packsMap));
+    };
+
+    const startingPacks = getPacksFromStorage(userName, packs);
+
+    const [defaultPackCount, setDefaultPackCount] = React.useState(startingPacks['Default Pack'] ?? 0);
+    const [sagaPackCount, setSagaPackCount] = React.useState(startingPacks['Saga Pack'] ?? 0);
+    const [heroicPackCount, setHeroicPackCount] = React.useState(startingPacks['Heroic Pack'] ?? 0);
+    const [mythboundPackCount, setMythboundPackCount] = React.useState(startingPacks['Mythbound Pack'] ?? 0);
     const [openedCards, setOpenedCards] = React.useState([]);
     const [isPackOverlayOpen, setIsPackOverlayOpen] = React.useState(false);
+
+    React.useEffect(() => {
+        const latestPacks = getPacksFromStorage(userName, packs);
+        setDefaultPackCount(latestPacks['Default Pack'] ?? 0);
+        setSagaPackCount(latestPacks['Saga Pack'] ?? 0);
+        setHeroicPackCount(latestPacks['Heroic Pack'] ?? 0);
+        setMythboundPackCount(latestPacks['Mythbound Pack'] ?? 0);
+    }, [userName]);
 
     const showOpenedCards = (cards) => {
         setOpenedCards(cards || []);
@@ -111,7 +163,14 @@ export function Packs({ userName }) {
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = defaultPackCount - 1;
         setDefaultPackCount(nextCount);
-        if (user?.packs) user.packs['Default Pack'] = nextCount;
+        const nextPacks = {
+            'Default Pack': nextCount,
+            'Saga Pack': sagaPackCount,
+            'Heroic Pack': heroicPackCount,
+            'Mythbound Pack': mythboundPackCount,
+        };
+        if (user?.packs) Object.assign(user.packs, nextPacks);
+        persistPacksToStorage(userName, nextPacks);
     };
 
     const openSagaPack = () => {
@@ -120,7 +179,14 @@ export function Packs({ userName }) {
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = sagaPackCount - 1;
         setSagaPackCount(nextCount);
-        if (user?.packs) user.packs['Saga Pack'] = nextCount;
+        const nextPacks = {
+            'Default Pack': defaultPackCount,
+            'Saga Pack': nextCount,
+            'Heroic Pack': heroicPackCount,
+            'Mythbound Pack': mythboundPackCount,
+        };
+        if (user?.packs) Object.assign(user.packs, nextPacks);
+        persistPacksToStorage(userName, nextPacks);
     };
 
     const openHeroicPack = () => {
@@ -129,7 +195,14 @@ export function Packs({ userName }) {
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = heroicPackCount - 1;
         setHeroicPackCount(nextCount);
-        if (user?.packs) user.packs['Heroic Pack'] = nextCount;
+        const nextPacks = {
+            'Default Pack': defaultPackCount,
+            'Saga Pack': sagaPackCount,
+            'Heroic Pack': nextCount,
+            'Mythbound Pack': mythboundPackCount,
+        };
+        if (user?.packs) Object.assign(user.packs, nextPacks);
+        persistPacksToStorage(userName, nextPacks);
     };
 
     const openMythboundPack = () => {
@@ -138,7 +211,14 @@ export function Packs({ userName }) {
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = mythboundPackCount - 1;
         setMythboundPackCount(nextCount);
-        if (user?.packs) user.packs['Mythbound Pack'] = nextCount;
+        const nextPacks = {
+            'Default Pack': defaultPackCount,
+            'Saga Pack': sagaPackCount,
+            'Heroic Pack': heroicPackCount,
+            'Mythbound Pack': nextCount,
+        };
+        if (user?.packs) Object.assign(user.packs, nextPacks);
+        persistPacksToStorage(userName, nextPacks);
     };
 
   return (
