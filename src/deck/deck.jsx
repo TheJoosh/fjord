@@ -5,6 +5,7 @@ import { getUser, users } from '../data/users';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
+  const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
   
   recalcCardValues(users);
 
@@ -54,6 +55,11 @@ export function Deck({ userName }) {
 
     return a.name.localeCompare(b.name);
   });
+
+  React.useEffect(() => {
+    if (!ownedCardsStorageKey) return;
+    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(owned));
+  }, [ownedCardsStorageKey, owned]);
 
   return (
     <main>
