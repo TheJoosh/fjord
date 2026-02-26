@@ -20,8 +20,9 @@ export function Deck({ userName }) {
           {cardNames.map((name) => {
             const card = getCardByName(name);
             if (!card) return null;
-            return (
-              <div className="col deck-col" key={name}>
+            const qty = Math.max(0, parseInt(user.cards[name], 10) || 0);
+            return Array.from({ length: qty }).map((_, i) => (
+              <div className="col deck-col" key={`${name}-${i}`}>
                 <Card
                   image={card.image}
                   name={card.name}
@@ -33,7 +34,7 @@ export function Deck({ userName }) {
                   endurance={card.endurance}
                 />
               </div>
-            );
+            ));
           })}
         </div>
       </div>
