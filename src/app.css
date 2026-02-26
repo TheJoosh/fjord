@@ -229,7 +229,18 @@ li {
 .card-value {
   color: whitesmoke;
   font-size: 12px;
-  text-align: center;
+}
+
+.card-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.card-quantity {
+  margin-left: auto;
+  text-align: right;
 }
 
 .deck-value {

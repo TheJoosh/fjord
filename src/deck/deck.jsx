@@ -140,7 +140,12 @@ export function Deck({ userName }) {
                   endurance={card.endurance}
                 />
                 <div className="card-value mt-1">
-                  <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                  <div className="card-meta-row">
+                    <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                    {!showDuplicates && qty > 1 && (
+                      <small className="card-quantity">Quantity: {qty}</small>
+                    )}
+                  </div>
                 </div>
               </div>
             ));
