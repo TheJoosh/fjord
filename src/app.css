@@ -339,6 +339,23 @@ main {
 
 .login-form {
   bottom: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.login-form > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.login-form input {
+  padding: 8px 10px;
+}
+
+.login-form button {
+  margin-top: 4px;
 }
 
 .header-image {
