@@ -71,6 +71,22 @@ export function Trades({ userName }) {
                 }
             }
 
+            const selectedCounts = new Map();
+            for (const card of selectedTradeCards) {
+                if (!card?.name) continue;
+                selectedCounts.set(card.name, (selectedCounts.get(card.name) || 0) + 1);
+            }
+
+            for (const [name, qtyInTrade] of selectedCounts.entries()) {
+                const ownedQty = byName.get(name) || 0;
+                const nextQty = Math.max(0, ownedQty - qtyInTrade);
+                if (nextQty > 0) {
+                    byName.set(name, nextQty);
+                } else {
+                    byName.delete(name);
+                }
+            }
+
             return Array.from(byName.entries())
                 .map(([name, qty]) => {
                     const card = getCardByName(name);
@@ -79,7 +95,7 @@ export function Trades({ userName }) {
                 })
                 .filter(Boolean)
                 .sort((a, b) => a.name.localeCompare(b.name));
-        }, [activeUser, ownedCardsStorageKey]);
+        }, [activeUser, ownedCardsStorageKey, selectedTradeCards]);
 
         React.useEffect(() => {
             if (!isDeckOverlayOpen) return;
