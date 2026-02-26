@@ -9,7 +9,7 @@ export function Designer() {
     const [balance, setBalance] = useState('');
     const [abilities, setAbilities] = useState('');
     const [spellDescription, setSpellDescription] = useState('');
-    const [passiveValue, setPassiveValue] = useState('');
+    const [passiveValue, setPassiveValue] = useState('1');
     const [passiveModifierType, setPassiveModifierType] = useState('');
     const [passiveTarget, setPassiveTarget] = useState('');
 
