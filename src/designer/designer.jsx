@@ -35,6 +35,9 @@ export function Designer() {
         const num = parseInt(value, 10);
         if (!isNaN(num) && num >= 1 && num <= 5) {
             setCost(num.toString());
+            if (num < 2 && abilities === 'Command') {
+                setAbilities('');
+            }
         }
     }
 
@@ -147,7 +150,7 @@ export function Designer() {
                             <select id="card_abilities" name="abilities" required onChange={e => setAbilities(e.target.options[e.target.selectedIndex].text)}>
                                 <option value="">-- Select Ability --</option>
                                 <option value="berserk">Berserk</option>
-                                <option value="command">Command</option>
+                                <option value="command" disabled={Number(cost) < 2}>Command</option>
                                 <option value="flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
                                 <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
                                 <option value="passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
