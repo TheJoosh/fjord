@@ -10,6 +10,8 @@ export function Designer() {
     const [abilities, setAbilities] = useState('');
     const [spellDescription, setSpellDescription] = useState('');
     const [passiveValue, setPassiveValue] = useState('');
+    const [passiveModifierType, setPassiveModifierType] = useState('');
+    const [passiveTarget, setPassiveTarget] = useState('');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -113,8 +115,19 @@ export function Designer() {
                     )}
 
                     {abilities === 'Passive' && (
-                        <div>
-                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
+                        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <select id="passive_type" name="passive_type" onChange={e => setPassiveModifierType(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
+                                <option value="">-- Select Type --</option>
+                                <option value="fate">Maximum Fate</option>
+                                <option value="strength">Strength</option>
+                                <option value="endurance">Endurance</option>
+                            </select>
+                            <select id="passive_target" name="passive_target" onChange={e => setPassiveTarget(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
+                                <option value="">-- Select Target --</option>
+                                <option value="enemy">Enemy</option>
+                                <option value="allied">Allied</option>
+                            </select>
                         </div>
                     )}
 
