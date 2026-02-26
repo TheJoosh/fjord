@@ -385,7 +385,7 @@ main {
 
 .trades-page h2,
 .trades-page h3,
-.trades-page button,
+.trades-page button:not(.trade-deck-card-btn),
 .trades-page section {
   padding: 8px;
 }
@@ -931,6 +931,26 @@ button {
   max-width: 195px;
   padding-left: 0;
   padding-right: 0;
+}
+
+.trade-deck-card-btn {
+  display: block;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+  background: transparent;
+  background-image: none;
+  font: inherit;
+  line-height: normal;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trade-deck-card-btn:focus-visible {
+  outline: 2px solid whitesmoke;
+  outline-offset: 2px;
+  border-radius: 14px;
 }
 
 @media screen and (max-width: 600px) {
