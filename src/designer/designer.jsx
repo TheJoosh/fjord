@@ -180,13 +180,19 @@ export function Designer() {
                     {abilities === 'Passive' && (
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
                             <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
-                            <select id="passive_type" name="passive_type" onChange={e => setPassiveModifierType(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
+                            <select id="passive_type" name="passive_type" onChange={e => {
+                                const selectedType = e.target.options[e.target.selectedIndex].text;
+                                setPassiveModifierType(selectedType);
+                                if (selectedType !== 'Strength' && selectedType !== 'Endurance') {
+                                    setPassiveTarget('');
+                                }
+                            }} style={{ flex: 1, minWidth: 'auto' }}>
                                 <option value="">-- Select Type --</option>
                                 <option value="fate">Maximum Fate</option>
                                 <option value="strength">Strength</option>
                                 <option value="endurance">Endurance</option>
                             </select>
-                            {passiveModifierType !== 'Maximum Fate' && (
+                            {(passiveModifierType === 'Strength' || passiveModifierType === 'Endurance') && (
                                 <select id="passive_target" name="passive_target" onChange={e => setPassiveTarget(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
                                     <option value="">-- Select Target --</option>
                                     <option value="enemy">Enemy</option>
