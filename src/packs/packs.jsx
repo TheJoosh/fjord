@@ -1,4 +1,5 @@
 import React from 'react';
+import { NavLink } from 'react-router-dom';
 import '../app.css';
 import { getUser } from '../data/users';
 
@@ -51,7 +52,7 @@ export function Packs({ userName }) {
                         <button className="open">Unopened Packs: {mythboundPackCount}</button>
                     </div>
                 </div>
-                                <button className="design packs-more-btn" href="designer.html">Get more Packs!</button>
+                    <NavLink className="design packs-more-btn" to="/designer">Get more Packs!</NavLink>
             </div>
         </div>
     </main>
