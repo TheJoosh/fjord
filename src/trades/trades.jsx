@@ -7,7 +7,16 @@ export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
-    const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
+        const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
+        const [selectedTradeCards, setSelectedTradeCards] = React.useState(() => {
+            try {
+                const raw = localStorage.getItem(tradeSelectionStorageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        });
         const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
         recalcCardValues(users);
@@ -57,6 +66,20 @@ export function Trades({ userName }) {
             if (!isDeckOverlayOpen) return;
             setOwnedDeckCards(buildOwnedDeckCards());
         }, [isDeckOverlayOpen, buildOwnedDeckCards]);
+
+        React.useEffect(() => {
+            try {
+                const raw = localStorage.getItem(tradeSelectionStorageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
+            } catch {
+                setSelectedTradeCards([]);
+            }
+        }, [tradeSelectionStorageKey]);
+
+        React.useEffect(() => {
+            localStorage.setItem(tradeSelectionStorageKey, JSON.stringify(selectedTradeCards));
+        }, [tradeSelectionStorageKey, selectedTradeCards]);
 
         const handleDeckCardClick = (clickedCard) => {
             const cardName = clickedCard?.name;
