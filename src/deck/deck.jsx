@@ -16,12 +16,12 @@ export function Deck({ userName }) {
       </div>
 
       <div className="container-fluid">
-        <div className="row">
+        <div className="row deck-row">
           {cardNames.map((name) => {
             const card = getCardByName(name);
             if (!card) return null;
             return (
-              <div className="col" key={name}>
+              <div className="col deck-col" key={name}>
                 <Card
                   image={card.image}
                   name={card.name}

@@ -141,6 +141,14 @@ body {
   padding: 10px;
   top: 60px;
   left: 10px;
+.deck-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  justify-content: flex-start;
+  align-items: start;
+  padding: 0;
+}
   position: absolute;
 }
 
@@ -444,5 +452,30 @@ button {
 
   .designer {
     flex-direction: column;;
+  }
+}
+
+.deck-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  justify-content: flex-start;
+  align-items: start;
+  padding: 8px 0;
+}
+
+.deck-col {
+  flex: 0 0 300px; /* fixed card width to match .fj-card */
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+@media screen and (max-width: 600px) {
+  .deck-row {
+    gap: 2px;
+  }
+  .deck-col {
+    flex: 0 0 150px;
   }
 }
