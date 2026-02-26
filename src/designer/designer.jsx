@@ -107,7 +107,7 @@ export function Designer() {
                     {abilities === 'Spell' && (
                         <div>
                             <span>Spell Description:</span>
-                            <input value={spellDescription} onChange={e => setSpellDescription(e.target.value)} type="text" placeholder="Enter spell description" maxLength="120" />
+                            <textarea value={spellDescription} onChange={e => setSpellDescription(e.target.value)} placeholder="Enter spell description" maxLength="85" style={{ minHeight: '60px', resize: 'vertical' }}></textarea>
                         </div>
                     )}
 
