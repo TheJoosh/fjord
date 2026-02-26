@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Card } from '../deck/card';
 
 export function Designer() { 
@@ -10,6 +10,7 @@ export function Designer() {
     const [abilities, setAbilities] = useState('');
     const [spellDescription, setSpellDescription] = useState('');
     const [passiveValue, setPassiveValue] = useState('1');
+    const [commandValue, setCommandValue] = useState('1');
     const [passiveModifierType, setPassiveModifierType] = useState('');
     const [passiveTarget, setPassiveTarget] = useState('');
 
@@ -58,13 +59,56 @@ export function Designer() {
     const stats = calculateStats();
     const statSum = stats.strength !== '-' && stats.endurance !== '-' ? stats.strength + stats.endurance : 0;
 
+    function getValueMax() {
+        if (stats.strength === '-' || stats.endurance === '-') return 1;
+        return Math.max(1, stats.strength + stats.endurance - 2);
+    }
+
+    function handleBoundedValueChange(e, setter) {
+        const value = e.target.value;
+        const max = getValueMax();
+
+        if (value === '') {
+            setter('1');
+            return;
+        }
+
+        const num = parseInt(value, 10);
+        if (isNaN(num)) {
+            setter('1');
+            return;
+        }
+
+        setter(Math.min(max, Math.max(1, num)).toString());
+    }
+
+    useEffect(() => {
+        const max = getValueMax();
+        const parsedPassive = parseInt(passiveValue, 10);
+        const parsedCommand = parseInt(commandValue, 10);
+
+        if (isNaN(parsedPassive) || parsedPassive < 1) {
+            setPassiveValue('1');
+        } else if (parsedPassive > max) {
+            setPassiveValue(max.toString());
+        }
+
+        if (isNaN(parsedCommand) || parsedCommand < 1) {
+            setCommandValue('1');
+        } else if (parsedCommand > max) {
+            setCommandValue(max.toString());
+        }
+    }, [cost, balance, passiveValue, commandValue]);
+
     function calculatePassiveStats() {
         if (stats.strength === '-' || stats.endurance === '-') {
             return stats;
         }
         
         const passiveVal = parseInt(passiveValue, 10) || 0;
-        if (passiveVal === 0) return stats;
+        const commandVal = parseInt(commandValue, 10) || 0;
+        const totalReduction = abilities === 'Command' ? passiveVal + commandVal : passiveVal;
+        if (totalReduction === 0) return stats;
         
         let strength = stats.strength;
         let endurance = stats.endurance;
@@ -72,7 +116,7 @@ export function Designer() {
         // For defensive balance, start reducing endurance; otherwise start with strength
         const startWithEndurance = balance === 'Defensive';
         
-        for (let i = 0; i < passiveVal; i++) {
+        for (let i = 0; i < totalReduction; i++) {
             if ((startWithEndurance && i % 2 === 0) || (!startWithEndurance && i % 2 === 1)) {
                 endurance = Math.max(1, endurance - 1);
             } else {
@@ -83,7 +127,7 @@ export function Designer() {
         return { strength, endurance };
     }
 
-    const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight') ? calculatePassiveStats() : stats;
+    const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight' || abilities === 'Command') ? calculatePassiveStats() : stats;
 
     function generatePassiveDescription() {
         if (!passiveModifierType) {
@@ -169,19 +213,26 @@ export function Designer() {
 
                     {abilities === 'Flight' && (
                         <div>
-                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
                         </div>
                     )}
 
                     {abilities === 'Forge' && (
                         <div>
-                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
+                        </div>
+                    )}
+
+                    {abilities === 'Command' && (
+                        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
                         </div>
                     )}
 
                     {abilities === 'Passive' && (
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                            <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
                             <select id="passive_type" name="passive_type" onChange={e => {
                                 const selectedType = e.target.options[e.target.selectedIndex].text;
                                 setPassiveModifierType(selectedType);
