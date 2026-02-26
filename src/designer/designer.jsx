@@ -22,6 +22,7 @@ export function Designer({ userName }) {
     const [pexelsError, setPexelsError] = useState('');
     const [pexelsResults, setPexelsResults] = useState([]);
     const [isPexelsOverlayOpen, setIsPexelsOverlayOpen] = useState(false);
+    const [submitMessage, setSubmitMessage] = useState('');
 
     const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
@@ -371,6 +372,8 @@ export function Designer({ userName }) {
         e.preventDefault();
         if (!isSubmitReady) return;
 
+        setSubmitMessage('');
+
         const cardName = title.trim();
         if (!cardName) return;
 
@@ -426,6 +429,8 @@ export function Designer({ userName }) {
 
                     users[activeUserName].packs[rewardPackKey] =
                         (parseInt(users[activeUserName].packs[rewardPackKey], 10) || 0) + 1;
+
+                    setSubmitMessage(`You earned a ${rewardPackKey}`);
 
                     const userPacksStorageKey = 'usersPacks';
                     let packsMap = {};
@@ -633,6 +638,12 @@ export function Designer({ userName }) {
                     {isSubmitReady && (
                         <div>
                             <button type="submit" className="submit-card-btn">Submit Card</button>
+                        </div>
+                    )}
+
+                    {submitMessage && (
+                        <div>
+                            <span>{submitMessage}</span>
                         </div>
                     )}
 
