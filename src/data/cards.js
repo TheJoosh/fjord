@@ -1,13 +1,14 @@
-/*
- * Mock card database.  This will eventually be replaced by a real backend
- * datasource.  For now it's a simple in-memory object grouped by rarity.
- *
- * Consumers only need a card's name; helper functions look up the remaining
- * fields from this structure.
- */
-
 export const cardsByRarity = {
-  Legendary: {
+    Placeholder: {
+      image: "Placeholder.png",
+      cardType: "Card",
+      cost: "-",
+      description: 
+        "This is a placeholder card. Please replace it with your own design!",
+      strength: "-",
+      endurance: "-",
+    },
+    Legendary: {
     "Loki, God of Mischief": {
       image: "loki.png",
       cardType: "God",
