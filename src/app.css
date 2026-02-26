@@ -258,6 +258,20 @@ li {
   font-size: 14px;
 }
 
+.deck-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.show-duplicates-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+}
+
 .sort-by-control select {
   font-family: "Cinzel";
   background-image: url("../public/wood.jpg");

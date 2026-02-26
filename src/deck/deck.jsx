@@ -8,6 +8,7 @@ export function Deck({ userName }) {
   const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
+  const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = localStorage.getItem(sortByStorageKey);
     return sortOptions.includes(saved) ? saved : 'Rarity';
@@ -93,14 +94,24 @@ export function Deck({ userName }) {
       <div className="user">
         <div className="user-header-row">
           <h2>{title}</h2>
-          <label className="sort-by-control">
-            <span>Sort By</span>
-            <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-              {sortOptions.map((option) => (
-                <option key={option} value={option}>{option}</option>
-              ))}
-            </select>
-          </label>
+          <div className="deck-controls">
+            <label className="sort-by-control">
+              <span>Sort By</span>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                {sortOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label className="show-duplicates-control">
+              <input
+                type="checkbox"
+                checked={showDuplicates}
+                onChange={(e) => setShowDuplicates(e.target.checked)}
+              />
+              <span>Show duplicates</span>
+            </label>
+          </div>
         </div>
         {userName && (
           <div className="deck-value">
@@ -115,7 +126,8 @@ export function Deck({ userName }) {
             const card = entry.card;
             if (!card) return [];
             const qty = entry.qty || 0;
-            return Array.from({ length: qty }).map((_, i) => (
+            const copiesToRender = showDuplicates ? qty : 1;
+            return Array.from({ length: copiesToRender }).map((_, i) => (
               <div className="col deck-col" key={`${entry.name}-${i}`}>
                 <Card
                   image={card.image}
