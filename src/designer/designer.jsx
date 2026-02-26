@@ -14,6 +14,11 @@ export function Designer() {
     const [commandValue, setCommandValue] = useState('1');
     const [passiveModifierType, setPassiveModifierType] = useState('');
     const [passiveTarget, setPassiveTarget] = useState('');
+    const [pexelsQuery, setPexelsQuery] = useState('');
+    const [isFetchingPexels, setIsFetchingPexels] = useState(false);
+    const [pexelsError, setPexelsError] = useState('');
+
+    const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
     function handleFileChange(e) {
         const input = e.target;
@@ -40,6 +45,41 @@ export function Designer() {
             if (num < 2 && abilities === 'Command') {
                 setAbilities('');
             }
+        }
+    }
+
+    async function handlePexelsFetch() {
+        const query = (pexelsQuery || title || cardType || 'mythology').trim();
+        if (!query) return;
+
+        setIsFetchingPexels(true);
+        setPexelsError('');
+
+        try {
+            const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=portrait`, {
+                headers: {
+                    Authorization: PEXELS_API_KEY,
+                },
+            });
+
+            if (!response.ok) {
+                throw new Error('Pexels request failed');
+            }
+
+            const data = await response.json();
+            const photo = data?.photos?.[0];
+            const imageUrl = photo?.src?.large2x || photo?.src?.large || photo?.src?.original;
+
+            if (!imageUrl) {
+                setPexelsError('No images found for that search.');
+                return;
+            }
+
+            setPreviewImage(imageUrl);
+        } catch (error) {
+            setPexelsError('Unable to load image from Pexels right now.');
+        } finally {
+            setIsFetchingPexels(false);
         }
     }
 
@@ -283,6 +323,25 @@ export function Designer() {
                     <div>
                         <span>Image:</span>
                         <input onChange={handleFileChange} type="file" id="image_uploads" name="image_uploads" accept="image/png, image/jpeg" />
+                        <div className="pexels-actions">
+                            <input
+                                className="pexels-query"
+                                value={pexelsQuery}
+                                onChange={e => setPexelsQuery(e.target.value)}
+                                type="text"
+                                placeholder="Search Pexels"
+                            />
+                            <button
+                                type="button"
+                                className="pexels-logo-btn"
+                                onClick={handlePexelsFetch}
+                                disabled={isFetchingPexels}
+                                title="Fetch image from Pexels"
+                            >
+                                <img src="https://images.pexels.com/lib/api/pexels-white.png" alt="Pexels" />
+                            </button>
+                        </div>
+                        {pexelsError && <div className="pexels-error">{pexelsError}</div>}
                     </div>
 
                     <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
