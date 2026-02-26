@@ -64,9 +64,16 @@ export function Designer() {
         return Math.max(1, stats.strength + stats.endurance - 2);
     }
 
-    function handleBoundedValueChange(e, setter) {
-        const value = e.target.value;
+    function getCommandFieldMax(otherValue) {
         const max = getValueMax();
+        const other = parseInt(otherValue, 10);
+        const safeOther = isNaN(other) ? 1 : Math.max(1, other);
+        return Math.max(1, max - safeOther);
+    }
+
+    function handleBoundedValueChange(e, setter, options = {}) {
+        const value = e.target.value;
+        const max = options.maxOverride ?? (options.coupled ? getCommandFieldMax(options.otherValue) : getValueMax());
 
         if (value === '') {
             setter('1');
@@ -84,21 +91,26 @@ export function Designer() {
 
     useEffect(() => {
         const max = getValueMax();
-        const parsedPassive = parseInt(passiveValue, 10);
-        const parsedCommand = parseInt(commandValue, 10);
+        let nextPassive = parseInt(passiveValue, 10);
+        let nextCommand = parseInt(commandValue, 10);
 
-        if (isNaN(parsedPassive) || parsedPassive < 1) {
-            setPassiveValue('1');
-        } else if (parsedPassive > max) {
-            setPassiveValue(max.toString());
+        nextPassive = isNaN(nextPassive) ? 1 : Math.min(max, Math.max(1, nextPassive));
+        nextCommand = isNaN(nextCommand) ? 1 : Math.min(max, Math.max(1, nextCommand));
+
+        if (abilities === 'Command' && nextPassive + nextCommand > max) {
+            nextCommand = Math.max(1, max - nextPassive);
+            if (nextPassive + nextCommand > max) {
+                nextPassive = Math.max(1, max - nextCommand);
+            }
         }
 
-        if (isNaN(parsedCommand) || parsedCommand < 1) {
-            setCommandValue('1');
-        } else if (parsedCommand > max) {
-            setCommandValue(max.toString());
+        if (nextPassive.toString() !== passiveValue) {
+            setPassiveValue(nextPassive.toString());
         }
-    }, [cost, balance, passiveValue, commandValue]);
+        if (nextCommand.toString() !== commandValue) {
+            setCommandValue(nextCommand.toString());
+        }
+    }, [cost, balance, abilities, passiveValue, commandValue]);
 
     function calculatePassiveStats() {
         if (stats.strength === '-' || stats.endurance === '-') {
@@ -128,6 +140,16 @@ export function Designer() {
     }
 
     const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight' || abilities === 'Command') ? calculatePassiveStats() : stats;
+
+    function getCommandInputMax(currentValue, otherValue) {
+        const coupledMax = getCommandFieldMax(otherValue);
+        if (displayStats.strength === 1 && displayStats.endurance === 1) {
+            const current = parseInt(currentValue, 10);
+            const safeCurrent = isNaN(current) ? 1 : Math.max(1, current);
+            return Math.min(coupledMax, safeCurrent);
+        }
+        return coupledMax;
+    }
 
     function generatePassiveDescription() {
         if (!passiveModifierType) {
@@ -225,8 +247,8 @@ export function Designer() {
 
                     {abilities === 'Command' && (
                         <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
-                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
                         </div>
                     )}
 
