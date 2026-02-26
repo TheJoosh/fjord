@@ -10,6 +10,12 @@ export const users = {
       "Bear Shaman": 1,
       "Leif Erikson": 1,
     },
+    packs: {
+      "Default Pack": 2,
+      "Saga Pack": 1,
+      "Mythbound Pack": 0,
+      "Heroic Pack": 1,
+    }
   },
   Steven: {
     password: "steve_pw",
@@ -20,6 +26,12 @@ export const users = {
       "Dökkálfr": 1,
       "Ljósálfr": 2,
     },
+    packs: {
+      "Default Pack": 1,
+      "Saga Pack": 2,
+      "Mythbound Pack": 1,
+      "Heroic Pack": 0,
+    }
   },
   Lucy: {
     password: "lucy$$$",
@@ -33,6 +45,12 @@ export const users = {
       "Valkyrie": 1,
       "Leif Erikson": 1,
     },
+    packs: {
+      "Default Pack": 1,
+      "Saga Pack": 0,
+      "Mythbound Pack": 0,
+      "Heroic Pack": 0,
+    }
   },
 };
 
