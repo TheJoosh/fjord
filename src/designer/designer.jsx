@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { Card } from '../deck/card';
 
-export function Designer() {
+export function Designer() { 
     const [previewImage, setPreviewImage] = useState(null);
     const [title, setTitle] = useState('');
     const [cardType, setCardType] = useState('');
+    const [cost, setCost] = useState('');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -15,6 +16,18 @@ export function Designer() {
             setPreviewImage(reader.result);
         };
         reader.readAsDataURL(file);
+    }
+
+    function handleCostChange(e) {
+        const value = e.target.value;
+        if (value === '') {
+            setCost('');
+            return;
+        }
+        const num = parseInt(value, 10);
+        if (!isNaN(num) && num >= 1 && num <= 5) {
+            setCost(num.toString());
+        }
     }
 
     return (
@@ -50,18 +63,16 @@ export function Designer() {
 
                     <div>
                         <span>Cost:</span>
-                        <input type="number" min="1" max="5" placeholder="Fate cost" required />
+                    <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
                     </div>
-
-                    <div>
-                        <span>Abilities:</span>
-                        <textarea placeholder="Abilities" required></textarea>
-                    </div>
-
-                    <button type="submit">Submit Design</button>
                 </form>
 
-                <Card image={previewImage || "Default.png"} strength={"-"} endurance={"-"} cost={"-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={"Description"}/>
+                <div>
+                    <span>Abilities:</span>
+                    <textarea placeholder="Abilities" required></textarea>
+                </div>
+
+                <Card image={previewImage || "Default.png"} strength={"-"} endurance={"-"} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={"Description"}/>
             </div>
 
         </main>
