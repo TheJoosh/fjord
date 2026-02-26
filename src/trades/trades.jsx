@@ -6,21 +6,107 @@ import { getUser, users } from '../data/users';
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
+        const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
+        const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
         recalcCardValues(users);
         const activeUser = getUser(userName);
 
-        const ownedDeckCards = activeUser
-            ? Object.keys(activeUser.cards || {})
-                    .map((name) => {
-                        const qty = Math.max(0, parseInt(activeUser.cards[name], 10) || 0);
-                        const card = getCardByName(name);
-                        if (!card || qty <= 0) return null;
-                        return { ...card, qty };
-                    })
-                    .filter(Boolean)
-                    .sort((a, b) => a.name.localeCompare(b.name))
-            : [];
+        const buildOwnedDeckCards = React.useCallback(() => {
+            const fallbackCards = activeUser?.cards || {};
+            let sourceEntries = [];
+
+            if (ownedCardsStorageKey) {
+                try {
+                    const raw = localStorage.getItem(ownedCardsStorageKey);
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    if (Array.isArray(parsed)) {
+                        sourceEntries = parsed;
+                    }
+                } catch {
+                    sourceEntries = [];
+                }
+            }
+
+            const byName = new Map();
+
+            if (sourceEntries.length > 0) {
+                for (const entry of sourceEntries) {
+                    if (!entry?.name) continue;
+                    const currentQty = byName.get(entry.name) || 0;
+                    byName.set(entry.name, currentQty + Math.max(0, parseInt(entry.qty, 10) || 0));
+                }
+            } else {
+                for (const [name, qty] of Object.entries(fallbackCards)) {
+                    byName.set(name, Math.max(0, parseInt(qty, 10) || 0));
+                }
+            }
+
+            return Array.from(byName.entries())
+                .map(([name, qty]) => {
+                    const card = getCardByName(name);
+                    if (!card || qty <= 0) return null;
+                    return { ...card, qty };
+                })
+                .filter(Boolean)
+                .sort((a, b) => a.name.localeCompare(b.name));
+        }, [activeUser, ownedCardsStorageKey]);
+
+        React.useEffect(() => {
+            if (!isDeckOverlayOpen) return;
+            setOwnedDeckCards(buildOwnedDeckCards());
+        }, [isDeckOverlayOpen, buildOwnedDeckCards]);
+
+        const handleDeckCardClick = (cardName) => {
+            if (!ownedCardsStorageKey || !cardName) return;
+
+            const currentQty = Math.max(0, parseInt(activeUser?.cards?.[cardName], 10) || 0);
+            if (activeUser?.cards && currentQty > 0) {
+                if (currentQty <= 1) {
+                    delete activeUser.cards[cardName];
+                } else {
+                    activeUser.cards[cardName] = currentQty - 1;
+                }
+            }
+
+            let sourceEntries = [];
+            try {
+                const raw = localStorage.getItem(ownedCardsStorageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                sourceEntries = Array.isArray(parsed) ? parsed : [];
+            } catch {
+                sourceEntries = [];
+            }
+
+            const byName = new Map();
+            if (sourceEntries.length > 0) {
+                for (const entry of sourceEntries) {
+                    if (!entry?.name) continue;
+                    const existingQty = byName.get(entry.name) || 0;
+                    byName.set(entry.name, existingQty + Math.max(0, parseInt(entry.qty, 10) || 0));
+                }
+            } else {
+                for (const [name, qty] of Object.entries(activeUser?.cards || {})) {
+                    byName.set(name, Math.max(0, parseInt(qty, 10) || 0));
+                }
+            }
+
+            const nextQty = Math.max(0, (byName.get(cardName) || 0) - 1);
+            if (nextQty > 0) {
+                byName.set(cardName, nextQty);
+            } else {
+                byName.delete(cardName);
+            }
+
+            const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
+                name,
+                qty,
+                card: getCardByName(name),
+            }));
+
+            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+            setOwnedDeckCards(buildOwnedDeckCards());
+        };
 
   return (
         <main className="trades-page">
@@ -100,16 +186,23 @@ export function Trades({ userName }) {
                         <div className="row deck-row pack-overlay-cards">
                             {ownedDeckCards.map((card) => (
                                 <div key={card.name} className="col deck-col pack-overlay-col">
-                                    <Card
-                                        image={card.image}
-                                        name={card.name}
-                                        cost={card.cost}
-                                        rarity={card.rarity}
-                                        cardType={card.cardType}
-                                        description={card.description}
-                                        strength={card.strength}
-                                        endurance={card.endurance}
-                                    />
+                                    <button
+                                        type="button"
+                                        className="trade-deck-card-btn"
+                                        onClick={() => handleDeckCardClick(card.name)}
+                                        title="Remove 1 from your deck"
+                                    >
+                                        <Card
+                                            image={card.image}
+                                            name={card.name}
+                                            cost={card.cost}
+                                            rarity={card.rarity}
+                                            cardType={card.cardType}
+                                            description={card.description}
+                                            strength={card.strength}
+                                            endurance={card.endurance}
+                                        />
+                                    </button>
                                     <div className="card-value mt-1">
                                         <div className="card-meta-row">
                                             <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
