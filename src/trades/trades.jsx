@@ -292,20 +292,6 @@ export function Trades({ userName }) {
         <section className="other">
             <div className="container-fluid">
                 <div className="row">
-                    <div className="col">
-                        <div className="fj-card">
-                            <div className="card-image">
-                                <img src="Card Images/thor.png" alt="Thor, God of Thunder"/>
-                            </div>
-                            <div className="card-cost">5</div>
-                            <div className="card-content">
-                                <h1 className="card-name">Thor, God of Thunder</h1>
-                                <span className="card-type">Legendary Warrior</span>
-                                <span className="card-description">Passive - the strength of all enemy warriors is reduced by 1 while this card is in play</span>
-                            </div>
-                            <div className="card-stats">5/3</div>
-                        </div>
-                    </div>
                 </div>
             </div>
                 
