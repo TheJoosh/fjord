@@ -60,7 +60,7 @@ export function Designer() {
         setPexelsResults([]);
 
         try {
-            const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=12&orientation=portrait`, {
+            const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=120&orientation=portrait`, {
                 headers: {
                     Authorization: PEXELS_API_KEY,
                 },
