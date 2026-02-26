@@ -9,6 +9,8 @@ import { Deck } from './deck/deck';
 import { Designer } from './designer/designer';
 import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
+import { getUser } from './data/users';
+import { getCardByName } from './data/cards';
 
 export default function App() {
 
@@ -17,7 +19,56 @@ export default function App() {
   const [authState, setAuthState] = React.useState(currentAuthState);
   const navigate = useNavigate();
 
+    const restoreTradedCardsOnLogout = (activeUserName) => {
+        if (!activeUserName) return;
+
+        const tradeSelectionStorageKey = `tradeSelection:${activeUserName}`;
+        const ownedCardsStorageKey = `ownedCards:${activeUserName}`;
+
+        let selectedTradeCards = [];
+        try {
+            const rawTradeSelection = localStorage.getItem(tradeSelectionStorageKey);
+            const parsedTradeSelection = rawTradeSelection ? JSON.parse(rawTradeSelection) : [];
+            selectedTradeCards = Array.isArray(parsedTradeSelection) ? parsedTradeSelection : [];
+        } catch {
+            selectedTradeCards = [];
+        }
+
+        if (!selectedTradeCards.length) {
+            localStorage.removeItem(tradeSelectionStorageKey);
+            return;
+        }
+
+        const restoreCounts = new Map();
+        for (const card of selectedTradeCards) {
+            if (!card?.name) continue;
+            restoreCounts.set(card.name, (restoreCounts.get(card.name) || 0) + 1);
+        }
+
+        const user = getUser(activeUserName);
+        if (user) {
+            user.cards = user.cards || {};
+            for (const [name, qty] of restoreCounts.entries()) {
+                user.cards[name] = (parseInt(user.cards[name], 10) || 0) + qty;
+            }
+
+            const nextOwned = Object.entries(user.cards)
+                .map(([name, qty]) => ({
+                    name,
+                    qty: Math.max(0, parseInt(qty, 10) || 0),
+                    card: getCardByName(name),
+                }))
+                .filter(entry => entry.qty > 0);
+
+            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+        }
+
+        localStorage.removeItem(tradeSelectionStorageKey);
+    };
+
   const logout = () => {
+        const logoutUserName = userName;
+        restoreTradedCardsOnLogout(logoutUserName);
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
     localStorage.removeItem('userName');
