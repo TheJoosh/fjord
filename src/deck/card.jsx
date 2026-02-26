@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function Card({ image, name, cost, type, description, strength, endurance }) {
+export function Card({ image, name, cost, rarity, cardType, description, strength, endurance }) {
   const stats = strength === '-' && endurance === '-' ? '-/-' : `${strength}/${endurance}`;
 
   return (
@@ -11,7 +11,7 @@ export function Card({ image, name, cost, type, description, strength, endurance
       <div className="card-cost">{cost}</div>
       <div className="card-content">
         <h1 className="card-name">{name}</h1>
-        <span className="card-type">{type}</span>
+        <span className="card-type">{rarity} {cardType}</span>
         <span className="card-description">{description}</span>
       </div>
       <div className="card-stats">{stats}</div>
