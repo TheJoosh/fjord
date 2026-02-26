@@ -518,14 +518,14 @@ main {
 
 .pack-overlay-cards {
   gap: 0;
-  --bs-gutter-x: 1px;
+  --bs-gutter-x: 0;
   --bs-gutter-y: 1px;
 }
 
 .pack-overlay-col {
   flex: 0 0 195px;
-  padding-left: 1px;
-  padding-right: 1px;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 .pack-overlay-col .fj-card {
@@ -793,6 +793,13 @@ button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.deck-col.pack-overlay-col {
+  flex: 0 0 195px;
+  max-width: 195px;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 @media screen and (max-width: 600px) {
