@@ -7,6 +7,7 @@ export function Designer() {
     const [cardType, setCardType] = useState('');
     const [cost, setCost] = useState('');
     const [balance, setBalance] = useState('');
+    const [abilities, setAbilities] = useState('');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -89,16 +90,24 @@ export function Designer() {
                     </div>
 
                     <div>
+                        <label htmlFor="card_abilities">Abilities:</label>
+                        <select id="card_abilities" name="abilities" required onChange={e => setAbilities(e.target.options[e.target.selectedIndex].text)}>
+                            <option value="">-- Select Ability --</option>
+                            <option value="berserk">Berserk</option>
+                            <option value="command">Command</option>
+                            <option value="flight">Flight</option>
+                            <option value="forge">Forge</option>
+                            <option value="passive">Passive</option>
+                            <option value="spell">Spell</option>
+                            <option value="swift">Swift</option>
+                        </select>
+                    </div>
+
+                    <div>
                         <span>Cost:</span>
-                    <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
+                        <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
                     </div>
                 </form>
-
-                <div>
-                    <span>Abilities:</span>
-                    <textarea placeholder="Abilities" required></textarea>
-                </div>
-
                 <Card image={previewImage || "Default.png"} strength={stats.strength} endurance={stats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={"Description"}/>
             </div>
 
