@@ -3,6 +3,8 @@ import { Card } from '../deck/card';
 
 export function Designer() {
     const [previewImage, setPreviewImage] = useState(null);
+    const [title, setTitle] = useState('Your Card');
+    const [cardType, setCardType] = useState('Type');
 
     function handleFileChange(e) {
         const input = e.target;
@@ -27,12 +29,12 @@ export function Designer() {
 
                     <div>
                         <span>Title:</span>
-                        <input type="text" placeholder="Card Title" required />
+                        <input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="Card Title" required />
                     </div>
 
                     <div>
                         <label htmlFor="card_class">class:</label>
-                        <select id="card_class" name="class" required>
+                        <select id="card_class" name="class" required onChange={e => setCardType(e.target.options[e.target.selectedIndex].text)}>
                             <option value="warrior">Warrior</option>
                             <option value="chieftan">Chieftan</option>
                             <option value="god">God</option>
@@ -58,7 +60,7 @@ export function Designer() {
                     <button type="submit">Submit Design</button>
                 </form>
 
-                <Card image={previewImage || "Default.png"} strength={"-"} endurance={"-"} cost={"-"} name={"Your Card"} rarity={"Common"} cardType={"Type"} description={"Description"}/>
+                <Card image={previewImage || "Default.png"} strength={"-"} endurance={"-"} cost={"-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType} description={"Description"}/>
             </div>
 
         </main>
