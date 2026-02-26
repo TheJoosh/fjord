@@ -127,18 +127,37 @@ export function Deck({ userName }) {
             if (!card) return [];
             const qty = entry.qty || 0;
             const copiesToRender = showDuplicates ? qty : 1;
+            const showStack = !showDuplicates && qty > 1;
             return Array.from({ length: copiesToRender }).map((_, i) => (
               <div className="col deck-col" key={`${entry.name}-${i}`}>
-                <Card
-                  image={card.image}
-                  name={card.name}
-                  cost={card.cost}
-                  rarity={card.rarity}
-                  cardType={card.cardType}
-                  description={card.description}
-                  strength={card.strength}
-                  endurance={card.endurance}
-                />
+                <div className={showStack ? 'card-stack' : ''}>
+                  {showStack && (
+                    <div className="card-stack-ghost" aria-hidden="true">
+                      <Card
+                        image={card.image}
+                        name={card.name}
+                        cost={card.cost}
+                        rarity={card.rarity}
+                        cardType={card.cardType}
+                        description={card.description}
+                        strength={card.strength}
+                        endurance={card.endurance}
+                      />
+                    </div>
+                  )}
+                  <div className="card-stack-main">
+                    <Card
+                      image={card.image}
+                      name={card.name}
+                      cost={card.cost}
+                      rarity={card.rarity}
+                      cardType={card.cardType}
+                      description={card.description}
+                      strength={card.strength}
+                      endurance={card.endurance}
+                    />
+                  </div>
+                </div>
                 <div className="card-value mt-1">
                   <div className="card-meta-row">
                     <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
