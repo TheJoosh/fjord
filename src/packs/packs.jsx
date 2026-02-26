@@ -1,7 +1,16 @@
 import React from 'react';
 import '../app.css';
+import { getUser } from '../data/users';
 
-export function Packs() {
+export function Packs({ userName }) {
+    const user = getUser(userName);
+    const packs = user?.packs || {};
+
+    const defaultPackCount = packs['Default Pack'] ?? 0;
+    const sagaPackCount = packs['Saga Pack'] ?? 0;
+    const heroicPackCount = packs['Heroic Pack'] ?? 0;
+    const mythboundPackCount = packs['Mythbound Pack'] ?? 0;
+
   return (
     <main>
         <div className="container-fluid">
@@ -12,7 +21,7 @@ export function Packs() {
                         <h3>Normal Pack</h3>
                         <h4>$2.00</h4>
                         <h4>10 cards</h4>
-                        <button className="open">Unopened Packs: 0</button>
+                        <button className="open">Unopened Packs: {defaultPackCount}</button>
                     </div>
                 </div>
 
@@ -21,7 +30,7 @@ export function Packs() {
                         <h3>Saga Pack</h3>
                         <h4>$3.50</h4>
                         <h4>10 cards - 2x Mythical and Legendary cards</h4>
-                        <button className="open">Unopened Packs: 0</button>
+                        <button className="open">Unopened Packs: {sagaPackCount}</button>
                     </div>
                 </div>
 
@@ -30,7 +39,7 @@ export function Packs() {
                         <h3>Heroic Pack</h3>
                         <h4>$6.00</h4>
                         <h4>8 cards - No Common cards</h4>
-                        <button className="open">Unopened Packs: 0</button>
+                        <button className="open">Unopened Packs: {heroicPackCount}</button>
                     </div>
                 </div>
 
@@ -39,7 +48,7 @@ export function Packs() {
                         <h3>Mythbound Pack</h3>
                         <h4>$10.00</h4>
                         <h4>5 cards - No Common or Uncommon cards</h4>
-                        <button className="open">Unopened Packs: 0</button>
+                        <button className="open">Unopened Packs: {mythboundPackCount}</button>
                     </div>
                 </div>
                 <button className="design" href="designer.html">Get more Packs!</button>

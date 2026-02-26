@@ -67,7 +67,7 @@ export default function App() {
                 <Route path='/deck' element={<Deck userName={userName} />} />
                 <Route path='/designer' element={<Designer />} />
                 <Route path='/trades' element={<Trades />} />
-                <Route path='/packs' element={<Packs />} />
+                <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='*' element={<NotFound />} />
             </Routes>
 
