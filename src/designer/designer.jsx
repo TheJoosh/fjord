@@ -326,7 +326,7 @@ export function Designer() {
                         <div>
                             <label htmlFor="card_abilities">Abilities:</label>
                             <select id="card_abilities" name="abilities" value={abilities} required onChange={e => {
-                                const selectedAbility = e.target.options[e.target.selectedIndex].text;
+                                const selectedAbility = e.target.value;
                                 setAbilities(selectedAbility);
                                 if (selectedAbility === 'Command') {
                                     setPassiveTarget('');
@@ -336,13 +336,13 @@ export function Designer() {
                                 }
                             }}>
                                 <option value="">-- Select Ability --</option>
-                                <option value="berserk" disabled={balance === 'Standard' && cost === '1'}>Berserk</option>
-                                <option value="command" disabled={Number(cost) < 2}>Command</option>
-                                <option value="flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
-                                <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
-                                <option value="passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
-                                <option value="spell">Spell</option>
-                                <option value="swift">Swift</option>
+                                <option value="Berserk" disabled={balance === 'Standard' && cost === '1'}>Berserk</option>
+                                <option value="Command" disabled={Number(cost) < 2}>Command</option>
+                                <option value="Flight" disabled={balance === 'Standard' && cost === '1'}>Flight</option>
+                                <option value="Forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
+                                <option value="Passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
+                                <option value="Spell">Spell</option>
+                                <option value="Swift">Swift</option>
                             </select>
                         </div>
                     )}
