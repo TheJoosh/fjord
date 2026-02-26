@@ -139,7 +139,7 @@ export function Designer() {
         return { strength, endurance };
     }
 
-    const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight' || abilities === 'Command') ? calculatePassiveStats() : stats;
+    const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight' || abilities === 'Command' || abilities === 'Berserk') ? calculatePassiveStats() : stats;
 
     function getCommandInputMax(currentValue, otherValue) {
         const coupledMax = getCommandFieldMax(otherValue);
