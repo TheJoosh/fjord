@@ -30,7 +30,7 @@ body {
   position: relative;
   z-index: 3;
   box-sizing: border-box;
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  transition: transform 50ms ease, box-shadow 200ms ease;
   will-change: transform;
   transform: perspective(1000px) translateY(var(--ty,0)) scale(var(--scale,1)) rotateX(var(--rx,0)) rotateY(var(--ry,0));
 }
@@ -281,10 +281,11 @@ main {
   border: 2px solid whitesmoke;
   border-radius: 15px;
   padding: 10px;
-  margin-bottom: 20px;
+  margin-bottom:20px;
   background-color: rgb(0, 0, 0, 0.6);
   position: relative;
-  transition: transform 200ms ease, box-shadow 200ms ease;
+  /* shorter transition for responsive tilt */
+  transition: transform 50ms ease, box-shadow 200ms ease;
   will-change: transform;
   transform: perspective(1000px) translateY(var(--ty,0)) scale(var(--scale,1)) rotateX(var(--rx,0)) rotateY(var(--ry,0));
 }
