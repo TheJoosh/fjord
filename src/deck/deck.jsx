@@ -10,6 +10,17 @@ export function Deck({ userName }) {
 
   const user = getUser(userName);
 
+  // calculate total deck value
+  let deckValue = 0;
+  if (user) {
+    for (const [name, qty] of Object.entries(user.cards || {})) {
+      const card = getCardByName(name);
+      if (card && typeof card.value === 'number') {
+        deckValue += card.value * (parseInt(qty, 10) || 0);
+      }
+    }
+  }
+
   // build list of owned cards with quantities
   const owned = user
     ? Object.keys(user.cards || {}).map(name => ({
@@ -48,6 +59,11 @@ export function Deck({ userName }) {
     <main>
       <div className="user">
         <h2>{title}</h2>
+        {userName && (
+          <div className="deck-value">
+            Deck Value: ${deckValue.toFixed(2)}
+          </div>
+        )}
       </div>
 
       <div className="container-fluid">
