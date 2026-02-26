@@ -32,10 +32,12 @@ body {
   box-sizing: border-box;
   transition: transform 200ms ease, box-shadow 200ms ease;
   will-change: transform;
+  transform: perspective(1000px) translateY(var(--ty,0)) scale(var(--scale,1)) rotateX(var(--rx,0)) rotateY(var(--ry,0));
 }
 
 .fj-card:hover {
-  transform: translateY(-8px) scale(1.02);
+  --ty: -8px;
+  --scale: 1.02;
   box-shadow: 0 20px 40px rgba(0,0,0,0.45);
   z-index: 6;
 }
@@ -284,10 +286,12 @@ main {
   position: relative;
   transition: transform 200ms ease, box-shadow 200ms ease;
   will-change: transform;
+  transform: perspective(1000px) translateY(var(--ty,0)) scale(var(--scale,1)) rotateX(var(--rx,0)) rotateY(var(--ry,0));
 }
 
 .cardpack:hover {
-  transform: translateY(-6px) scale(1.02);
+  --ty: -6px;
+  --scale: 1.02;
   box-shadow: 0 16px 32px rgba(0,0,0,0.35);
   z-index: 4;
 }
