@@ -47,7 +47,7 @@ export function Designer() {
                 <button type="submit">Submit Design</button>
             </form>
 
-            <Card image="Default.png"strength={"-"} endurance={"-"} cost={"-"} name={"Your Card"} type={"Type"} description={"Description"}/>
+            <Card image="Default.png" strength={"-"} endurance={"-"} cost={"-"} name={"Your Card"} rarity={"Common"} cardType={"Type"} description={"Description"}/>
         </div>
 
             
