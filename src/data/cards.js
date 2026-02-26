@@ -17,6 +17,7 @@ export const cardsByRarity = {
         "Spell - each turn, this card assumes the strength and endurance of any other card in play",
       strength: "-",
       endurance: "-",
+      value: 0,
     },
     "Thrym, Frost Giant King": {
       image: "frost-giant.png",
@@ -25,6 +26,7 @@ export const cardsByRarity = {
       description: "Berserk - gains +2 strength while attacking",
       strength: 3,
       endurance: 5,
+      value: 0,
     },
     "Odin, King of the Gods": {
       image: "mythologyart-odin-10069805_1280.png",
@@ -33,6 +35,7 @@ export const cardsByRarity = {
       description: "Passive - +2 maximum fate while this card is in play",
       strength: 4,
       endurance: 5,
+      value: 0,
     },
     "Thor, God of Thunder": {
       image: "thor.png",
@@ -42,6 +45,7 @@ export const cardsByRarity = {
         "Passive - the strength of all enemy cards is reduced by 1 while this card is in play",
       strength: 5,
       endurance: 3,
+      value: 0,
     },
   },
   Mythical: {
@@ -170,4 +174,45 @@ export function getCardByName(name) {
     }
   }
   return null;
+}
+
+// given an object of users (like the one exported from users.js),
+// compute total quantities for each card and update the `value` field
+// on every entry in cardsByRarity according to the supplied formula.
+export function recalcCardValues(usersObj) {
+  // rarity score mapping
+  const rarityScores = {
+    Common: 2,
+    Uncommon: 4,
+    Rare: 6,
+    Loric: 8,
+    Mythical: 10,
+    Legendary: 12,
+  };
+
+  // accumulate totals T across all users
+  const totals = {};
+  for (const user of Object.values(usersObj || {})) {
+    if (user.cards) {
+      for (const [name, qty] of Object.entries(user.cards)) {
+        totals[name] = (totals[name] || 0) + (parseInt(qty, 10) || 0);
+      }
+    }
+  }
+
+  // helper to compute value for a single card
+  const compute = (rarity, name) => {
+    const R = rarityScores[rarity] || 0;
+    const T = totals[name] || 0;
+    if (T <= 0) return 0;
+    return 0.05 * (1 + (R * R) / 10) * Math.sqrt(1000 / T);
+  };
+
+  for (const [rarity, group] of Object.entries(cardsByRarity)) {
+    for (const [name, data] of Object.entries(group)) {
+      data.value = compute(rarity, name);
+    }
+  }
+
+  return cardsByRarity;
 }
