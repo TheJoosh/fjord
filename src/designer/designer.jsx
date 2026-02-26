@@ -1,4 +1,5 @@
 import React from 'react';
+import { Card } from '../deck/card';
 
 export function Designer() {
   return (
@@ -21,10 +22,9 @@ export function Designer() {
                     <label for="card_class">class:</label>
                     <select id="card_class" name="class" required>
                         <option value="warrior">Warrior</option>
-                        <option value="spell">Spell</option>
-                        <option value="attachment">Weapon</option>
-                        <option value="attachment">Mount</option>
-                        <option value="attachment">Companion</option>
+                        <option value="chieftan">Chieftan</option>
+                        <option value="god">God</option>
+                        <option value="beast">Beast</option>
                     </select>
                 </div>
                 
@@ -47,18 +47,7 @@ export function Designer() {
                 <button type="submit">Submit Design</button>
             </form>
 
-            <div className="fj-card">
-                <div className="card-image">
-                    <img src="Card Images/loki.png" alt="Loki, the god of mischief"/>
-                </div>
-                <div className="card-cost">5</div>
-                <div className="card-content">
-                    <h1 className="card-name">Loki, God of Mischief</h1>
-                    <span className="card-type">Legendary Warrior</span>
-                    <span className="card-description">Spell - each turn, this card assumes the strength and endurance of any other warrior in play</span>
-                </div>
-                <div className="card-stats">-/-</div>
-            </div>
+            <Card strength={"-"} endurance={"-"} cost={"-"} name={"Your Card"} type={"Type"} image={"Card Images/Default.png"} description={"Description"}/>
         </div>
 
             
