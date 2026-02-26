@@ -373,6 +373,10 @@ export function Designer() {
                         </div>
                     )}
 
+                    <div>
+                        <button type="button" className="submit-card-btn">Submit Card</button>
+                    </div>
+
                 </form>
                 <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : abilities === "Berserk" ? `Berserk - gains +${passiveValue || 1} strength while attacking` : `${abilities} - `) : "Description"}/>
             </div>
