@@ -118,8 +118,8 @@ export function Designer() {
             return stats;
         }
         
-        const passiveVal = parseInt(passiveValue, 10) || 0;
-        const commandVal = parseInt(commandValue, 10) || 0;
+        const passiveVal = getEffectivePassiveValue();
+        const commandVal = getEffectiveCommandValue();
         const totalReduction = abilities === 'Command' ? passiveVal + commandVal : passiveVal;
         if (totalReduction === 0) return stats;
         
@@ -186,14 +186,23 @@ export function Designer() {
         return numberWords[parsed] || value;
     }
 
+    function getEffectivePassiveValue() {
+        const passiveVisible = abilities === 'Flight' || abilities === 'Forge' || abilities === 'Passive' || abilities === 'Command' || abilities === 'Berserk';
+        if (!passiveVisible) return 0;
+        const parsed = parseInt(passiveValue, 10);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
+    function getEffectiveCommandValue() {
+        if (abilities !== 'Command') return 0;
+        const parsed = parseInt(commandValue, 10);
+        return isNaN(parsed) ? 0 : parsed;
+    }
+
     function calculateRarityScore() {
         const parsedCost = parseInt(cost, 10);
         const safeCost = isNaN(parsedCost) ? 0 : parsedCost;
-        const parsedPassive = parseInt(passiveValue, 10);
-        const parsedCommand = parseInt(commandValue, 10);
-        const safePassive = isNaN(parsedPassive) ? 0 : parsedPassive;
-        const safeCommand = isNaN(parsedCommand) ? 0 : parsedCommand;
-        const abilityWeight = safePassive + safeCommand;
+        const abilityWeight = getEffectivePassiveValue() + getEffectiveCommandValue();
         const novelty = isNamedCharacter ? 2 : 0;
 
         return 2 * safeCost + abilityWeight + novelty;
