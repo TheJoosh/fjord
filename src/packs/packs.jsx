@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import '../app.css';
 import { getUser } from '../data/users';
 import { drawWeightedCards } from '../data/cards';
+import { Card } from '../deck/card';
 
 export function Packs({ userName }) {
     const user = getUser(userName);
@@ -12,10 +13,18 @@ export function Packs({ userName }) {
     const [sagaPackCount, setSagaPackCount] = React.useState(packs['Saga Pack'] ?? 0);
     const [heroicPackCount, setHeroicPackCount] = React.useState(packs['Heroic Pack'] ?? 0);
     const [mythboundPackCount, setMythboundPackCount] = React.useState(packs['Mythbound Pack'] ?? 0);
+    const [openedCards, setOpenedCards] = React.useState([]);
+    const [isPackOverlayOpen, setIsPackOverlayOpen] = React.useState(false);
+
+    const showOpenedCards = (cards) => {
+        setOpenedCards(cards || []);
+        setIsPackOverlayOpen(true);
+    };
 
     const openNormalPack = () => {
         if (defaultPackCount <= 0) return;
-        drawWeightedCards(10, 47, 28, 14, 7, 3, 1);
+        const cards = drawWeightedCards(10, 47, 28, 14, 7, 3, 1);
+        showOpenedCards(cards);
         const nextCount = defaultPackCount - 1;
         setDefaultPackCount(nextCount);
         if (user?.packs) user.packs['Default Pack'] = nextCount;
@@ -23,7 +32,8 @@ export function Packs({ userName }) {
 
     const openSagaPack = () => {
         if (sagaPackCount <= 0) return;
-        drawWeightedCards(10, 30, 29, 22, 11, 6, 2);
+        const cards = drawWeightedCards(10, 30, 29, 22, 11, 6, 2);
+        showOpenedCards(cards);
         const nextCount = sagaPackCount - 1;
         setSagaPackCount(nextCount);
         if (user?.packs) user.packs['Saga Pack'] = nextCount;
@@ -31,7 +41,8 @@ export function Packs({ userName }) {
 
     const openHeroicPack = () => {
         if (heroicPackCount <= 0) return;
-        drawWeightedCards(8, 0, 35, 30, 18, 12, 5);
+        const cards = drawWeightedCards(8, 0, 35, 30, 18, 12, 5);
+        showOpenedCards(cards);
         const nextCount = heroicPackCount - 1;
         setHeroicPackCount(nextCount);
         if (user?.packs) user.packs['Heroic Pack'] = nextCount;
@@ -39,7 +50,8 @@ export function Packs({ userName }) {
 
     const openMythboundPack = () => {
         if (mythboundPackCount <= 0) return;
-        drawWeightedCards(5, 0, 0, 40, 30, 20, 10);
+        const cards = drawWeightedCards(5, 0, 0, 40, 30, 20, 10);
+        showOpenedCards(cards);
         const nextCount = mythboundPackCount - 1;
         setMythboundPackCount(nextCount);
         if (user?.packs) user.packs['Mythbound Pack'] = nextCount;
@@ -88,6 +100,34 @@ export function Packs({ userName }) {
                     <NavLink className="design packs-more-btn" to="/designer">Get more Packs!</NavLink>
             </div>
         </div>
+
+        {isPackOverlayOpen && (
+            <div className="pexels-overlay" onClick={() => setIsPackOverlayOpen(false)}>
+                <div className="pexels-overlay-panel" onClick={e => e.stopPropagation()}>
+                    <div className="pexels-overlay-header">
+                        <h3>Pack Results</h3>
+                        <button type="button" className="pexels-overlay-close" onClick={() => setIsPackOverlayOpen(false)}>Close</button>
+                    </div>
+
+                    <div className="row deck-row">
+                        {openedCards.map((card, index) => (
+                            <div key={`${card.name}-${index}`} className="col deck-col">
+                                <Card
+                                    image={card.image}
+                                    name={card.name}
+                                    cost={card.cost}
+                                    rarity={card.rarity}
+                                    cardType={card.cardType}
+                                    description={card.description}
+                                    strength={card.strength}
+                                    endurance={card.endurance}
+                                />
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        )}
     </main>
   );
 }
