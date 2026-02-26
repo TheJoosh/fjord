@@ -1,6 +1,7 @@
 import React from 'react';
 
-export function Trades() {
+export function Trades({ userName }) {
+    const currentUserLabel = userName || 'User';
   return (
         <main className="trades-page">
 
@@ -37,7 +38,7 @@ export function Trades() {
         <button className="cancel">
             <h2>Cancel Trade</h2>
         </button>
-            <h2 className="user_name">User</h2>
+            <h2 className="user_name">{currentUserLabel}</h2>
             <section className="yoUser">
             <div className="container-fluid">
                 <div className="row">
