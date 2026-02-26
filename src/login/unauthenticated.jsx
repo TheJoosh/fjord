@@ -1,4 +1,5 @@
 import React from 'react';
+import { getUser } from '../data/users';
 
 // component used when the user is not signed in
 export function Unauthenticated({ userName, onLogin }) {
@@ -6,27 +7,15 @@ export function Unauthenticated({ userName, onLogin }) {
   const [password, setPassword] = React.useState('');
   const [message, setMessage] = React.useState('');
 
-  // load users from localStorage
-  const loadUsers = () => {
-    try {
-      return JSON.parse(localStorage.getItem('users')) || {};
-    } catch {
-      return {};
-    }
-  };
-
-  const saveUsers = users => {
-    localStorage.setItem('users', JSON.stringify(users));
-  };
-
+  // when checking credentials, consult the mock user database
   const handleSubmit = e => {
     e.preventDefault();
-    const users = loadUsers();
     if (!email || !password) {
       setMessage('Please enter both username and password.');
       return;
     }
-    if (users[email] && users[email] === password) {
+    const user = getUser(email);
+    if (user && user.password === password) {
       setMessage('');
       onLogin(email);
     } else {
@@ -35,22 +24,9 @@ export function Unauthenticated({ userName, onLogin }) {
   };
 
   const handleCreateAccount = () => {
-    const users = loadUsers();
-    if (!email || !password) {
-      setMessage('Please enter both username and password.');
-      return;
-    }
-    if (users[email]) {
-      setMessage('Username already exists.');
-      return;
-    }
-    users[email] = password;
-    saveUsers(users);
-    setMessage('Account created. Logging you in...');
-    // reset the form
-    setEmail('');
-    setPassword('');
-    onLogin(email);
+    // new users are currently defined in src/data/users.js; account creation
+    // is not supported in this mock environment.
+    setMessage('Account creation is disabled.');
   };
 
   return (
