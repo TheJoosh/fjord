@@ -109,9 +109,9 @@ export function Packs({ userName }) {
                         <button type="button" className="pexels-overlay-close" onClick={() => setIsPackOverlayOpen(false)}>Close</button>
                     </div>
 
-                    <div className="row deck-row">
+                    <div className="row deck-row pack-results-row">
                         {openedCards.map((card, index) => (
-                            <div key={`${card.name}-${index}`} className="col deck-col">
+                            <div key={`${card.name}-${index}`} className="col deck-col pack-results-col">
                                 <Card
                                     image={card.image}
                                     name={card.name}

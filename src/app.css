@@ -516,6 +516,14 @@ main {
   padding: 2px 6px 8px 6px;
 }
 
+.pack-results-col {
+  flex: 0 0 255px;
+}
+
+.pack-results-col .fj-card {
+  zoom: 0.5;
+}
+
 .design-form textarea {
   min-height: 80px;
   width: 100%;
