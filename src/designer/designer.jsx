@@ -51,6 +51,50 @@ export function Designer() {
     }
 
     const stats = calculateStats();
+    const statSum = stats.strength !== '-' && stats.endurance !== '-' ? stats.strength + stats.endurance : 0;
+
+    function calculatePassiveStats() {
+        if (stats.strength === '-' || stats.endurance === '-') {
+            return stats;
+        }
+        
+        const passiveVal = parseInt(passiveValue, 10) || 0;
+        if (passiveVal === 0) return stats;
+        
+        let strength = stats.strength;
+        let endurance = stats.endurance;
+        
+        // For defensive balance, start reducing endurance; otherwise start with strength
+        const startWithEndurance = balance === 'Defensive';
+        
+        for (let i = 0; i < passiveVal; i++) {
+            if ((startWithEndurance && i % 2 === 0) || (!startWithEndurance && i % 2 === 1)) {
+                endurance = Math.max(1, endurance - 1);
+            } else {
+                strength = Math.max(1, strength - 1);
+            }
+        }
+        
+        return { strength, endurance };
+    }
+
+    const displayStats = abilities === 'Passive' ? calculatePassiveStats() : stats;
+
+    function generatePassiveDescription() {
+        if (!passiveModifierType) {
+            return 'Passive - ';
+        }
+        
+        if (passiveModifierType === 'Maximum Fate') {
+            return `Passive - +${passiveValue} maximum fate while this card is in play`;
+        }
+        
+        const statName = passiveModifierType.toLowerCase();
+        const direction = passiveTarget === 'Enemy' ? 'reduced' : 'increased';
+        const cardType = passiveTarget === 'Enemy' ? 'enemy' : 'allied';
+        
+        return `Passive - the ${statName} of all ${cardType} cards is ${direction} by ${passiveValue} while this card is in play`;
+    }
 
     return (
         <main>
@@ -134,7 +178,7 @@ export function Designer() {
                     )}
 
                 </form>
-                <Card image={previewImage || "Default.png"} strength={stats.strength} endurance={stats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Passive" ? generatePassiveDescription() : `${abilities} - `) : "Description"}/>
             </div>
 
         </main>
