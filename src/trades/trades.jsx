@@ -19,7 +19,26 @@ export function Trades({ userName }) {
         });
         const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
-        recalcCardValues(users);
+        const simulatedUsers = Object.fromEntries(
+            Object.entries(users || {}).map(([name, data]) => [
+                name,
+                {
+                    ...data,
+                    cards: { ...(data.cards || {}) },
+                    packs: { ...(data.packs || {}) },
+                },
+            ])
+        );
+
+        if (userName && simulatedUsers[userName]) {
+            for (const card of selectedTradeCards) {
+                if (!card?.name) continue;
+                simulatedUsers[userName].cards[card.name] =
+                    (Math.max(0, parseInt(simulatedUsers[userName].cards[card.name], 10) || 0) + 1);
+            }
+        }
+
+        recalcCardValues(simulatedUsers);
         const activeUser = getUser(userName);
 
         const buildOwnedDeckCards = React.useCallback(() => {
