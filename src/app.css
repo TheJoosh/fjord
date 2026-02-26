@@ -516,12 +516,18 @@ main {
   padding: 2px 6px 8px 6px;
 }
 
-.pack-results-col {
+.pack-overlay-cards {
+  gap: 0;
+}
+
+.pack-overlay-col {
   flex: 0 0 255px;
 }
 
-.pack-results-col .fj-card {
-  zoom: 0.5;
+.pack-overlay-col .fj-card {
+  margin-top: 0;
+  transform-origin: top left;
+  scale: 0.65;
 }
 
 .design-form textarea {
