@@ -1,13 +1,46 @@
 import React from 'react';
 import { Card } from './card';
-import { getCardByName } from '../data/cards';
+import { getCardByName, cardsByRarity } from '../data/cards';
 import { getUser } from '../data/users';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   
   const user = getUser(userName);
-  const cardNames = user ? Object.keys(user.cards || {}) : [];
+
+  // build list of owned cards with quantities
+  const owned = user
+    ? Object.keys(user.cards || {}).map(name => ({
+        name,
+        qty: Math.max(0, parseInt(user.cards[name], 10) || 0),
+        card: getCardByName(name),
+      })).filter(x => x.qty > 0)
+    : [];
+
+  const rarityOrder = Object.keys(cardsByRarity || {});
+  const typeOrder = ['God', 'Beast', 'Chieftan', 'Warrior'];
+
+  owned.sort((a, b) => {
+    const aCard = a.card;
+    const bCard = b.card;
+
+    const aR = aCard ? aCard.rarity : '';
+    const bR = bCard ? bCard.rarity : '';
+    const ri = (r) => (r ? rarityOrder.indexOf(r) : Infinity);
+    const rDiff = ri(aR) - ri(bR);
+    if (rDiff !== 0) return rDiff;
+
+    const aT = aCard ? aCard.cardType : '';
+    const bT = bCard ? bCard.cardType : '';
+    const ti = (t) => {
+      const idx = typeOrder.indexOf(t);
+      return idx === -1 ? Infinity : idx;
+    };
+    const tDiff = ti(aT) - ti(bT);
+    if (tDiff !== 0) return tDiff;
+
+    return a.name.localeCompare(b.name);
+  });
 
   return (
     <main>
@@ -17,12 +50,12 @@ export function Deck({ userName }) {
 
       <div className="container-fluid">
         <div className="row deck-row">
-          {cardNames.map((name) => {
-            const card = getCardByName(name);
-            if (!card) return null;
-            const qty = Math.max(0, parseInt(user.cards[name], 10) || 0);
+          {owned.flatMap(entry => {
+            const card = entry.card;
+            if (!card) return [];
+            const qty = entry.qty || 0;
             return Array.from({ length: qty }).map((_, i) => (
-              <div className="col deck-col" key={`${name}-${i}`}>
+              <div className="col deck-col" key={`${entry.name}-${i}`}>
                 <Card
                   image={card.image}
                   name={card.name}
