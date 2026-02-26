@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Card } from '../deck/card';
+import { addCardToRarity } from '../data/cards';
 
 export function Designer() { 
     const [previewImage, setPreviewImage] = useState(null);
@@ -346,11 +347,47 @@ export function Designer() {
         isAbilityValid &&
         isAbilitySubFieldsValid;
 
+    const previewDescription = abilities
+        ? (abilities === "Swift"
+            ? "Swift - this card can attack on the same turn it enters play"
+            : abilities === "Spell"
+                ? `Spell - ${spellDescription}`
+                : abilities === "Command"
+                    ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn`
+                    : abilities === "Passive"
+                        ? generatePassiveDescription()
+                        : abilities === "Forge"
+                            ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played`
+                            : abilities === "Flight"
+                                ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight`
+                                : abilities === "Berserk"
+                                    ? `Berserk - gains +${passiveValue || 1} strength while attacking`
+                                    : `${abilities} - `)
+        : "Description";
+
+    function handleSubmitCard(e) {
+        e.preventDefault();
+        if (!isSubmitReady) return;
+
+        const cardName = title.trim();
+        if (!cardName) return;
+
+        addCardToRarity(calculatedRarity, cardName, {
+            image: previewImage || "Default.png",
+            cardType,
+            cost: parseInt(cost, 10) || cost,
+            description: previewDescription,
+            strength: displayStats.strength,
+            endurance: displayStats.endurance,
+            value: 0,
+        });
+    }
+
     return (
         <main>
 
             <div className="designer">
-                <form className ="design-form">
+                <form className ="design-form" onSubmit={handleSubmitCard}>
                     <div>
                         <span>Image:</span>
                         <input onChange={handleFileChange} type="file" id="image_uploads" name="image_uploads" accept="image/png, image/jpeg" />
@@ -507,12 +544,12 @@ export function Designer() {
 
                     {isSubmitReady && (
                         <div>
-                            <button type="button" className="submit-card-btn">Submit Card</button>
+                            <button type="submit" className="submit-card-btn">Submit Card</button>
                         </div>
                     )}
 
                 </form>
-                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : abilities === "Berserk" ? `Berserk - gains +${passiveValue || 1} strength while attacking` : `${abilities} - `) : "Description"}/>
+                <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={previewDescription}/>
             </div>
 
             {isPexelsOverlayOpen && (
