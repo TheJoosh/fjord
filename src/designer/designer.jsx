@@ -77,6 +77,11 @@ export function Designer() {
                     </div>
 
                     <div>
+                        <span>Cost:</span>
+                        <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
+                    </div>
+
+                    <div>
                         <label htmlFor="card_balance">Balance:</label>
                         <select id="card_balance" name="balance" required onChange={e => setBalance(e.target.options[e.target.selectedIndex].text)}>
                             <option value="">-- Select Balance --</option>
@@ -84,11 +89,6 @@ export function Designer() {
                             <option value="aggressive">Aggressive</option>
                             <option value="defensive">Defensive</option>
                         </select>
-                    </div>
-
-                    <div>
-                        <span>Description:</span>
-                        <textarea placeholder="Description" ></textarea>
                     </div>
 
                     <div>
@@ -118,10 +118,6 @@ export function Designer() {
                         </div>
                     )}
 
-                    <div>
-                        <span>Cost:</span>
-                        <input value={cost} onChange={handleCostChange} type="number" min="1" max="5" step="1" placeholder="Fate cost" required />
-                    </div>
                 </form>
                 <Card image={previewImage || "Default.png"} strength={stats.strength} endurance={stats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={"Common"} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : `${abilities} - `) : "Description"}/>
             </div>
