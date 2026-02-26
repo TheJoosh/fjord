@@ -17,6 +17,8 @@ export function Designer() {
     const [pexelsQuery, setPexelsQuery] = useState('');
     const [isFetchingPexels, setIsFetchingPexels] = useState(false);
     const [pexelsError, setPexelsError] = useState('');
+    const [pexelsResults, setPexelsResults] = useState([]);
+    const [isPexelsOverlayOpen, setIsPexelsOverlayOpen] = useState(false);
 
     const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
@@ -52,11 +54,13 @@ export function Designer() {
         const query = (pexelsQuery || title || cardType || 'mythology').trim();
         if (!query) return;
 
+        setIsPexelsOverlayOpen(true);
         setIsFetchingPexels(true);
         setPexelsError('');
+        setPexelsResults([]);
 
         try {
-            const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=1&orientation=portrait`, {
+            const response = await fetch(`https://api.pexels.com/v1/search?query=${encodeURIComponent(query)}&per_page=12&orientation=portrait`, {
                 headers: {
                     Authorization: PEXELS_API_KEY,
                 },
@@ -67,21 +71,48 @@ export function Designer() {
             }
 
             const data = await response.json();
-            const photo = data?.photos?.[0];
-            const imageUrl = photo?.src?.large2x || photo?.src?.large || photo?.src?.original;
+            const photos = Array.isArray(data?.photos) ? data.photos : [];
+            const formattedResults = photos
+                .map(photo => ({
+                    id: photo.id,
+                    thumb: photo?.src?.medium || photo?.src?.small || photo?.src?.tiny,
+                    image: photo?.src?.large2x || photo?.src?.large || photo?.src?.original,
+                    alt: photo?.alt || 'Pexels image',
+                }))
+                .filter(photo => photo.thumb && photo.image);
 
-            if (!imageUrl) {
+            if (!formattedResults.length) {
                 setPexelsError('No images found for that search.');
                 return;
             }
 
-            setPreviewImage(imageUrl);
+            setPexelsResults(formattedResults);
         } catch (error) {
             setPexelsError('Unable to load image from Pexels right now.');
         } finally {
             setIsFetchingPexels(false);
         }
     }
+
+    function handlePexelsQueryKeyDown(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            handlePexelsFetch();
+        }
+    }
+
+    useEffect(() => {
+        if (!isPexelsOverlayOpen) return;
+
+        const onKeyDown = (event) => {
+            if (event.key === 'Escape') {
+                setIsPexelsOverlayOpen(false);
+            }
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isPexelsOverlayOpen]);
 
     function calculateStats() {
         if (!cost || !balance) return { strength: '-', endurance: '-' };
@@ -328,6 +359,7 @@ export function Designer() {
                                 className="pexels-query"
                                 value={pexelsQuery}
                                 onChange={e => setPexelsQuery(e.target.value)}
+                                onKeyDown={handlePexelsQueryKeyDown}
                                 type="text"
                                 placeholder="Search Pexels"
                             />
@@ -482,6 +514,39 @@ export function Designer() {
                 </form>
                 <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : abilities === "Berserk" ? `Berserk - gains +${passiveValue || 1} strength while attacking` : `${abilities} - `) : "Description"}/>
             </div>
+
+            {isPexelsOverlayOpen && (
+                <div className="pexels-overlay" onClick={() => setIsPexelsOverlayOpen(false)}>
+                    <div className="pexels-overlay-panel" onClick={e => e.stopPropagation()}>
+                        <div className="pexels-overlay-header">
+                            <h3>Pexels Search Results</h3>
+                            <button type="button" className="pexels-overlay-close" onClick={() => setIsPexelsOverlayOpen(false)}>Close</button>
+                        </div>
+
+                        {isFetchingPexels && <div className="pexels-overlay-state">Loading images...</div>}
+                        {!isFetchingPexels && pexelsError && <div className="pexels-overlay-state">{pexelsError}</div>}
+
+                        {!isFetchingPexels && !pexelsError && (
+                            <div className="pexels-overlay-grid">
+                                {pexelsResults.map(result => (
+                                    <button
+                                        key={result.id}
+                                        type="button"
+                                        className="pexels-overlay-item"
+                                        onClick={() => {
+                                            setPreviewImage(result.image);
+                                            setIsPexelsOverlayOpen(false);
+                                            setPexelsError('');
+                                        }}
+                                    >
+                                        <img src={result.thumb} alt={result.alt} />
+                                    </button>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
 
         </main>
     );
