@@ -30,8 +30,15 @@ body {
   position: relative;
   z-index: 3;
   box-sizing: border-box;
+  transition: transform 200ms ease, box-shadow 200ms ease;
+  will-change: transform;
 }
 
+.fj-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.45);
+  z-index: 6;
+}
 .card-image {
   height: 420px;
   width: 300px;
