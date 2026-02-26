@@ -61,11 +61,17 @@ export default function App() {
                     setAuthState(authState);
                     setUserName(userName);
 
+                                        if (authState === AuthState.Authenticated && userName) {
+                                            localStorage.setItem('userName', userName);
+                                        } else {
+                                            localStorage.removeItem('userName');
+                                        }
+
                     }}
 
                 />} exact />
                 <Route path='/deck' element={<Deck userName={userName} />} />
-                <Route path='/designer' element={<Designer />} />
+                                <Route path='/designer' element={<Designer userName={userName} />} />
                 <Route path='/trades' element={<Trades />} />
                 <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='*' element={<NotFound />} />
