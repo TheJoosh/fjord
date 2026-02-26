@@ -51,7 +51,7 @@ export function Packs({ userName }) {
                         <button className="open">Unopened Packs: {mythboundPackCount}</button>
                     </div>
                 </div>
-                <button className="design" href="designer.html">Get more Packs!</button>
+                                <button className="design packs-more-btn" href="designer.html">Get more Packs!</button>
             </div>
         </div>
     </main>
