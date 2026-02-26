@@ -355,6 +355,12 @@ main {
   margin-bottom: 20px;
 }
 
+.designer-message {
+  text-align: center;
+  margin: 0 0 12px;
+  padding: 0 20px;
+}
+
 .design-form {
   display: flex;
   flex-direction: column;

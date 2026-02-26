@@ -22,7 +22,7 @@ export function Designer({ userName }) {
     const [pexelsError, setPexelsError] = useState('');
     const [pexelsResults, setPexelsResults] = useState([]);
     const [isPexelsOverlayOpen, setIsPexelsOverlayOpen] = useState(false);
-    const [submitMessage, setSubmitMessage] = useState('');
+    const [submitMessage, setSubmitMessage] = useState('Design a card to get card packs');
 
     const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
@@ -372,8 +372,6 @@ export function Designer({ userName }) {
         e.preventDefault();
         if (!isSubmitReady) return;
 
-        setSubmitMessage('');
-
         const cardName = title.trim();
         if (!cardName) return;
 
@@ -478,6 +476,7 @@ export function Designer({ userName }) {
 
     return (
         <main>
+            <h1 className="designer-message">{submitMessage}</h1>
 
             <div className="designer">
                 <form className ="design-form" onSubmit={handleSubmitCard}>
@@ -638,12 +637,6 @@ export function Designer({ userName }) {
                     {isSubmitReady && (
                         <div>
                             <button type="submit" className="submit-card-btn">Submit Card</button>
-                        </div>
-                    )}
-
-                    {submitMessage && (
-                        <div>
-                            <span>{submitMessage}</span>
                         </div>
                     )}
 
