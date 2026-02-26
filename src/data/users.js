@@ -15,7 +15,8 @@ export const users = {
       "Saga Pack": 1,
       "Mythbound Pack": 0,
       "Heroic Pack": 1,
-    }
+    },
+    designed: 4,
   },
   Steven: {
     password: "steve_pw",
@@ -31,7 +32,8 @@ export const users = {
       "Saga Pack": 2,
       "Mythbound Pack": 1,
       "Heroic Pack": 0,
-    }
+    },
+    designed: 16,
   },
   Lucy: {
     password: "lucy$$$",
@@ -47,10 +49,11 @@ export const users = {
     },
     packs: {
       "Default Pack": 1,
-      "Saga Pack": 0,
-      "Mythbound Pack": 0,
-      "Heroic Pack": 0,
-    }
+      "Saga Pack": 1,
+      "Mythbound Pack": 1,
+      "Heroic Pack": 1,
+    },
+    designed: 300,
   },
 };
 
