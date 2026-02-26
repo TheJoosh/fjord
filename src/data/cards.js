@@ -187,6 +187,28 @@ function canUseLocalStorage() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
 
+function toPersistableCardsByRarity(source) {
+  const result = {};
+
+  for (const [rarity, group] of Object.entries(source || {})) {
+    if (!group || typeof group !== 'object') continue;
+
+    result[rarity] = {};
+    for (const [name, card] of Object.entries(group)) {
+      if (!card || typeof card !== 'object') continue;
+
+      const persistableCard = { ...card };
+      if (typeof persistableCard.image === 'string' && persistableCard.image.startsWith('data:')) {
+        persistableCard.image = 'Default.png';
+      }
+
+      result[rarity][name] = persistableCard;
+    }
+  }
+
+  return result;
+}
+
 function hydrateCardsByRarityFromStorage() {
   if (!canUseLocalStorage()) return;
 
@@ -205,12 +227,19 @@ function hydrateCardsByRarityFromStorage() {
     // Ignore malformed localStorage data and continue with in-memory defaults.
   }
 
-  localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(cardsByRarity));
+  try {
+    const payload = toPersistableCardsByRarity(cardsByRarity);
+    localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage write failures on hydration.
+  }
 }
 
 export function persistCardsByRarity() {
   if (!canUseLocalStorage()) return;
-  localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(cardsByRarity));
+
+  const payload = toPersistableCardsByRarity(cardsByRarity);
+  localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(payload));
 }
 
 export function addCardToRarity(rarity, name, cardData) {
