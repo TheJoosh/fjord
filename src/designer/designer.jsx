@@ -144,8 +144,8 @@ export function Designer() {
                             <option value="berserk">Berserk</option>
                             <option value="command">Command</option>
                             <option value="flight">Flight</option>
-                            <option value="forge" disabled={balance === 'Standard'}>Forge</option>
-                            <option value="passive" disabled={balance === 'Standard'}>Passive</option>
+                            <option value="forge" disabled={balance === 'Standard' && cost === '1'}>Forge</option>
+                            <option value="passive" disabled={balance === 'Standard' && cost === '1'}>Passive</option>
                             <option value="spell">Spell</option>
                             <option value="swift">Swift</option>
                         </select>
@@ -160,7 +160,6 @@ export function Designer() {
 
                     {abilities === 'Forge' && (
                         <div>
-                            <span>Strength Boost:</span>
                             <input value={passiveValue} onChange={e => setPassiveValue(e.target.value)} type="number" min="0" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(0, stats.strength + stats.endurance - 2) : 0} placeholder="0" />
                         </div>
                     )}
