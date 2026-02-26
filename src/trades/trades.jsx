@@ -6,6 +6,8 @@ import { getUser, users } from '../data/users';
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
+    const [requestUserInput, setRequestUserInput] = React.useState('');
+    const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
         const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
@@ -100,6 +102,61 @@ export function Trades({ userName }) {
         React.useEffect(() => {
             localStorage.setItem(tradeSelectionStorageKey, JSON.stringify(selectedTradeCards));
         }, [tradeSelectionStorageKey, selectedTradeCards]);
+
+        React.useEffect(() => {
+            if (!isRequestOverlayOpen && !isDeckOverlayOpen) return;
+
+            const handleKeyDown = (event) => {
+                if (event.key !== 'Escape') return;
+                setIsRequestOverlayOpen(false);
+                setIsDeckOverlayOpen(false);
+            };
+
+            window.addEventListener('keydown', handleKeyDown);
+            return () => window.removeEventListener('keydown', handleKeyDown);
+        }, [isRequestOverlayOpen, isDeckOverlayOpen]);
+
+        const resolveUserNameFromStorage = (inputName) => {
+            const target = (inputName || '').trim();
+            if (!target) return null;
+
+            try {
+                const rawUsers = localStorage.getItem('users');
+                const parsedUsers = rawUsers ? JSON.parse(rawUsers) : null;
+
+                if (parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)) {
+                    const keys = Object.keys(parsedUsers);
+                    const exact = keys.find((name) => name === target);
+                    if (exact) return exact;
+                    const insensitive = keys.find((name) => name.toLowerCase() === target.toLowerCase());
+                    if (insensitive) return insensitive;
+                }
+
+                if (Array.isArray(parsedUsers)) {
+                    const names = parsedUsers
+                        .map((entry) => (typeof entry === 'string' ? entry : entry?.name || entry?.userName || null))
+                        .filter(Boolean);
+                    const exact = names.find((name) => name === target);
+                    if (exact) return exact;
+                    const insensitive = names.find((name) => name.toLowerCase() === target.toLowerCase());
+                    if (insensitive) return insensitive;
+                }
+            } catch {
+                // Ignore malformed localStorage value.
+            }
+
+            const fallbackKeys = Object.keys(users || {});
+            const exactFallback = fallbackKeys.find((name) => name === target);
+            if (exactFallback) return exactFallback;
+            return fallbackKeys.find((name) => name.toLowerCase() === target.toLowerCase()) || null;
+        };
+
+        const handleRequestTradeUser = () => {
+            const matchedUserName = resolveUserNameFromStorage(requestUserInput);
+            if (!matchedUserName) return;
+            setOtherUserLabel(matchedUserName);
+            setIsRequestOverlayOpen(false);
+        };
 
         const handleDeckCardClick = (clickedCard) => {
             const cardName = clickedCard?.name;
@@ -220,7 +277,7 @@ export function Trades({ userName }) {
         <main className="trades-page">
 
         <button className="request" onClick={() => setIsRequestOverlayOpen(true)}>Request trade</button>
-        <h2 className="other_user">Other User</h2>
+        <h2 className="other_user">{otherUserLabel}</h2>
         <section className="other">
             <div className="container-fluid">
                 <div className="row">
@@ -289,7 +346,21 @@ export function Trades({ userName }) {
                         <h3>Request Trade</h3>
                         <button type="button" className="pexels-overlay-close" onClick={() => setIsRequestOverlayOpen(false)}>Close</button>
                     </div>
-                    <input type="text" className="pexels-query" placeholder="Input username" />
+                    <div className="pexels-actions">
+                        <input
+                            type="text"
+                            className="pexels-query"
+                            placeholder="Input username"
+                            value={requestUserInput}
+                            onChange={(e) => setRequestUserInput(e.target.value)}
+                            onKeyDown={(e) => {
+                                if (e.key !== 'Enter') return;
+                                e.preventDefault();
+                                handleRequestTradeUser();
+                            }}
+                        />
+                        <button type="button" onClick={handleRequestTradeUser}>Request</button>
+                    </div>
                 </div>
             </div>
         )}
