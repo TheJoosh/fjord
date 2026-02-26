@@ -234,6 +234,47 @@ export function Designer() {
 
     const calculatedRarity = calculateRarity();
 
+    function isNumberInRange(value, min, max) {
+        const parsed = parseInt(value, 10);
+        return !isNaN(parsed) && parsed >= min && parsed <= max;
+    }
+
+    const isImageValid = Boolean(previewImage);
+    const isTitleValid = title.trim().length > 0;
+    const isClassValid = Boolean(cardType);
+    const isCostValid = isNumberInRange(cost, 1, 5);
+    const isBalanceValid = ['Standard', 'Aggressive', 'Defensive'].includes(balance);
+    const isAbilityValid = ['Berserk', 'Command', 'Flight', 'Forge', 'Passive', 'Spell', 'Swift'].includes(abilities);
+
+    const passiveMax = getValueMax();
+    const isPassiveValueValid = isNumberInRange(passiveValue, 1, passiveMax);
+    const isCommandValueValid = isNumberInRange(commandValue, 1, passiveMax);
+    const commandTotalValid = (parseInt(passiveValue, 10) || 0) + (parseInt(commandValue, 10) || 0) <= passiveMax;
+
+    let isAbilitySubFieldsValid = true;
+    if (abilities === 'Spell') {
+        isAbilitySubFieldsValid = spellDescription.trim().length > 0;
+    } else if (abilities === 'Flight' || abilities === 'Forge' || abilities === 'Berserk') {
+        isAbilitySubFieldsValid = isPassiveValueValid;
+    } else if (abilities === 'Passive') {
+        const isPassiveTypeValid = ['Maximum Fate', 'Strength', 'Endurance'].includes(passiveModifierType);
+        const requiresTarget = passiveModifierType === 'Strength' || passiveModifierType === 'Endurance';
+        const isTargetValid = ['Enemy', 'Allied'].includes(passiveTarget);
+        isAbilitySubFieldsValid = isPassiveValueValid && isPassiveTypeValid && (!requiresTarget || isTargetValid);
+    } else if (abilities === 'Command') {
+        const isCommandTypeValid = ['Strength', 'Endurance'].includes(passiveModifierType);
+        isAbilitySubFieldsValid = isPassiveValueValid && isCommandValueValid && commandTotalValid && isCommandTypeValid;
+    }
+
+    const isSubmitReady =
+        isImageValid &&
+        isTitleValid &&
+        isClassValid &&
+        isCostValid &&
+        isBalanceValid &&
+        isAbilityValid &&
+        isAbilitySubFieldsValid;
+
     return (
         <main>
 
@@ -373,9 +414,11 @@ export function Designer() {
                         </div>
                     )}
 
-                    <div>
-                        <button type="button" className="submit-card-btn">Submit Card</button>
-                    </div>
+                    {isSubmitReady && (
+                        <div>
+                            <button type="button" className="submit-card-btn">Submit Card</button>
+                        </div>
+                    )}
 
                 </form>
                 <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={abilities ? (abilities === "Swift" ? "Swift - this card can attack on the same turn it enters play" : abilities === "Spell" ? `Spell - ${spellDescription}` : abilities === "Command" ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn` : abilities === "Passive" ? generatePassiveDescription() : abilities === "Forge" ? `Forge - permanently increases the strength of any one allied card by ${passiveValue || 0} when played` : abilities === "Flight" ? `Flight - requires +${passiveValue || 0} strength to be blocked by a card without flight` : abilities === "Berserk" ? `Berserk - gains +${passiveValue || 1} strength while attacking` : `${abilities} - `) : "Description"}/>
