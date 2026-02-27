@@ -438,15 +438,36 @@ function toPersistableCardsByRarity(source) {
 function hydrateCardsByRarityFromStorage() {
   if (!canUseLocalStorage()) return;
 
+  const defaultCardsByRarity = {};
+  for (const [rarity, group] of Object.entries(cardsByRarity || {})) {
+    defaultCardsByRarity[rarity] = { ...(group || {}) };
+  }
+
   try {
     const raw = localStorage.getItem(CARDS_STORAGE_KEY);
     if (raw) {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object') {
+        const merged = {};
+
+        for (const [rarity, group] of Object.entries(defaultCardsByRarity)) {
+          merged[rarity] = { ...(group || {}) };
+        }
+
+        for (const [rarity, group] of Object.entries(parsed || {})) {
+          if (!group || typeof group !== 'object') continue;
+          if (!merged[rarity]) merged[rarity] = {};
+
+          for (const [name, card] of Object.entries(group)) {
+            if (!card || typeof card !== 'object') continue;
+            merged[rarity][name] = card;
+          }
+        }
+
         for (const key of Object.keys(cardsByRarity)) {
           delete cardsByRarity[key];
         }
-        Object.assign(cardsByRarity, parsed);
+        Object.assign(cardsByRarity, merged);
       }
     }
   } catch {
