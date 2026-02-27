@@ -9,7 +9,9 @@ export function Deck({ userName }) {
   const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
+  const cardsPerPage = 30;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
+  const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = localStorage.getItem(sortByStorageKey);
     return sortOptions.includes(saved) ? saved : 'Rarity';
@@ -116,6 +118,39 @@ export function Deck({ userName }) {
     return a.name.localeCompare(b.name);
   });
 
+  const renderedCards = sortedOwned.flatMap((entry) => {
+    const card = entry.card;
+    if (!card) return [];
+
+    const qty = entry.qty || 0;
+    const copiesToRender = showDuplicates ? qty : 1;
+    const showStack = !showDuplicates && qty > 1;
+
+    return Array.from({ length: copiesToRender }).map((_, i) => ({
+      entry,
+      card,
+      qty,
+      copyIndex: i,
+      showStack,
+    }));
+  });
+
+  const totalRenderedCards = renderedCards.length;
+  const totalPages = Math.max(1, Math.ceil(totalRenderedCards / cardsPerPage));
+  const startIndex = totalRenderedCards === 0 ? 0 : (currentPage - 1) * cardsPerPage + 1;
+  const endIndex = Math.min(currentPage * cardsPerPage, totalRenderedCards);
+  const paginatedCards = renderedCards.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
+  const showPagination = totalPages > 1;
+  const showPreviousPageArrow = currentPage > 1;
+
+  const goToPreviousPage = () => {
+    setCurrentPage((previousPage) => Math.max(1, previousPage - 1));
+  };
+
+  const goToNextPage = () => {
+    setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
+  };
+
   React.useEffect(() => {
     if (!ownedCardsStorageKey) return;
     localStorage.setItem(ownedCardsStorageKey, JSON.stringify(ownedFromUser));
@@ -129,6 +164,16 @@ export function Deck({ userName }) {
     const saved = localStorage.getItem(sortByStorageKey);
     setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
   }, [sortByStorageKey]);
+
+  React.useEffect(() => {
+    setCurrentPage(1);
+  }, [showDuplicates, sortBy, userName]);
+
+  React.useEffect(() => {
+    if (currentPage > totalPages) {
+      setCurrentPage(totalPages);
+    }
+  }, [currentPage, totalPages]);
 
   return (
     <main>
@@ -152,6 +197,15 @@ export function Deck({ userName }) {
               />
               <span>Show duplicates</span>
             </label>
+            {showPagination && (
+              <div className="deck-pagination">
+                {showPreviousPageArrow && (
+                  <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
+                )}
+                <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
+                <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+              </div>
+            )}
           </div>
         </div>
         {userName && (
@@ -163,14 +217,8 @@ export function Deck({ userName }) {
 
       <div className="container-fluid">
         <div className="row deck-row">
-          {sortedOwned.flatMap(entry => {
-            const card = entry.card;
-            if (!card) return [];
-            const qty = entry.qty || 0;
-            const copiesToRender = showDuplicates ? qty : 1;
-            const showStack = !showDuplicates && qty > 1;
-            return Array.from({ length: copiesToRender }).map((_, i) => (
-              <div className="col deck-col" key={`${entry.name}-${i}`}>
+          {paginatedCards.map(({ entry, card, qty, copyIndex, showStack }) => (
+              <div className="col deck-col" key={`${entry.name}-${copyIndex}`}>
                 <div className={showStack ? 'card-stack' : ''}>
                   {showStack && (
                     <div className="card-stack-ghost" aria-hidden="true">
@@ -209,8 +257,7 @@ export function Deck({ userName }) {
                   <small>Author: {card.author || 'Unknown'}</small>
                 </div>
               </div>
-            ));
-          })}
+            ))}
         </div>
       </div>
     </main>
