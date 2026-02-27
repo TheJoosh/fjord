@@ -8,6 +8,7 @@ export function Trades({ userName }) {
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
     const [requestUserInput, setRequestUserInput] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
+    const [tradeSuccessMessage, setTradeSuccessMessage] = React.useState('');
     const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
     const [otherUserName, setOtherUserName] = React.useState('');
     const [otherTradeCards, setOtherTradeCards] = React.useState([]);
@@ -213,6 +214,7 @@ export function Trades({ userName }) {
             }));
 
             setRequestUserError('');
+            setTradeSuccessMessage('');
             setOtherUserLabel(matchedUserName);
             setOtherUserName(matchedUserName);
             setOtherTradeCards(pickedCards);
@@ -337,6 +339,7 @@ export function Trades({ userName }) {
             setOtherTradeCards([]);
             setOtherUserName('');
             setOtherUserLabel('Other User');
+            setTradeSuccessMessage('');
             if (isDeckOverlayOpen) {
                 setOwnedDeckCards(buildOwnedDeckCards());
             }
@@ -436,6 +439,7 @@ export function Trades({ userName }) {
             setOtherTradeCards([]);
             setOtherUserName('');
             setOtherUserLabel('Other User');
+            setTradeSuccessMessage('Your trade was successful!');
             if (isDeckOverlayOpen) {
                 setOwnedDeckCards(buildOwnedDeckCards());
             }
@@ -445,6 +449,7 @@ export function Trades({ userName }) {
         <main className="trades-page">
 
         <button className="request" onClick={() => setIsRequestOverlayOpen(true)}>Request trade</button>
+        {tradeSuccessMessage && <div className="trade-success-message">{tradeSuccessMessage}</div>}
         {hasValidTradePartner && (
             <>
         <h2 className="other_user">{otherUserLabel}</h2>
