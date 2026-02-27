@@ -63,6 +63,11 @@ export function Packs({ userName }) {
     const [openedCards, setOpenedCards] = React.useState([]);
     const [isPackOverlayOpen, setIsPackOverlayOpen] = React.useState(false);
 
+    const openedCardsTotalValue = openedCards.reduce((sum, card) => {
+        const value = card && typeof card.value === 'number' ? card.value : 0;
+        return sum + value;
+    }, 0);
+
     React.useEffect(() => {
         const latestPacks = getPacksFromStorage(userName, packs);
         setDefaultPackCount(latestPacks['Default Pack'] ?? 0);
@@ -269,7 +274,7 @@ export function Packs({ userName }) {
             <div className="pexels-overlay" onClick={() => setIsPackOverlayOpen(false)}>
                 <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
                     <div className="pexels-overlay-header">
-                        <h3>Your Cards</h3>
+                        <h3>Pack Value: ${openedCardsTotalValue.toFixed(2)}</h3>
                         <button type="button" className="pexels-overlay-close" onClick={claimOpenedCards}>Claim Cards</button>
                     </div>
 
