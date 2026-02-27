@@ -84,6 +84,8 @@ export function Unauthenticated({ userName, onLogin }) {
               value={email}
               onChange={e => setEmail(e.target.value)}
               placeholder="username"
+              id="username"
+              autoComplete="username"
             />
           </div>
           <div>
@@ -92,6 +94,8 @@ export function Unauthenticated({ userName, onLogin }) {
               value={password}
               onChange={e => setPassword(e.target.value)}
               placeholder="password"
+              id="password"
+              autoComplete="current-password"
             />
           </div>
           <button type="submit">Log in</button>
