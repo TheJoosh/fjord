@@ -111,8 +111,8 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **All functionality implemented or mocked out** - I did not complete this part of the deliverable.
-- [ ] **Hooks** - I did not complete this part of the deliverable.
+- [x] **All functionality implemented or mocked out** - Database is simulated with localstorage, trade functionality has default behavior
+- [x] **Hooks** - useState and useEffect hooks are used throughout
 
 ## 🚀 Service deliverable
 
