@@ -142,6 +142,7 @@ export function Deck({ userName }) {
   const paginatedCards = renderedCards.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
   const showPagination = totalPages > 1;
   const showPreviousPageArrow = currentPage > 1;
+  const showNextPageArrow = currentPage < totalPages;
 
   const goToPreviousPage = () => {
     setCurrentPage((previousPage) => Math.max(1, previousPage - 1));
@@ -206,7 +207,9 @@ export function Deck({ userName }) {
                 <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
               )}
               <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
-              <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+              {showNextPageArrow && (
+                <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+              )}
             </div>
           )}
         </div>
