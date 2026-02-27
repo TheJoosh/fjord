@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../deck/card';
-import { addCardToRarity } from '../data/cards';
+import { addCardToRarity, cardNameExists } from '../data/cards';
 import { users } from '../data/users';
 
 export function Designer({ userName }) { 
@@ -374,6 +374,10 @@ export function Designer({ userName }) {
 
         const cardName = title.trim();
         if (!cardName) return;
+        if (cardNameExists(cardName)) {
+            setSubmitMessage('Error: A card with that name already exists. Please choose a different name.');
+            return;
+        }
 
         const submittedImage =
             typeof previewImage === 'string' && previewImage.startsWith('data:')
