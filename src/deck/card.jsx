@@ -13,7 +13,15 @@ export function Card({ image, name, cost, rarity, cardType, description, strengt
   return (
     <div className="fj-card">
       <div className="card-image">
-        <img src={src} alt={name} />
+        <img
+          src={src}
+          alt={name}
+          loading="lazy"
+          decoding="async"
+          fetchPriority="low"
+          width="300"
+          height="420"
+        />
       </div>
       <div className="card-cost">{cost}</div>
       <div className="card-content">
