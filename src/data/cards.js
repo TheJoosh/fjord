@@ -9,6 +9,7 @@ export const cardsByRarity = {
       strength: "-",
       endurance: "-",
       value: 0,
+      author: "Fjord",
     },
     },
     Legendary: {
@@ -21,6 +22,7 @@ export const cardsByRarity = {
       strength: "-",
       endurance: "-",
       value: 0,
+      author: "Fjord",
     },
     "Thrym, Frost Giant King": {
       image: "frost-giant.png",
@@ -30,6 +32,7 @@ export const cardsByRarity = {
       strength: 3,
       endurance: 5,
       value: 0,
+      author: "Fjord",
     },
     "Odin, King of the Gods": {
       image: "mythologyart-odin-10069805_1280.png",
@@ -39,6 +42,7 @@ export const cardsByRarity = {
       strength: 4,
       endurance: 5,
       value: 0,
+      author: "Fjord",
     },
     "Thor, God of Thunder": {
       image: "thor.png",
@@ -49,6 +53,7 @@ export const cardsByRarity = {
       strength: 5,
       endurance: 3,
       value: 0,
+      author: "Fjord",
     },
   },
   Mythical: {
@@ -61,6 +66,7 @@ export const cardsByRarity = {
       strength: 6,
       endurance: 4,
       value: 0,
+      author: "Fjord",
     },
   },
   Loric: {
@@ -73,6 +79,7 @@ export const cardsByRarity = {
       strength: 4,
       endurance: 3,
         value: 0,
+        author: "Fjord",
     },
     "Erik the Red": {
       image: "Erik the Red.png",
@@ -83,6 +90,7 @@ export const cardsByRarity = {
       strength: 2,
       endurance: 2,
         value: 0,
+        author: "Fjord",
     },
   },
   Rare: {
@@ -95,6 +103,7 @@ export const cardsByRarity = {
       strength: 3,
       endurance: 4,
         value: 0,
+        author: "Fjord",
     },
     "Valkyrie": {
       image: "Valkyrie2.png",
@@ -105,6 +114,7 @@ export const cardsByRarity = {
       strength: 4,
       endurance: 2,
         value: 0,
+        author: "Fjord",
     },
     "Leif Erikson": {
       image: "Leif Erikson.png",
@@ -115,6 +125,7 @@ export const cardsByRarity = {
       strength: 3,
       endurance: 3,
         value: 0,
+        author: "Fjord",
     },
   },
   Uncommon: {
@@ -126,6 +137,7 @@ export const cardsByRarity = {
       strength: 1,
       endurance: 2,
         value: 0,
+        author: "Fjord",
     },
     "Bear Shaman": {
       image: "Bear Shaman.png",
@@ -135,6 +147,7 @@ export const cardsByRarity = {
       strength: 4,
       endurance: 2,
         value: 0,
+        author: "Fjord",
     },
     "Dökkálfr": {
       image: "Dokkalfr.png",
@@ -145,6 +158,7 @@ export const cardsByRarity = {
       strength: 3,
       endurance: 1,
         value: 0,
+        author: "Fjord",
     },
     "Ljósálfr": {
       image: "Ljosalfr.png",
@@ -155,6 +169,7 @@ export const cardsByRarity = {
       strength: 2,
       endurance: 2,
         value: 0,
+        author: "Fjord",
     },
     "Dvergr": {
       image: "Dvergr.png",
@@ -165,6 +180,7 @@ export const cardsByRarity = {
       strength: 3,
       endurance: 1,
         value: 0,
+        author: "Fjord",
     },
   },
   Common: {
@@ -177,6 +193,7 @@ export const cardsByRarity = {
       strength: 2,
       endurance: 1,
         value: 0,
+        author: "Fjord",
     },
   },
 };
