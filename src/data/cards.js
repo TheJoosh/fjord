@@ -557,9 +557,14 @@ export function recalcCardValues(usersObj) {
     }
   }
 
+  const totalCardsFromUsersObj = Object.values(totals).reduce(
+    (sum, qty) => sum + (parseInt(qty, 10) || 0),
+    0
+  );
+
   const totalCardsOwnedByAllUsersInLocalStorage = (() => {
     if (!canUseLocalStorage()) {
-      return Object.values(totals).reduce((sum, qty) => sum + (parseInt(qty, 10) || 0), 0);
+      return totalCardsFromUsersObj;
     }
 
     try {
@@ -577,9 +582,9 @@ export function recalcCardValues(usersObj) {
         }
       }
 
-      return total;
+      return total > 0 ? total : totalCardsFromUsersObj;
     } catch {
-      return Object.values(totals).reduce((sum, qty) => sum + (parseInt(qty, 10) || 0), 0);
+      return totalCardsFromUsersObj;
     }
   })();
 
