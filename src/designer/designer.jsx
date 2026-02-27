@@ -309,6 +309,18 @@ export function Designer({ userName }) {
 
     const calculatedRarity = calculateRarity();
 
+    function getRewardPackKeyForDesignCount(designCount) {
+        const safeCount = Math.max(1, parseInt(designCount, 10) || 1);
+        const cyclePosition = ((safeCount - 1) % 100) + 1;
+
+        // Rolling 100-design schedule:
+        // 35 Normal (Default), 27 Saga, 21 Heroic, 17 Mythbound
+        if (cyclePosition <= 35) return 'Default Pack';
+        if (cyclePosition <= 62) return 'Saga Pack';
+        if (cyclePosition <= 83) return 'Heroic Pack';
+        return 'Mythbound Pack';
+    }
+
     function isNumberInRange(value, min, max) {
         const parsed = parseInt(value, 10);
         return !isNaN(parsed) && parsed >= min && parsed <= max;
@@ -421,14 +433,7 @@ export function Designer({ userName }) {
                     users[activeUserName].designed = nextDesigned;
                     users[activeUserName].packs = users[activeUserName].packs || {};
 
-                    let rewardPackKey = 'Default Pack';
-                    if (nextDesigned % 50 === 0) {
-                        rewardPackKey = 'Mythbound Pack';
-                    } else if (nextDesigned % 20 === 0) {
-                        rewardPackKey = 'Heroic Pack';
-                    } else if (nextDesigned % 5 === 0) {
-                        rewardPackKey = 'Saga Pack';
-                    }
+                    const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
 
                     users[activeUserName].packs[rewardPackKey] =
                         (parseInt(users[activeUserName].packs[rewardPackKey], 10) || 0) + 1;
