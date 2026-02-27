@@ -313,12 +313,47 @@ export function Designer({ userName }) {
         const safeCount = Math.max(1, parseInt(designCount, 10) || 1);
         const cyclePosition = ((safeCount - 1) % 100) + 1;
 
-        // Rolling 100-design schedule:
-        // 35 Normal (Default), 27 Saga, 21 Heroic, 17 Mythbound
-        if (cyclePosition <= 35) return 'Default Pack';
-        if (cyclePosition <= 62) return 'Saga Pack';
-        if (cyclePosition <= 83) return 'Heroic Pack';
-        return 'Mythbound Pack';
+        const targets = [
+            { pack: 'Default Pack', count: 40 },
+            { pack: 'Saga Pack', count: 30 },
+            { pack: 'Heroic Pack', count: 18 },
+            { pack: 'Mythbound Pack', count: 12 },
+        ];
+
+        const assigned = {
+            'Default Pack': 0,
+            'Saga Pack': 0,
+            'Heroic Pack': 0,
+            'Mythbound Pack': 0,
+        };
+
+        let selectedPack = 'Default Pack';
+
+        for (let position = 1; position <= cyclePosition; position++) {
+            let bestPack = null;
+            let bestDeficit = Number.NEGATIVE_INFINITY;
+
+            for (const target of targets) {
+                if (assigned[target.pack] >= target.count) continue;
+
+                const expectedByNow = (position * target.count) / 100;
+                const deficit = expectedByNow - assigned[target.pack];
+
+                if (deficit > bestDeficit) {
+                    bestDeficit = deficit;
+                    bestPack = target.pack;
+                }
+            }
+
+            if (!bestPack) break;
+
+            assigned[bestPack] += 1;
+            if (position === cyclePosition) {
+                selectedPack = bestPack;
+            }
+        }
+
+        return selectedPack;
     }
 
     function isNumberInRange(value, min, max) {
@@ -530,12 +565,12 @@ export function Designer({ userName }) {
 
                     <div>
                         <label htmlFor="card_class">class:</label>
-                        <select id="card_class" name="class" required onChange={e => setCardType(e.target.options[e.target.selectedIndex].text)}>
+                        <select id="card_class" name="class" value={cardType} required onChange={e => setCardType(e.target.value)}>
                             <option value="">-- Select Class --</option>
-                            <option value="warrior">Warrior</option>
-                            <option value="chieftan">Chieftan</option>
-                            <option value="god">God</option>
-                            <option value="beast">Beast</option>
+                            <option value="Warrior">Warrior</option>
+                            <option value="Chieftan">Chieftan</option>
+                            <option value="God">God</option>
+                            <option value="Beast">Beast</option>
                         </select>
                     </div>
 
