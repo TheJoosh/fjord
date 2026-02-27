@@ -75,7 +75,16 @@ export const users = {
     },
     designed: 300,
   },
-};
+  Packer: {
+    password: "123",
+    packs: {
+      "Default Pack": 100,
+      "Saga Pack": 100,
+      "Mythbound Pack": 100,
+      "Heroic Pack": 100,
+    },
+  },
+}
 
 function getStoredUsersMap() {
   try {
