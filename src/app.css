@@ -497,6 +497,13 @@ main {
   margin: 0;
 }
 
+.design-divider {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid whitesmoke;
+  margin: 4px 0 8px;
+}
+
 .design-inline-input {
   flex: 1;
   min-width: auto;

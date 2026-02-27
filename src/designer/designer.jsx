@@ -512,6 +512,8 @@ export function Designer({ userName }) {
                         {pexelsError && <div className="pexels-error">{pexelsError}</div>}
                     </div>
 
+                    <hr className="design-divider" />
+
                     <div className="design-row design-row-title">
                         <span>Title:</span>
                         <input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="Card Title" required />
