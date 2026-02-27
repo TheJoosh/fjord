@@ -594,7 +594,7 @@ export function recalcCardValues(usersObj) {
     const T = totals[name] || 0;
     const N = totalCardsOwnedByAllUsersInLocalStorage;
     const logTerm = Math.log(1 + N / (T + 3));
-    return 0.02 * (1 + (R * R) / 10) * Math.pow(logTerm, 1.45);
+    return 0.02 * (1 + (R * R) / 10) * Math.pow(logTerm, 1.5);
   };
 
   for (const [rarity, group] of Object.entries(cardsByRarity)) {
