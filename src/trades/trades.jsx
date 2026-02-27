@@ -341,6 +341,44 @@ export function Trades({ userName }) {
         const handleAcceptTrade = () => {
             if (!selectedTradeCards.length && !otherTradeCards.length) return;
 
+            if (!ownedCardsStorageKey || !otherUserName) return;
+
+            const toCountMap = (entries) => {
+                const byName = new Map();
+                for (const entry of entries || []) {
+                    if (!entry?.name) continue;
+                    byName.set(entry.name, (byName.get(entry.name) || 0) + Math.max(0, parseInt(entry.qty, 10) || 0));
+                }
+                return byName;
+            };
+
+            const toOwnedArray = (map) => Array.from(map.entries())
+                .filter(([, qty]) => qty > 0)
+                .map(([name, qty]) => ({
+                    name,
+                    qty,
+                    card: getCardByName(name),
+                }));
+
+            const loadOwnedMap = (storageKey, fallbackCards) => {
+                let sourceEntries = [];
+                try {
+                    const raw = localStorage.getItem(storageKey);
+                    const parsed = raw ? JSON.parse(raw) : [];
+                    sourceEntries = Array.isArray(parsed) ? parsed : [];
+                } catch {
+                    sourceEntries = [];
+                }
+
+                if (sourceEntries.length > 0) {
+                    return toCountMap(sourceEntries);
+                }
+
+                return toCountMap(
+                    Object.entries(fallbackCards || {}).map(([name, qty]) => ({ name, qty }))
+                );
+            };
+
             const activeToOtherCounts = new Map();
             for (const card of selectedTradeCards) {
                 if (!card?.name) continue;
@@ -353,53 +391,41 @@ export function Trades({ userName }) {
                 otherToActiveCounts.set(card.name, (otherToActiveCounts.get(card.name) || 0) + 1);
             }
 
-            if (activeUser?.cards) {
-                for (const [name, qty] of otherToActiveCounts.entries()) {
-                    activeUser.cards[name] = (Math.max(0, parseInt(activeUser.cards[name], 10) || 0) + qty);
-                }
+            const targetOwnedCardsStorageKey = `ownedCards:${otherUserName}`;
+            const targetUser = getUser(otherUserName);
+
+            const activeOwnedMap = loadOwnedMap(ownedCardsStorageKey, activeUser?.cards || {});
+            const otherOwnedMap = loadOwnedMap(targetOwnedCardsStorageKey, targetUser?.cards || {});
+
+            for (const [name, qty] of activeToOtherCounts.entries()) {
+                otherOwnedMap.set(name, (otherOwnedMap.get(name) || 0) + qty);
             }
 
-            if (otherUserName && (activeToOtherCounts.size > 0 || otherToActiveCounts.size > 0)) {
-                const targetUser = getUser(otherUserName);
-                if (targetUser) {
-                    targetUser.cards = targetUser.cards || {};
-                    for (const [name, qty] of activeToOtherCounts.entries()) {
-                        targetUser.cards[name] = (Math.max(0, parseInt(targetUser.cards[name], 10) || 0) + qty);
-                    }
+            for (const [name, requestedQty] of otherToActiveCounts.entries()) {
+                const available = otherOwnedMap.get(name) || 0;
+                const movedQty = Math.min(available, requestedQty);
+                if (movedQty <= 0) continue;
 
-                    for (const [name, qty] of otherToActiveCounts.entries()) {
-                        const currentQty = Math.max(0, parseInt(targetUser.cards[name], 10) || 0);
-                        const nextQty = Math.max(0, currentQty - qty);
-                        if (nextQty > 0) {
-                            targetUser.cards[name] = nextQty;
-                        } else {
-                            delete targetUser.cards[name];
-                        }
-                    }
-                }
-
-                const targetOwnedCardsStorageKey = `ownedCards:${otherUserName}`;
-                const nextTargetOwned = Object.entries(targetUser?.cards || {})
-                .map(([name, qty]) => ({
-                    name,
-                    qty: Math.max(0, parseInt(qty, 10) || 0),
-                    card: getCardByName(name),
-                }))
-                .filter((entry) => entry.qty > 0);
-
-                localStorage.setItem(targetOwnedCardsStorageKey, JSON.stringify(nextTargetOwned));
+                otherOwnedMap.set(name, available - movedQty);
+                activeOwnedMap.set(name, (activeOwnedMap.get(name) || 0) + movedQty);
             }
 
-            if (ownedCardsStorageKey) {
-                const nextActiveOwned = Object.entries(activeUser?.cards || {})
-                    .map(([name, qty]) => ({
-                        name,
-                        qty: Math.max(0, parseInt(qty, 10) || 0),
-                        card: getCardByName(name),
-                    }))
-                    .filter((entry) => entry.qty > 0);
+            const nextActiveOwned = toOwnedArray(activeOwnedMap);
+            const nextTargetOwned = toOwnedArray(otherOwnedMap);
 
-                localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextActiveOwned));
+            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextActiveOwned));
+            localStorage.setItem(targetOwnedCardsStorageKey, JSON.stringify(nextTargetOwned));
+
+            if (activeUser) {
+                activeUser.cards = Object.fromEntries(
+                    nextActiveOwned.map((entry) => [entry.name, entry.qty])
+                );
+            }
+
+            if (targetUser) {
+                targetUser.cards = Object.fromEntries(
+                    nextTargetOwned.map((entry) => [entry.name, entry.qty])
+                );
             }
 
             setSelectedTradeCards([]);
