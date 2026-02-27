@@ -5,13 +5,32 @@ import { getUser, users } from '../data/users';
 
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
+    const pendingTradeStorageKey = userName ? `pendingTrade:${userName}` : 'pendingTrade';
+    const loadPendingTrade = () => {
+        try {
+            const raw = localStorage.getItem(pendingTradeStorageKey);
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (!parsed || typeof parsed !== 'object') {
+                return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
+            }
+
+            return {
+                otherUserLabel: parsed.otherUserLabel || parsed.otherUserName || 'Other User',
+                otherUserName: parsed.otherUserName || '',
+                otherTradeCards: Array.isArray(parsed.otherTradeCards) ? parsed.otherTradeCards : [],
+            };
+        } catch {
+            return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
+        }
+    };
+    const initialPendingTrade = loadPendingTrade();
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
     const [requestUserInput, setRequestUserInput] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
     const [tradeSuccessMessage, setTradeSuccessMessage] = React.useState('');
-    const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
-    const [otherUserName, setOtherUserName] = React.useState('');
-    const [otherTradeCards, setOtherTradeCards] = React.useState([]);
+    const [otherUserLabel, setOtherUserLabel] = React.useState(initialPendingTrade.otherUserLabel);
+    const [otherUserName, setOtherUserName] = React.useState(initialPendingTrade.otherUserName);
+    const [otherTradeCards, setOtherTradeCards] = React.useState(initialPendingTrade.otherTradeCards);
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
         const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
@@ -107,6 +126,20 @@ export function Trades({ userName }) {
         React.useEffect(() => {
             localStorage.setItem(tradeSelectionStorageKey, JSON.stringify(selectedTradeCards));
         }, [tradeSelectionStorageKey, selectedTradeCards]);
+
+        React.useEffect(() => {
+            if (!otherUserName) {
+                localStorage.removeItem(pendingTradeStorageKey);
+                return;
+            }
+
+            const payload = {
+                otherUserName,
+                otherUserLabel: otherUserLabel || otherUserName,
+                otherTradeCards,
+            };
+            localStorage.setItem(pendingTradeStorageKey, JSON.stringify(payload));
+        }, [pendingTradeStorageKey, otherUserName, otherUserLabel, otherTradeCards]);
 
         React.useEffect(() => {
             if (!isRequestOverlayOpen && !isDeckOverlayOpen) return;
