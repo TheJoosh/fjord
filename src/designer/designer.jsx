@@ -486,7 +486,8 @@ export function Designer({ userName }) {
 
             <div className="designer">
                 <form className ="design-form" onSubmit={handleSubmitCard}>
-                    <div>
+                    <div className="design-image-row">
+                        <h4 className="design-image-helper">Upload an image or search stock photos from Pexels</h4>
                         <span>Image:</span>
                         <input ref={imageInputRef} onChange={handleFileChange} type="file" id="image_uploads" name="image_uploads" accept="image/png, image/jpeg" />
                         <div className="pexels-actions">

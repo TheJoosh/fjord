@@ -487,6 +487,16 @@ main {
   width: 100%;
 }
 
+.design-form > .design-image-row {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.design-image-helper {
+  margin: 0;
+}
+
 .design-inline-input {
   flex: 1;
   min-width: auto;
