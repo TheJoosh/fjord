@@ -229,16 +229,23 @@ li {
 .card-value {
   color: whitesmoke;
   font-size: 12px;
+  width: 100%;
+  padding-left: 4px;
+  padding-right: 4px;
+  box-sizing: border-box;
 }
 
 .card-meta-row {
   display: flex;
+  width: 100%;
   align-items: center;
   justify-content: space-between;
   gap: 8px;
 }
 
 .card-quantity {
+  display: block;
+  flex: 1 1 auto;
   margin-left: auto;
   text-align: right;
 }
