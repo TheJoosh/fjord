@@ -194,7 +194,7 @@ export function Packs({ userName }) {
 
     const openSagaPack = () => {
         if (sagaPackCount <= 0) return;
-        const cards = drawWeightedCards(10, 30, 29, 22, 11, 6, 2);
+        const cards = drawWeightedCards(10, 32, 30, 23, 7, 7, 1);
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
         const nextCount = sagaPackCount - 1;
         setSagaPackCount(nextCount);
@@ -266,7 +266,7 @@ export function Packs({ userName }) {
                 <div className="col">
                     <div className="cardpack heroic">
                         <h3>Heroic Pack</h3>
-                        <h4>$6.00</h4>
+                        <h4>$7.50</h4>
                         <h4>No Common cards</h4>
                         <button className="open" onClick={openHeroicPack} disabled={heroicPackCount <= 0}>Unopened Packs: {heroicPackCount}</button>
                     </div>
@@ -275,7 +275,7 @@ export function Packs({ userName }) {
                 <div className="col">
                     <div className="cardpack mythbound">
                         <h3>Mythbound Pack</h3>
-                        <h4>$7.50</h4>
+                        <h4>$11.25</h4>
                         <h4>No Common or Uncommon cards</h4>
                         <button className="open" onClick={openMythboundPack} disabled={mythboundPackCount <= 0}>Unopened Packs: {mythboundPackCount}</button>
                     </div>

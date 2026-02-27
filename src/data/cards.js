@@ -547,6 +547,9 @@ export function recalcCardValues(usersObj) {
     Legendary: 12,
   };
 
+  const BASE_VALUE_SCALE = 0.0165;
+  const RARITY_SPREAD_EXPONENT = 1.16;
+
   
   const totals = {};
   for (const user of Object.values(usersObj || {})) {
@@ -594,7 +597,8 @@ export function recalcCardValues(usersObj) {
     const T = totals[name] || 0;
     const N = totalCardsOwnedByAllUsersInLocalStorage;
     const logTerm = Math.log(1 + N / (T + 3));
-    return 0.017 * (1 + (R * R) / 10) * Math.pow(logTerm, 1.5);
+    const rarityFactor = Math.pow(1 + (R * R) / 10, RARITY_SPREAD_EXPONENT);
+    return BASE_VALUE_SCALE * rarityFactor * Math.pow(logTerm, 1.5);
   };
 
   for (const [rarity, group] of Object.entries(cardsByRarity)) {
