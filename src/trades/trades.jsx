@@ -281,6 +281,44 @@ export function Trades({ userName }) {
             ]));
         };
 
+        const handleRemoveTradeCard = (tradeEntryId) => {
+            const tradeCard = selectedTradeCards.find((card) => card.tradeEntryId === tradeEntryId);
+            if (!tradeCard?.name || !ownedCardsStorageKey) return;
+
+            const cardName = tradeCard.name;
+
+            if (activeUser?.cards) {
+                activeUser.cards[cardName] = (Math.max(0, parseInt(activeUser.cards[cardName], 10) || 0) + 1);
+            }
+
+            let sourceEntries = [];
+            try {
+                const raw = localStorage.getItem(ownedCardsStorageKey);
+                const parsed = raw ? JSON.parse(raw) : [];
+                sourceEntries = Array.isArray(parsed) ? parsed : [];
+            } catch {
+                sourceEntries = [];
+            }
+
+            const byName = new Map();
+            for (const entry of sourceEntries) {
+                if (!entry?.name) continue;
+                byName.set(entry.name, (byName.get(entry.name) || 0) + Math.max(0, parseInt(entry.qty, 10) || 0));
+            }
+
+            byName.set(cardName, (byName.get(cardName) || 0) + 1);
+
+            const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
+                name,
+                qty,
+                card: getCardByName(name),
+            }));
+
+            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+            setOwnedDeckCards(buildOwnedDeckCards());
+            setSelectedTradeCards((prev) => prev.filter((card) => card.tradeEntryId !== tradeEntryId));
+        };
+
         const userTradeValue = selectedTradeCards.reduce((sum, card) => {
             const value = card && typeof card.value === 'number' ? card.value : 0;
             return sum + value;
@@ -506,6 +544,13 @@ export function Trades({ userName }) {
                             <div className="card-value mt-1">
                                 <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
                             </div>
+                            <button
+                                type="button"
+                                className="remove-trade-card-btn"
+                                onClick={() => handleRemoveTradeCard(card.tradeEntryId)}
+                            >
+                                Remove Card
+                            </button>
                         </div>
                     ))}
                 </div>

@@ -401,6 +401,12 @@ main {
   font-weight: 700;
 }
 
+.remove-trade-card-btn {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  margin-top: 6px;
+}
+
 .cardpack {
   height: 420px;
   width: 300px;
