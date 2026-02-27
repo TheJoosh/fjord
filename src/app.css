@@ -1048,7 +1048,7 @@ button {
 
 .card-stack-ghost {
   position: absolute;
-  top: 10px;
+  top: -10px;
   left: 10px;
   opacity: 1;
   filter: brightness(0.4);
@@ -1097,7 +1097,7 @@ button {
   }
 
   .card-stack-ghost {
-    top: 6px;
+    top: -6px;
     left: 6px;
   }
 }
