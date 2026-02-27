@@ -1037,8 +1037,6 @@ button {
 
 .card-stack {
   position: relative;
-  padding-right: 10px;
-  padding-bottom: 10px;
 }
 
 .card-stack-main {
@@ -1093,7 +1091,7 @@ button {
 
   .card-stack {
     padding-right: 6px;
-    padding-bottom: 6px;
+    padding-bottom: 0;
   }
 
   .card-stack-ghost {
