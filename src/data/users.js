@@ -77,6 +77,39 @@ export const users = {
   },
 };
 
+function getStoredUsersMap() {
+  try {
+    const rawUsers = localStorage.getItem('users');
+    const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
+    return parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
+      ? parsedUsers
+      : {};
+  } catch {
+    return {};
+  }
+}
+
 export function getUser(username) {
-  return users[username] || null;
+  if (!username) return null;
+
+  if (users[username]) {
+    return users[username];
+  }
+
+  const storedUsers = getStoredUsersMap();
+  if (storedUsers[username]) {
+    users[username] = storedUsers[username];
+    return users[username];
+  }
+
+  const insensitiveKey = Object.keys(storedUsers).find(
+    (name) => name.toLowerCase() === username.toLowerCase()
+  );
+
+  if (insensitiveKey) {
+    users[insensitiveKey] = storedUsers[insensitiveKey];
+    return users[insensitiveKey];
+  }
+
+  return null;
 }

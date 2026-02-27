@@ -1,5 +1,5 @@
 import React from 'react';
-import { getUser } from '../data/users';
+import { getUser, users } from '../data/users';
 
 // component used when the user is not signed in
 export function Unauthenticated({ userName, onLogin }) {
@@ -24,9 +24,53 @@ export function Unauthenticated({ userName, onLogin }) {
   };
 
   const handleCreateAccount = () => {
-    // new users are currently defined in src/data/users.js; account creation
-    // is not supported in this mock environment.
-    setMessage('Account creation is disabled.');
+    const loginName = email.trim();
+    if (!loginName || !password) {
+      setMessage('Please enter both username and password.');
+      return;
+    }
+
+    if (getUser(loginName)) {
+      setMessage('Username already exists.');
+      return;
+    }
+
+    const newUser = {
+      password,
+      cards: {},
+      packs: {
+        'Default Pack': 1,
+        'Saga Pack': 0,
+        'Heroic Pack': 0,
+        'Mythbound Pack': 0,
+      },
+      designed: 0,
+    };
+
+    users[loginName] = newUser;
+
+    let usersMap = {};
+    try {
+      const rawUsersMap = localStorage.getItem('users');
+      usersMap = rawUsersMap ? JSON.parse(rawUsersMap) : {};
+    } catch {
+      usersMap = {};
+    }
+    usersMap[loginName] = newUser;
+    localStorage.setItem('users', JSON.stringify(usersMap));
+
+    let packsMap = {};
+    try {
+      const rawPacksMap = localStorage.getItem('usersPacks');
+      packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
+    } catch {
+      packsMap = {};
+    }
+    packsMap[loginName] = { ...newUser.packs };
+    localStorage.setItem('usersPacks', JSON.stringify(packsMap));
+
+    setMessage('Account created. Logging in...');
+    onLogin(loginName);
   };
 
   return (
