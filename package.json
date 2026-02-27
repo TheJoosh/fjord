@@ -6,7 +6,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "optimize:images": "node scripts/optimize-card-images.mjs"
   },
   "repository": {
     "type": "git",
@@ -21,6 +22,7 @@
   },
   "homepage": "https://github.com/TheJoosh/fjord#readme",
   "devDependencies": {
+    "sharp": "^0.34.5",
     "vite": "^7.3.1"
   },
   "dependencies": {
