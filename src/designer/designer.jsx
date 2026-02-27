@@ -429,7 +429,8 @@ export function Designer({ userName }) {
                     users[activeUserName].packs[rewardPackKey] =
                         (parseInt(users[activeUserName].packs[rewardPackKey], 10) || 0) + 1;
 
-                    setSubmitMessage(`You earned a ${rewardPackKey}`);
+                    const rewardMessageName = rewardPackKey === 'Default Pack' ? 'Normal Deck' : rewardPackKey;
+                    setSubmitMessage(`You earned a ${rewardMessageName}`);
 
                     const userPacksStorageKey = 'usersPacks';
                     let packsMap = {};
