@@ -19,6 +19,7 @@ printf "\n----> Build the distribution package\n"
 rm -rf build
 mkdir build
 npm install # make sure vite is installed so that we can bundle
+npm run optimize:images # optimize card images before bundling for faster remote loads
 npm run build # build the React front end
 cp -rf dist/* build # move the React front end to the target distribution
 
