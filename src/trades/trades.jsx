@@ -290,50 +290,53 @@ export function Trades({ userName }) {
         }, 0);
 
         const handleCancelTrade = () => {
-            if (!selectedTradeCards.length) return;
-
-            const restoreCounts = new Map();
-            for (const card of selectedTradeCards) {
-                if (!card?.name) continue;
-                restoreCounts.set(card.name, (restoreCounts.get(card.name) || 0) + 1);
-            }
-
-            if (activeUser?.cards) {
-                for (const [name, qty] of restoreCounts.entries()) {
-                    activeUser.cards[name] = (Math.max(0, parseInt(activeUser.cards[name], 10) || 0) + qty);
-                }
-            }
-
-            if (ownedCardsStorageKey) {
-                let sourceEntries = [];
-                try {
-                    const raw = localStorage.getItem(ownedCardsStorageKey);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    sourceEntries = Array.isArray(parsed) ? parsed : [];
-                } catch {
-                    sourceEntries = [];
+            if (selectedTradeCards.length) {
+                const restoreCounts = new Map();
+                for (const card of selectedTradeCards) {
+                    if (!card?.name) continue;
+                    restoreCounts.set(card.name, (restoreCounts.get(card.name) || 0) + 1);
                 }
 
-                const byName = new Map();
-                for (const entry of sourceEntries) {
-                    if (!entry?.name) continue;
-                    byName.set(entry.name, (byName.get(entry.name) || 0) + Math.max(0, parseInt(entry.qty, 10) || 0));
+                if (activeUser?.cards) {
+                    for (const [name, qty] of restoreCounts.entries()) {
+                        activeUser.cards[name] = (Math.max(0, parseInt(activeUser.cards[name], 10) || 0) + qty);
+                    }
                 }
 
-                for (const [name, qty] of restoreCounts.entries()) {
-                    byName.set(name, (byName.get(name) || 0) + qty);
+                if (ownedCardsStorageKey) {
+                    let sourceEntries = [];
+                    try {
+                        const raw = localStorage.getItem(ownedCardsStorageKey);
+                        const parsed = raw ? JSON.parse(raw) : [];
+                        sourceEntries = Array.isArray(parsed) ? parsed : [];
+                    } catch {
+                        sourceEntries = [];
+                    }
+
+                    const byName = new Map();
+                    for (const entry of sourceEntries) {
+                        if (!entry?.name) continue;
+                        byName.set(entry.name, (byName.get(entry.name) || 0) + Math.max(0, parseInt(entry.qty, 10) || 0));
+                    }
+
+                    for (const [name, qty] of restoreCounts.entries()) {
+                        byName.set(name, (byName.get(name) || 0) + qty);
+                    }
+
+                    const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
+                        name,
+                        qty,
+                        card: getCardByName(name),
+                    }));
+
+                    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
                 }
-
-                const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
-                    name,
-                    qty,
-                    card: getCardByName(name),
-                }));
-
-                localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
             }
 
             setSelectedTradeCards([]);
+            setOtherTradeCards([]);
+            setOtherUserName('');
+            setOtherUserLabel('Other User');
             if (isDeckOverlayOpen) {
                 setOwnedDeckCards(buildOwnedDeckCards());
             }
@@ -431,6 +434,8 @@ export function Trades({ userName }) {
 
             setSelectedTradeCards([]);
             setOtherTradeCards([]);
+            setOtherUserName('');
+            setOtherUserLabel('Other User');
             if (isDeckOverlayOpen) {
                 setOwnedDeckCards(buildOwnedDeckCards());
             }
