@@ -79,7 +79,6 @@ export function Unauthenticated({ userName, onLogin }) {
         <h2>Welcome to the Fjords! Begin your voyage today.</h2>
         <form className="login-form" onSubmit={handleSubmit}>
           <div>
-            <span>Username</span>
             <input
               type="text"
               value={email}
@@ -88,7 +87,6 @@ export function Unauthenticated({ userName, onLogin }) {
             />
           </div>
           <div>
-            <span>Password</span>
             <input
               type="password"
               value={password}
