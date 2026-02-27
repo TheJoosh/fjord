@@ -197,16 +197,18 @@ export function Deck({ userName }) {
               />
               <span>Show duplicates</span>
             </label>
-            {showPagination && (
-              <div className="deck-pagination">
-                {showPreviousPageArrow && (
-                  <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
-                )}
-                <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
-                <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
-              </div>
-            )}
           </div>
+        </div>
+        <div className="deck-pagination-slot" aria-hidden={!showPagination}>
+          {showPagination && (
+            <div className="deck-pagination">
+              {showPreviousPageArrow && (
+                <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
+              )}
+              <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
+              <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+            </div>
+          )}
         </div>
         {userName && (
           <div className="deck-value">

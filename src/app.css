@@ -283,13 +283,21 @@ li {
   font-size: 14px;
 }
 
+.deck-pagination-slot {
+  min-height: 16px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+}
+
 .deck-pagination {
-  width: 100%;
   display: flex;
   align-items: center;
   gap: 8px;
   margin-left: 2px;
   font-size: 13px;
+  line-height: 1;
+  max-height: 16px;
 }
 
 .deck-pagination-arrow {
@@ -302,7 +310,10 @@ li {
   color: whitesmoke;
   border: 1px solid rgba(255,255,255,0.12);
   border-radius: 6px;
-  padding: 2px 8px;
+  font-size: 12px;
+  line-height: 1;
+  height: 16px;
+  padding: 0 6px;
   cursor: pointer;
 }
 
