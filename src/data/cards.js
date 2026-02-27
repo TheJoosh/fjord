@@ -110,7 +110,7 @@ export const cardsByRarity = {
       value: 0,
       author: "Fjord",
     },
-    "Surtr": {
+    "Surtr, Fire Giant Lord": {
       image: "Surtr.png",
       cardType: "Chieftan",
       cost: 5,
@@ -121,7 +121,7 @@ export const cardsByRarity = {
       value: 0,
       author: "Fjord",
     },
-    "Freyja": {
+    "Freyja, Goddess of Love": {
       image: "Freyja.png",
       cardType: "God",
       cost: 5,
@@ -132,7 +132,7 @@ export const cardsByRarity = {
         value: 0,
         author: "Fjord",
     },
-    "Freyr": {
+    "Freyr, God of Prosperity": {
       image: "Freyr.png",
       cardType: "God",
       cost: 5,
@@ -594,7 +594,7 @@ export function recalcCardValues(usersObj) {
     const T = totals[name] || 0;
     const N = totalCardsOwnedByAllUsersInLocalStorage;
     const logTerm = Math.log(1 + N / (T + 3));
-    return 0.05 * (1 + (R * R) / 10) * Math.pow(logTerm, 1.45);
+    return 0.02 * (1 + (R * R) / 10) * Math.pow(logTerm, 1.45);
   };
 
   for (const [rarity, group] of Object.entries(cardsByRarity)) {
