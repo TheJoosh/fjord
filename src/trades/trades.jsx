@@ -9,6 +9,7 @@ export function Trades({ userName }) {
     const [requestUserInput, setRequestUserInput] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
     const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
+    const [otherUserName, setOtherUserName] = React.useState('');
     const [otherTradeCards, setOtherTradeCards] = React.useState([]);
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
@@ -212,6 +213,7 @@ export function Trades({ userName }) {
 
             setRequestUserError('');
             setOtherUserLabel(matchedUserName);
+            setOtherUserName(matchedUserName);
             setOtherTradeCards(pickedCards);
             setIsRequestOverlayOpen(false);
         };
@@ -336,6 +338,77 @@ export function Trades({ userName }) {
             }
         };
 
+        const handleAcceptTrade = () => {
+            if (!selectedTradeCards.length && !otherTradeCards.length) return;
+
+            const activeToOtherCounts = new Map();
+            for (const card of selectedTradeCards) {
+                if (!card?.name) continue;
+                activeToOtherCounts.set(card.name, (activeToOtherCounts.get(card.name) || 0) + 1);
+            }
+
+            const otherToActiveCounts = new Map();
+            for (const card of otherTradeCards) {
+                if (!card?.name) continue;
+                otherToActiveCounts.set(card.name, (otherToActiveCounts.get(card.name) || 0) + 1);
+            }
+
+            if (activeUser?.cards) {
+                for (const [name, qty] of otherToActiveCounts.entries()) {
+                    activeUser.cards[name] = (Math.max(0, parseInt(activeUser.cards[name], 10) || 0) + qty);
+                }
+            }
+
+            if (otherUserName && (activeToOtherCounts.size > 0 || otherToActiveCounts.size > 0)) {
+                const targetUser = getUser(otherUserName);
+                if (targetUser) {
+                    targetUser.cards = targetUser.cards || {};
+                    for (const [name, qty] of activeToOtherCounts.entries()) {
+                        targetUser.cards[name] = (Math.max(0, parseInt(targetUser.cards[name], 10) || 0) + qty);
+                    }
+
+                    for (const [name, qty] of otherToActiveCounts.entries()) {
+                        const currentQty = Math.max(0, parseInt(targetUser.cards[name], 10) || 0);
+                        const nextQty = Math.max(0, currentQty - qty);
+                        if (nextQty > 0) {
+                            targetUser.cards[name] = nextQty;
+                        } else {
+                            delete targetUser.cards[name];
+                        }
+                    }
+                }
+
+                const targetOwnedCardsStorageKey = `ownedCards:${otherUserName}`;
+                const nextTargetOwned = Object.entries(targetUser?.cards || {})
+                .map(([name, qty]) => ({
+                    name,
+                    qty: Math.max(0, parseInt(qty, 10) || 0),
+                    card: getCardByName(name),
+                }))
+                .filter((entry) => entry.qty > 0);
+
+                localStorage.setItem(targetOwnedCardsStorageKey, JSON.stringify(nextTargetOwned));
+            }
+
+            if (ownedCardsStorageKey) {
+                const nextActiveOwned = Object.entries(activeUser?.cards || {})
+                    .map(([name, qty]) => ({
+                        name,
+                        qty: Math.max(0, parseInt(qty, 10) || 0),
+                        card: getCardByName(name),
+                    }))
+                    .filter((entry) => entry.qty > 0);
+
+                localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextActiveOwned));
+            }
+
+            setSelectedTradeCards([]);
+            setOtherTradeCards([]);
+            if (isDeckOverlayOpen) {
+                setOwnedDeckCards(buildOwnedDeckCards());
+            }
+        };
+
   return (
         <main className="trades-page">
 
@@ -368,7 +441,7 @@ export function Trades({ userName }) {
             <h3 className="value">Trade Value: ${otherTradeValue.toFixed(2)}</h3>
         </section>
 
-        <button className="accept">
+        <button className="accept" onClick={handleAcceptTrade}>
             <h2>Accept Trade</h2>
         </button>
 
