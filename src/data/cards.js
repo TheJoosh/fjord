@@ -557,18 +557,45 @@ export function recalcCardValues(usersObj) {
     }
   }
 
+  const totalCardsOwnedByAllUsersInLocalStorage = (() => {
+    if (!canUseLocalStorage()) {
+      return Object.values(totals).reduce((sum, qty) => sum + (parseInt(qty, 10) || 0), 0);
+    }
+
+    try {
+      const rawUsers = localStorage.getItem('users');
+      const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
+      const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
+        ? parsedUsers
+        : {};
+
+      let total = 0;
+      for (const user of Object.values(usersMap)) {
+        if (!user || typeof user !== 'object' || !user.cards || typeof user.cards !== 'object') continue;
+        for (const qty of Object.values(user.cards)) {
+          total += parseInt(qty, 10) || 0;
+        }
+      }
+
+      return total;
+    } catch {
+      return Object.values(totals).reduce((sum, qty) => sum + (parseInt(qty, 10) || 0), 0);
+    }
+  })();
+
   
   const compute = (rarity, name) => {
     const R = rarityScores[rarity] || 0;
     const T = totals[name] || 0;
-    if (T <= 0) return 0;
-    return 0.05 * (1 + (R * R) / 10) * Math.sqrt(1000 / T);
+    const N = totalCardsOwnedByAllUsersInLocalStorage;
+    const logTerm = Math.log(1 + N / (T + 3));
+    return 0.05 * (1 + (R * R) / 10) * Math.pow(logTerm, 1.45);
   };
 
   for (const [rarity, group] of Object.entries(cardsByRarity)) {
     for (const [name, data] of Object.entries(group)) {
       if (typeof data !== 'object' || data === null) continue;
-      data.value = compute(rarity, name);
+      data.value = Number(compute(rarity, name).toFixed(2));
     }
   }
 
