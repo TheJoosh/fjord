@@ -283,6 +283,29 @@ li {
   font-size: 14px;
 }
 
+.deck-pagination {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 2px;
+  font-size: 13px;
+}
+
+.deck-pagination-arrow {
+  font-family: "Cinzel";
+  background-image: url("../public/wood.jpg");
+  background-size: cover;
+  background-position: center;
+  background-color: #582f0e;
+  background-blend-mode: multiply;
+  color: whitesmoke;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 2px 8px;
+  cursor: pointer;
+}
+
 .sort-by-control select {
   font-family: "Cinzel";
   background-image: url("../public/wood.jpg");
