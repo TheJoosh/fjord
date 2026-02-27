@@ -9,7 +9,7 @@ export function Deck({ userName }) {
   const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
-  const cardsPerPage = 30;
+  const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState(() => {
