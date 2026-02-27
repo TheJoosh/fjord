@@ -162,6 +162,20 @@ export function Packs({ userName }) {
         setIsPackOverlayOpen(false);
     };
 
+    React.useEffect(() => {
+        if (!isPackOverlayOpen) return;
+
+        const onKeyDown = (event) => {
+            if (event.key !== 'Enter') return;
+            event.preventDefault();
+            event.stopPropagation();
+            claimOpenedCards();
+        };
+
+        window.addEventListener('keydown', onKeyDown);
+        return () => window.removeEventListener('keydown', onKeyDown);
+    }, [isPackOverlayOpen, claimOpenedCards]);
+
     const openNormalPack = () => {
         if (defaultPackCount <= 0) return;
         const cards = drawWeightedCards(10, 47, 28, 14, 7, 3, 1);
