@@ -782,25 +782,24 @@ main {
 
 /* Make number input spinner arrows larger and more visible */
 .design-form input[type="number"] {
-  padding-right: 40px;
+  padding-right: 10px;
+  -moz-appearance: textfield;
+  appearance: auto;
 }
 
 .design-form input[type="number"]::-webkit-inner-spin-button,
 .design-form input[type="number"]::-webkit-outer-spin-button {
-  opacity: 1;
-  width: 35px;
-  height: 135px;
+  opacity: 0.95;
+  width: 18px;
+  height: auto;
   cursor: pointer;
-  position: relative;
-  right: 0;
-  transform: scale(3.5);
-  margin-left: 8px;
+  margin: 0;
+  transform: none;
 }
 
 .design-form input[type="number"]::-webkit-inner-spin-button:hover,
 .design-form input[type="number"]::-webkit-outer-spin-button:hover {
-  background-color: rgba(255, 255, 255, 0.15);
-  border-radius: 4px;
+  opacity: 1;
 }
 
 .open {
