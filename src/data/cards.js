@@ -55,8 +55,6 @@ export const cardsByRarity = {
       value: 0,
       author: "Fjord",
     },
-  },
-  Mythical: {
     "Níðhǫggr, Curse Striker": {
       image: "Níðhǫggr.png",
       cardType: "Beast",
@@ -68,8 +66,85 @@ export const cardsByRarity = {
       value: 0,
       author: "Fjord",
     },
+    "Fenris, Odin's Bane": {
+      image: "Fenrir.png",
+      cardType: "Beast",
+      cost: 5,
+      description:
+        "Berserk - gains +2 strength while attacking",
+      strength: 6,
+      endurance: 4,
+      value: 0,
+      author: "Fjord",
+    },
+    "Hel, Goddess of Death": {
+      image: "Hel.png",
+      cardType: "God",
+      cost: 5,
+      description:
+        "Spell - takes one slain allied card each turn and returns it to the deck",
+      strength: 2,
+      endurance: 6,
+      value: 0,
+      author: "Fjord",
+    },
+    "Eagle of the World Tree": {
+      image: "Eagddrasil.png",
+      cardType: "Beast",
+      cost: 4,
+      description:
+        "Flight - requires +1 strength to be blocked by a card without flight",
+      strength: 3,
+      endurance: 4,
+      value: 0,
+      author: "Fjord",
+    },
+    "Jörmungandr": {
+      image: "Jörmungandr.png",
+      cardType: "Beast",
+      cost: 5,
+      description:
+        "Spell - when played, all allied cards on the field die",
+      strength: 8,
+      endurance: 5,
+      value: 0,
+      author: "Fjord",
+    },
+    "Surtr": {
+      image: "Surtr.png",
+      cardType: "Chieftan",
+      cost: 5,
+      description:
+        "Spell - when killed, the card that killed this card also dies",
+      strength: 6,
+      endurance: 4,
+      value: 0,
+      author: "Fjord",
+    },
+    "Freyja": {
+      image: "Freyja.png",
+      cardType: "God",
+      cost: 5,
+      description:
+        "Passive - the endurance of all allied cards is increased by 5 while this card is in play", 
+      strength: 2,
+      endurance: 3,
+        value: 0,
+        author: "Fjord",
+    },
+    "Freyr": {
+      image: "Freyr.png",
+      cardType: "God",
+      cost: 5,
+      description:
+        "Passive - the endurance of all enemy cards is reduced by 5 while this card is in play", 
+      strength: 2,
+      endurance: 3,
+        value: 0,
+        author: "Fjord",
+    },
   },
-  Loric: {
+  Mythical: {
     "Ratatoskr, The Messenger": {
       image: "Ratatoskr.png",
       cardType: "Beast",
@@ -81,6 +156,41 @@ export const cardsByRarity = {
         value: 0,
         author: "Fjord",
     },
+    "Ymir, Primordial Giant": {
+      image: "Ymir.png",
+      cardType: "God",
+      cost: 3,
+      description:
+        "Passive - +2 maximum fate while this card is in play",
+      strength: 2,
+      endurance: 3,
+        value: 0,
+        author: "Fjord",
+    },
+    "Sigurd, Dragon-Slayer": {
+      image: "Sigurd.png",
+      cardType: "Warrior",
+      cost: 3,
+      description:
+        "Spell - all enemy beasts have -1 strength and -1 endurance against this card",
+      strength: 3,
+      endurance: 3,
+        value: 0,
+        author: "Fjord",
+    },
+    "Brynhildr, Shieldmaiden": {
+      image: "Brynhildr.png",
+      cardType: "Warrior",
+      cost: 3,
+      description:
+        "Spell - all enemy beasts have -1 strength and -1 endurance against this card",
+      strength: 2,
+      endurance: 4,
+        value: 0,
+        author: "Fjord",
+    },
+  },
+  Loric: {
     "Erik the Red": {
       image: "Erik the Red.png",
       cardType: "Chieftan",
@@ -89,6 +199,28 @@ export const cardsByRarity = {
         "Command - can temporarily increase the strength of any two allied cards by 1 each turn",
       strength: 2,
       endurance: 2,
+        value: 0,
+        author: "Fjord",
+    },
+    "Cnut the Great": {
+      image: "Cnut.png",
+      cardType: "Chieftan",
+      cost: 2,
+      description:
+        "Command - can temporarily increase the strength of any three allied cards by 1 each turn",
+      strength: 1,
+      endurance: 2,
+        value: 0,
+        author: "Fjord",
+    },
+    "Skaði, Jötunn Huntress": {
+      image: "Skaði.png",
+      cardType: "God",
+      cost: 3,
+      description:
+        "Spell - this card has +2 strength and +2 endurance against enemy beasts",
+      strength: 2,
+      endurance: 4,
         value: 0,
         author: "Fjord",
     },
@@ -122,6 +254,39 @@ export const cardsByRarity = {
       cost: 3,
       description:
         "Command - can temporarily increase the endurance of any two allied cards by 1 each turn",
+      strength: 3,
+      endurance: 3,
+        value: 0,
+        author: "Fjord",
+    },
+    "Fire Jötunn": {
+      image: "Fire Jötunn.png",
+      cardType: "Warrior",
+      cost: 3,
+      description:
+        "Spell - any enemy card that attacks or is attacked by this card permanently loses 1 endurance",
+      strength: 4,
+      endurance: 2,
+        value: 0,
+        author: "Fjord",
+    },
+    "Ice Jötunn": {
+      image: "Ice Jötunn.png",
+      cardType: "Warrior",
+      cost: 3,
+      description:
+        "Spell - any enemy card that attacks or is attacked by this card permanently loses 1 strength",
+      strength: 4,
+      endurance: 2,
+        value: 0,
+        author: "Fjord",
+    },
+    "Einherji": {
+      image: "Einherji.png",
+      cardType: "Warrior",
+      cost: 3,
+      description:
+        "Spell - if an allied warrior is killed after this card is killed, this card returns to the hand",
       strength: 3,
       endurance: 3,
         value: 0,
@@ -186,6 +351,50 @@ export const cardsByRarity = {
   Common: {
     "Drengr": {
       image: "grunt.png",
+      cardType: "Warrior",
+      cost: 1,
+      description: 
+        "Swift - this card can attack on the same turn it enters play",
+      strength: 2,
+      endurance: 1,
+        value: 0,
+        author: "Fjord",
+    },
+    "Corsair": {
+      image: "Corsair.png",
+      cardType: "Warrior",
+      cost: 1,
+      description: 
+        "Swift - this card can attack on the same turn it enters play",
+      strength: 2,
+      endurance: 1,
+        value: 0,
+        author: "Fjord",
+    },
+    "Draugr": {
+      image: "Draugr.png",
+      cardType: "Warrior",
+      cost: 1,
+      description: 
+        "Spell - when killed, this card returns to the deck",
+      strength: 1,
+      endurance: 1,
+        value: 0,
+        author: "Fjord",
+    },
+    "Stormborn": {
+      image: "Stormborn.png",
+      cardType: "Warrior",
+      cost: 1,
+      description: 
+        "Swift - this card can attack on the same turn it enters play",
+      strength: 2,
+      endurance: 1,
+        value: 0,
+        author: "Fjord",
+    },
+    "Marauder": {
+      image: "Marauder.png",
       cardType: "Warrior",
       cost: 1,
       description: 
