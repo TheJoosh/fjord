@@ -955,6 +955,64 @@ button {
   .header-image {
     height: clamp(120px, calc(100dvh - 360px), 260px);
   }
+
+  .designer .fj-card {
+    width: 300px;
+    height: 420px;
+    border-radius: 14px;
+  }
+
+  .designer .card-image {
+    height: 420px;
+    width: 300px;
+    border-radius: 15px;
+  }
+
+  .designer .card-content {
+    height: 140px;
+    width: 300px;
+    border-radius: 0px 0px 15px 15px;
+  }
+
+  .designer .card-name {
+    font-size: 20px;
+    font-weight: 600;
+    top: 10px;
+    left: 10px;
+  }
+
+  .designer .card-type {
+    font-size: 14px;
+    font-weight: 400;
+    top: 32px;
+    left: 10px;
+  }
+
+  .designer .card-cost {
+    font-size: 30px;
+    width: 50px;
+    height: 50px;
+    border-width: 6px;
+    top: 10px;
+    right: 10px;
+  }
+
+  .designer .card-stats {
+    font-size: 14px;
+    width: 40px;
+    height: 40px;
+    border-width: 5px;
+    bottom: 150px;
+    right: 10px;
+  }
+
+  .designer .card-description {
+    font-size: 12px;
+    width: 278px;
+    padding: 10px;
+    top: 60px;
+    left: 10px;
+  }
 }
 
 .deck-row {
