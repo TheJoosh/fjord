@@ -446,6 +446,8 @@ main {
   padding: 20px;
   align-items: center;
   justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 16px;
   margin-bottom: 20px;
 }
 
@@ -478,7 +480,7 @@ main {
   min-width: auto;
 }
 
-@media screen and (max-width: 900px) {
+@media screen and (max-width: 1020px) {
   .designer {
     flex-direction: column;
     align-items: center;
