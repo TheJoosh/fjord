@@ -283,6 +283,28 @@ export function getCardByName(name) {
   return null;
 }
 
+export function cardNameExists(name) {
+  const normalizeCardName = (value) =>
+    (value || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/gi, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+
+  const normalized = normalizeCardName(name);
+  if (!normalized) return false;
+
+  for (const group of Object.values(cardsByRarity || {})) {
+    for (const existingName of Object.keys(group || {})) {
+      if (normalizeCardName(existingName) === normalized) {
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 
 export function recalcCardValues(usersObj) {
   
