@@ -24,6 +24,7 @@ export function Trades({ userName }) {
             }
         });
         const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
+        const hasValidTradePartner = Boolean(otherUserName);
 
         const simulatedUsers = Object.fromEntries(
             Object.entries(users || {}).map(([name, data]) => [
@@ -439,6 +440,8 @@ export function Trades({ userName }) {
         <main className="trades-page">
 
         <button className="request" onClick={() => setIsRequestOverlayOpen(true)}>Request trade</button>
+        {hasValidTradePartner && (
+            <>
         <h2 className="other_user">{otherUserLabel}</h2>
         <section className="other">
             <div className="container-fluid">
@@ -503,6 +506,8 @@ export function Trades({ userName }) {
         </section>
 
             <button className="picker" onClick={() => setIsDeckOverlayOpen(true)}>Pick from your deck</button>
+            </>
+        )}
 
         {isRequestOverlayOpen && (
             <div className="pexels-overlay" onClick={() => setIsRequestOverlayOpen(false)}>
