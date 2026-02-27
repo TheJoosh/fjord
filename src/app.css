@@ -1082,8 +1082,6 @@ button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  content-visibility: auto;
-  contain-intrinsic-size: 460px;
 }
 
 .card-stack {
