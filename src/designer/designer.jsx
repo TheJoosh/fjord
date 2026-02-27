@@ -379,6 +379,7 @@ export function Designer({ userName }) {
             typeof previewImage === 'string' && previewImage.startsWith('data:')
                 ? 'Default.png'
                 : (previewImage || "Default.png");
+        const activeUserName = (userName || localStorage.getItem('userName') || '').trim();
 
         try {
             addCardToRarity(calculatedRarity, cardName, {
@@ -389,9 +390,9 @@ export function Designer({ userName }) {
                 strength: displayStats.strength,
                 endurance: displayStats.endurance,
                 value: 0,
+                author: activeUserName,
             });
 
-            const activeUserName = userName || localStorage.getItem('userName');
             if (activeUserName) {
                 const designedMapKey = 'usersDesigned';
                 let designedMap = {};
