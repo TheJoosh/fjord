@@ -408,6 +408,7 @@ export const cardsByRarity = {
 };
 
 const CARDS_STORAGE_KEY = 'cardsByRarity';
+let cardScarcityByName = {};
 
 function canUseLocalStorage() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
@@ -601,6 +602,17 @@ export function recalcCardValues(usersObj) {
     return BASE_VALUE_SCALE * rarityFactor * Math.pow(logTerm, 1.5);
   };
 
+  const nextScarcityByName = {};
+  for (const [rarity, group] of Object.entries(cardsByRarity)) {
+    for (const [name, data] of Object.entries(group)) {
+      if (typeof data !== 'object' || data === null) continue;
+      const T = totals[name] || 0;
+      const N = totalCardsOwnedByAllUsersInLocalStorage;
+      nextScarcityByName[name] = N / (T + 3);
+    }
+  }
+  cardScarcityByName = nextScarcityByName;
+
   for (const [rarity, group] of Object.entries(cardsByRarity)) {
     for (const [name, data] of Object.entries(group)) {
       if (typeof data !== 'object' || data === null) continue;
@@ -610,6 +622,11 @@ export function recalcCardValues(usersObj) {
 
   persistCardsByRarity();
   return cardsByRarity;
+}
+
+export function getCardScarcityScore(name) {
+  if (!name) return 0;
+  return Number(cardScarcityByName[name]) || 0;
 }
 
 

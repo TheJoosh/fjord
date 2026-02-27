@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from './card';
-import { getCardByName, cardsByRarity, recalcCardValues } from '../data/cards';
+import { getCardByName, getCardScarcityScore, recalcCardValues } from '../data/cards';
 import { getUser, users } from '../data/users';
 
 export function Deck({ userName }) {
@@ -81,7 +81,6 @@ export function Deck({ userName }) {
       })).filter(x => x.qty > 0)
     : [];
 
-  const rarityOrder = Object.keys(cardsByRarity || {});
   const typeOrder = ['God', 'Beast', 'Chieftan', 'Warrior'];
 
   const sortedOwned = [...owned].sort((a, b) => {
@@ -100,11 +99,10 @@ export function Deck({ userName }) {
       return a.name.localeCompare(b.name);
     }
 
-    const aR = aCard ? aCard.rarity : '';
-    const bR = bCard ? bCard.rarity : '';
-    const ri = (r) => (r ? rarityOrder.indexOf(r) : Infinity);
-    const rDiff = ri(aR) - ri(bR);
-    if (rDiff !== 0) return rDiff;
+    const aScarcity = getCardScarcityScore(a.name);
+    const bScarcity = getCardScarcityScore(b.name);
+    const scarcityDiff = bScarcity - aScarcity;
+    if (scarcityDiff !== 0) return scarcityDiff;
 
     const aT = aCard ? aCard.cardType : '';
     const bT = bCard ? bCard.cardType : '';
