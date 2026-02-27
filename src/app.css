@@ -469,6 +469,10 @@ main {
   padding: 0 20px;
 }
 
+.designer-title {
+  text-align: center;
+}
+
 .design-form {
   display: flex;
   flex-direction: column;

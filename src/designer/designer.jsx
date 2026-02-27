@@ -22,7 +22,7 @@ export function Designer({ userName }) {
     const [pexelsError, setPexelsError] = useState('');
     const [pexelsResults, setPexelsResults] = useState([]);
     const [isPexelsOverlayOpen, setIsPexelsOverlayOpen] = useState(false);
-    const [submitMessage, setSubmitMessage] = useState('Design a card to get card packs');
+    const [submitMessage, setSubmitMessage] = useState('');
 
     const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
@@ -482,8 +482,7 @@ export function Designer({ userName }) {
 
     return (
         <main>
-            <h1 className="designer-message">{submitMessage}</h1>
-
+            <h1 className="designer-title">Design a card to get card packs</h1>
             <div className="designer">
                 <form className ="design-form" onSubmit={handleSubmitCard}>
                     <div className="design-image-row">
@@ -649,6 +648,10 @@ export function Designer({ userName }) {
                             <button type="submit" className="submit-card-btn">Submit Card</button>
                         </div>
                     )}
+
+                    <div>
+                        <h1 className="designer-message">{submitMessage}</h1>
+                    </div>
 
                 </form>
                 <Card image={previewImage || "Default.png"} strength={displayStats.strength} endurance={displayStats.endurance} cost={cost || "-"} name={title || "Your Card"} rarity={calculatedRarity} cardType={cardType || "Type"} description={previewDescription}/>
