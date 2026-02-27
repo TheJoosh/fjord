@@ -183,7 +183,7 @@ export const cardsByRarity = {
       cardType: "Warrior",
       cost: 3,
       description:
-        "Spell - all enemy beasts have -1 strength and -1 endurance against this card",
+        "Spell - Once per turn, if an allied Warrior is killed, it can be returned to the hand",
       strength: 2,
       endurance: 4,
         value: 0,
