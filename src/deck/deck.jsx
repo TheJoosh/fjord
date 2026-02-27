@@ -81,8 +81,6 @@ export function Deck({ userName }) {
       })).filter(x => x.qty > 0)
     : [];
 
-  const typeOrder = ['God', 'Beast', 'Chieftan', 'Warrior'];
-
   const sortedOwned = [...owned].sort((a, b) => {
     const aCard = a.card;
     const bCard = b.card;
@@ -103,15 +101,6 @@ export function Deck({ userName }) {
     const bScarcity = getCardScarcityScore(b.name);
     const scarcityDiff = bScarcity - aScarcity;
     if (scarcityDiff !== 0) return scarcityDiff;
-
-    const aT = aCard ? aCard.cardType : '';
-    const bT = bCard ? bCard.cardType : '';
-    const ti = (t) => {
-      const idx = typeOrder.indexOf(t);
-      return idx === -1 ? Infinity : idx;
-    };
-    const tDiff = ti(aT) - ti(bT);
-    if (tDiff !== 0) return tDiff;
 
     return a.name.localeCompare(b.name);
   });
