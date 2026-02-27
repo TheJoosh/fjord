@@ -506,7 +506,7 @@ export function Designer({ userName }) {
                         {pexelsError && <div className="pexels-error">{pexelsError}</div>}
                     </div>
 
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                    <div className="design-row design-row-title">
                         <span>Title:</span>
                         <input value={title} onChange={e => setTitle(e.target.value)} type="text" placeholder="Card Title" required />
                         <label htmlFor="named_character" style={{ display: 'flex', alignItems: 'center', gap: '6px', margin: 0 }}>
@@ -594,14 +594,14 @@ export function Designer({ userName }) {
                     )}
 
                     {abilities === 'Command' && (
-                        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
-                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                        <div className="design-row design-row-command">
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" className="design-inline-input" />
+                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" className="design-inline-input" />
                             <select id="command_passive_type" name="command_passive_type" onChange={e => {
                                 const selectedType = e.target.options[e.target.selectedIndex].text;
                                 setPassiveModifierType(selectedType);
                                 setPassiveTarget('');
-                            }} style={{ flex: 1, minWidth: 'auto' }}>
+                            }} className="design-inline-input">
                                 <option value="">-- Select Type --</option>
                                 <option value="fate" disabled>Maximum Fate</option>
                                 <option value="strength">Strength</option>
@@ -611,22 +611,22 @@ export function Designer({ userName }) {
                     )}
 
                     {abilities === 'Passive' && (
-                        <div style={{ display: 'flex', gap: '12px', width: '100%' }}>
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" style={{ flex: 1, minWidth: 'auto' }} />
+                        <div className="design-row design-row-passive">
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" className="design-inline-input" />
                             <select id="passive_type" name="passive_type" onChange={e => {
                                 const selectedType = e.target.options[e.target.selectedIndex].text;
                                 setPassiveModifierType(selectedType);
                                 if (selectedType !== 'Strength' && selectedType !== 'Endurance') {
                                     setPassiveTarget('');
                                 }
-                            }} style={{ flex: 1, minWidth: 'auto' }}>
+                            }} className="design-inline-input">
                                 <option value="">-- Select Type --</option>
                                 <option value="fate">Maximum Fate</option>
                                 <option value="strength">Strength</option>
                                 <option value="endurance">Endurance</option>
                             </select>
                             {(passiveModifierType === 'Strength' || passiveModifierType === 'Endurance') && (
-                                <select id="passive_target" name="passive_target" onChange={e => setPassiveTarget(e.target.options[e.target.selectedIndex].text)} style={{ flex: 1, minWidth: 'auto' }}>
+                                <select id="passive_target" name="passive_target" onChange={e => setPassiveTarget(e.target.options[e.target.selectedIndex].text)} className="design-inline-input">
                                     <option value="">-- Select Target --</option>
                                     <option value="enemy">Enemy</option>
                                     <option value="allied">Allied</option>

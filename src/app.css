@@ -473,6 +473,44 @@ main {
   width: 100%;
 }
 
+.design-inline-input {
+  flex: 1;
+  min-width: auto;
+}
+
+@media screen and (max-width: 900px) {
+  .designer {
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 12px;
+  }
+
+  .design-form {
+    width: min(100%, 520px);
+    align-items: stretch;
+  }
+
+  .design-form > div,
+  .design-row-title,
+  .design-row-command,
+  .design-row-passive {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .design-form input[type="text"],
+  .design-form input[type="number"],
+  .design-form select,
+  .design-form textarea,
+  .design-form input[type="file"],
+  .design-inline-input {
+    min-width: 0;
+    width: 100%;
+  }
+}
+
 .design-form input[type="text"],
 .design-form input[type="number"],
 .design-form select,
