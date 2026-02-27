@@ -83,7 +83,7 @@ export function Unauthenticated({ userName, onLogin }) {
               type="text"
               value={email}
               onChange={e => setEmail(e.target.value)}
-              placeholder="username or email"
+              placeholder="username"
             />
           </div>
           <div>
