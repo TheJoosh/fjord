@@ -559,6 +559,8 @@ export function Trades({ userName }) {
             <h2>Cancel Trade</h2>
         </button>
             <h2 className="user_name">{currentUserLabel}</h2>
+            <h3 className="value">Trade Value: ${userTradeValue.toFixed(2)}</h3>
+            <button className="picker" onClick={() => setIsDeckOverlayOpen(true)}>Pick from your deck</button>
             <section className="yoUser">
             <div className="container-fluid">
                 <div className="row deck-row">
@@ -588,12 +590,7 @@ export function Trades({ userName }) {
                     ))}
                 </div>
             </div>
-                
-
-            <h3 className="value">Trade Value: ${userTradeValue.toFixed(2)}</h3>
         </section>
-
-            <button className="picker" onClick={() => setIsDeckOverlayOpen(true)}>Pick from your deck</button>
             </>
         )}
 
