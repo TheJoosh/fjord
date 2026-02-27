@@ -200,22 +200,24 @@ export function Deck({ userName }) {
             </label>
           </div>
         </div>
-        <div className="deck-pagination-slot" aria-hidden={!showPagination}>
-          {showPagination && (
-            <div className="deck-pagination">
-              {showPreviousPageArrow && (
-                <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
-              )}
-              <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
-              {showNextPageArrow && (
-                <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+        {userName && (
+          <div className="deck-value-row">
+            <div className="deck-value">
+              Deck Value: ${deckValue.toFixed(2)}
+            </div>
+            <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
+              {showPagination && (
+                <div className="deck-pagination">
+                  {showPreviousPageArrow && (
+                    <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
+                  )}
+                  <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
+                  {showNextPageArrow && (
+                    <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-        {userName && (
-          <div className="deck-value">
-            Deck Value: ${deckValue.toFixed(2)}
           </div>
         )}
       </div>

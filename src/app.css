@@ -246,6 +246,14 @@ li {
 .deck-value {
   color: whitesmoke;
   font-size: 14px;
+  margin-top: 0;
+}
+
+.deck-value-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   margin-top: 4px;
 }
 
@@ -283,11 +291,11 @@ li {
   font-size: 14px;
 }
 
-.deck-pagination-slot {
+.deck-value-pagination-slot {
   min-height: 16px;
-  margin-top: 4px;
   display: flex;
   align-items: center;
+  justify-content: flex-end;
 }
 
 .deck-pagination {
