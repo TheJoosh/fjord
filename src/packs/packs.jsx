@@ -2,7 +2,13 @@ import React from 'react';
 import { NavLink } from 'react-router-dom';
 import '../app.css';
 import { getUser, users } from '../data/users';
-import { drawWeightedCards, getCardByName, recalcCardValues } from '../data/cards';
+import {
+    drawWeightedCards,
+    getCardByName,
+    incrementCardPopulations,
+    recalcCardValues,
+    syncCardPopulationsFromOwnedCards,
+} from '../data/cards';
 import { Card } from '../deck/card';
 
 export function Packs({ userName }) {
@@ -80,25 +86,9 @@ export function Packs({ userName }) {
     };
 
     const applyGeneratedCardsToValueCalculation = (generatedCards) => {
-        const simulatedUsers = {};
-
-        for (const [name, data] of Object.entries(users || {})) {
-            simulatedUsers[name] = {
-                ...data,
-                cards: { ...(data.cards || {}) },
-                packs: { ...(data.packs || {}) },
-            };
-        }
-
-        if (userName && simulatedUsers[userName]) {
-            for (const card of generatedCards) {
-                if (!card?.name) continue;
-                simulatedUsers[userName].cards[card.name] =
-                    (parseInt(simulatedUsers[userName].cards[card.name], 10) || 0) + 1;
-            }
-        }
-
-        recalcCardValues(simulatedUsers);
+        syncCardPopulationsFromOwnedCards(users);
+        incrementCardPopulations(generatedCards);
+        recalcCardValues();
 
         return generatedCards.map((card) => {
             if (!card?.name) return card;
