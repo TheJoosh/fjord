@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from './card';
-import { getCardByName, getCardScarcityScore, recalcCardValues } from '../data/cards';
-import { getUser, users } from '../data/users';
+import { getCardByName, getCardScarcityScore } from '../data/cards';
+import { getUser } from '../data/users';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
@@ -35,23 +35,6 @@ export function Deck({ userName }) {
     if (!card?.name) continue;
     effectiveCards[card.name] = (parseInt(effectiveCards[card.name], 10) || 0) + 1;
   }
-
-  const simulatedUsers = Object.fromEntries(
-    Object.entries(users || {}).map(([name, data]) => [
-      name,
-      {
-        ...data,
-        cards: { ...(data.cards || {}) },
-        packs: { ...(data.packs || {}) },
-      },
-    ])
-  );
-
-  if (userName && simulatedUsers[userName]) {
-    simulatedUsers[userName].cards = { ...effectiveCards };
-  }
-
-  recalcCardValues(simulatedUsers);
 
   // calculate total deck value
   let deckValue = 0;
