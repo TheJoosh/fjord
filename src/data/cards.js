@@ -23,6 +23,7 @@ export const cardsByRarity = {
       endurance: "-",
       value: 0,
       author: "Fjord",
+      population: 0,
     },
     "Thrym, Frost Giant King": {
       image: "frost-giant.png",
@@ -33,6 +34,7 @@ export const cardsByRarity = {
       endurance: 5,
       value: 0,
       author: "Fjord",
+      population: 0,
     },
     "Odin, King of the Gods": {
       image: "mythologyart-odin-10069805_1280.png",
@@ -410,6 +412,20 @@ export const cardsByRarity = {
 const CARDS_STORAGE_KEY = 'cardsByRarity';
 let cardScarcityByName = {};
 
+function normalizePopulationValue(value) {
+  return Math.max(0, parseInt(value, 10) || 0);
+}
+
+function ensurePopulationFields(source) {
+  for (const group of Object.values(source || {})) {
+    if (!group || typeof group !== 'object') continue;
+    for (const card of Object.values(group)) {
+      if (!card || typeof card !== 'object') continue;
+      card.population = normalizePopulationValue(card.population);
+    }
+  }
+}
+
 function canUseLocalStorage() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
@@ -428,6 +444,7 @@ function toPersistableCardsByRarity(source) {
       if (typeof persistableCard.image === 'string' && persistableCard.image.startsWith('data:')) {
         persistableCard.image = 'Default.png';
       }
+      persistableCard.population = normalizePopulationValue(persistableCard.population);
 
       result[rarity][name] = persistableCard;
     }
@@ -475,6 +492,8 @@ function hydrateCardsByRarityFromStorage() {
     // Ignore malformed localStorage data and continue with in-memory defaults.
   }
 
+  ensurePopulationFields(cardsByRarity);
+
   try {
     const payload = toPersistableCardsByRarity(cardsByRarity);
     localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(payload));
@@ -497,9 +516,116 @@ export function addCardToRarity(rarity, name, cardData) {
     cardsByRarity[rarity] = {};
   }
 
-  cardsByRarity[rarity][name] = { ...cardData };
+  cardsByRarity[rarity][name] = {
+    ...cardData,
+    population: normalizePopulationValue(cardData.population),
+  };
   persistCardsByRarity();
   return true;
+}
+
+function getKnownUserNames(usersObj) {
+  const names = new Set(Object.keys(usersObj || {}));
+
+  if (!canUseLocalStorage()) {
+    return Array.from(names);
+  }
+
+  try {
+    const rawUsers = localStorage.getItem('users');
+    const parsedUsers = rawUsers ? JSON.parse(rawUsers) : null;
+
+    if (parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)) {
+      for (const name of Object.keys(parsedUsers)) {
+        names.add(name);
+      }
+    } else if (Array.isArray(parsedUsers)) {
+      for (const entry of parsedUsers) {
+        const name =
+          typeof entry === 'string'
+            ? entry
+            : entry?.name || entry?.userName || null;
+        if (name) names.add(name);
+      }
+    }
+  } catch {
+  }
+
+  return Array.from(names);
+}
+
+export function syncCardPopulationsFromOwnedCards(usersObj) {
+  ensurePopulationFields(cardsByRarity);
+
+  const totals = {};
+  const knownUsers = getKnownUserNames(usersObj);
+
+  for (const userName of knownUsers) {
+    let usedOwnedCardsStorage = false;
+
+    if (canUseLocalStorage()) {
+      try {
+        const rawOwned = localStorage.getItem(`ownedCards:${userName}`);
+        const parsedOwned = rawOwned ? JSON.parse(rawOwned) : [];
+        if (Array.isArray(parsedOwned) && parsedOwned.length > 0) {
+          usedOwnedCardsStorage = true;
+          for (const entry of parsedOwned) {
+            if (!entry?.name) continue;
+            totals[entry.name] = (totals[entry.name] || 0) + normalizePopulationValue(entry.qty);
+          }
+        }
+      } catch {
+      }
+    }
+
+    if (!usedOwnedCardsStorage) {
+      const fallbackUser = usersObj?.[userName];
+      for (const [name, qty] of Object.entries(fallbackUser?.cards || {})) {
+        totals[name] = (totals[name] || 0) + normalizePopulationValue(qty);
+      }
+    }
+  }
+
+  for (const group of Object.values(cardsByRarity)) {
+    if (!group || typeof group !== 'object') continue;
+    for (const card of Object.values(group)) {
+      if (!card || typeof card !== 'object') continue;
+      card.population = 0;
+    }
+  }
+
+  for (const [rarity, group] of Object.entries(cardsByRarity)) {
+    for (const [name, data] of Object.entries(group || {})) {
+      if (!data || typeof data !== 'object') continue;
+      cardsByRarity[rarity][name].population = normalizePopulationValue(totals[name]);
+    }
+  }
+
+  persistCardsByRarity();
+  return cardsByRarity;
+}
+
+export function incrementCardPopulations(cards) {
+  ensurePopulationFields(cardsByRarity);
+
+  if (!Array.isArray(cards) || cards.length === 0) {
+    return cardsByRarity;
+  }
+
+  for (const cardEntry of cards) {
+    const cardName = typeof cardEntry === 'string' ? cardEntry : cardEntry?.name;
+    if (!cardName) continue;
+
+    for (const group of Object.values(cardsByRarity)) {
+      if (!group || typeof group !== 'object') continue;
+      if (!group[cardName]) continue;
+      group[cardName].population = normalizePopulationValue(group[cardName].population) + 1;
+      break;
+    }
+  }
+
+  persistCardsByRarity();
+  return cardsByRarity;
 }
 
 hydrateCardsByRarityFromStorage();
@@ -537,7 +663,7 @@ export function cardNameExists(name) {
 }
 
 
-export function recalcCardValues(usersObj) {
+export function recalcCardValues() {
   
   const rarityScores = {
     Common: 2,
@@ -552,51 +678,25 @@ export function recalcCardValues(usersObj) {
   const RARITY_SPREAD_EXPONENT = 1.16;
 
   
+  ensurePopulationFields(cardsByRarity);
+
   const totals = {};
-  for (const user of Object.values(usersObj || {})) {
-    if (user.cards) {
-      for (const [name, qty] of Object.entries(user.cards)) {
-        totals[name] = (totals[name] || 0) + (parseInt(qty, 10) || 0);
-      }
+  let totalPopulation = 0;
+  for (const group of Object.values(cardsByRarity || {})) {
+    if (!group || typeof group !== 'object') continue;
+    for (const [name, data] of Object.entries(group)) {
+      if (!data || typeof data !== 'object') continue;
+      const population = normalizePopulationValue(data.population);
+      totals[name] = population;
+      totalPopulation += population;
     }
   }
-
-  const totalCardsFromUsersObj = Object.values(totals).reduce(
-    (sum, qty) => sum + (parseInt(qty, 10) || 0),
-    0
-  );
-
-  const totalCardsOwnedByAllUsersInLocalStorage = (() => {
-    if (!canUseLocalStorage()) {
-      return totalCardsFromUsersObj;
-    }
-
-    try {
-      const rawUsers = localStorage.getItem('users');
-      const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
-      const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
-        ? parsedUsers
-        : {};
-
-      let total = 0;
-      for (const user of Object.values(usersMap)) {
-        if (!user || typeof user !== 'object' || !user.cards || typeof user.cards !== 'object') continue;
-        for (const qty of Object.values(user.cards)) {
-          total += parseInt(qty, 10) || 0;
-        }
-      }
-
-      return total > 0 ? total : totalCardsFromUsersObj;
-    } catch {
-      return totalCardsFromUsersObj;
-    }
-  })();
 
   
   const compute = (rarity, name) => {
     const R = rarityScores[rarity] || 0;
     const T = totals[name] || 0;
-    const N = totalCardsOwnedByAllUsersInLocalStorage;
+    const N = totalPopulation;
     const logTerm = Math.log(1 + N / (T + 3));
     const rarityFactor = Math.pow(1 + (R * R) / 10, RARITY_SPREAD_EXPONENT);
     return BASE_VALUE_SCALE * rarityFactor * Math.pow(logTerm, 1.5);
@@ -607,7 +707,7 @@ export function recalcCardValues(usersObj) {
     for (const [name, data] of Object.entries(group)) {
       if (typeof data !== 'object' || data === null) continue;
       const T = totals[name] || 0;
-      const N = totalCardsOwnedByAllUsersInLocalStorage;
+      const N = totalPopulation;
       nextScarcityByName[name] = N / (T + 3);
     }
   }
