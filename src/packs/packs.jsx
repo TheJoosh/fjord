@@ -282,7 +282,7 @@ export function Packs({ userName }) {
         </div>
 
         {isPackOverlayOpen && (
-            <div className="pexels-overlay" onClick={() => setIsPackOverlayOpen(false)}>
+            <div className="pexels-overlay" onClick={claimOpenedCards}>
                 <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
                     <div className="pexels-overlay-header">
                         <h3>Pack Value: ${openedCardsTotalValue.toFixed(2)}</h3>
