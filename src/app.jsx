@@ -9,10 +9,15 @@ import { Deck } from './deck/deck';
 import { Designer } from './designer/designer';
 import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
-import { getUser } from './data/users';
-import { getCardByName } from './data/cards';
+import { getUser, users } from './data/users';
+import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 
 export default function App() {
+
+    React.useEffect(() => {
+        syncCardPopulationsFromOwnedCards(users);
+        recalcCardValues();
+    }, []);
 
   const [userName, setUserName] = React.useState(localStorage.getItem('userName') || '');
   const currentAuthState = userName ? AuthState.Authenticated : AuthState.Unauthenticated;
