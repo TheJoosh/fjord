@@ -163,7 +163,7 @@ export function Packs({ userName }) {
         if (!isPackOverlayOpen) return;
 
         const onKeyDown = (event) => {
-            if (event.key !== 'Enter') return;
+            if (event.key !== 'Enter' && event.key !== 'Escape') return;
             event.preventDefault();
             event.stopPropagation();
             claimOpenedCards();
