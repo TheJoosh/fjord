@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../deck/card';
-import { getCardByName, recalcCardValues } from '../data/cards';
+import { getCardByName } from '../data/cards';
 import { getUser, users } from '../data/users';
 
 export function Trades({ userName }) {
@@ -46,26 +46,6 @@ export function Trades({ userName }) {
         const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
         const hasValidTradePartner = Boolean(otherUserName);
 
-        const simulatedUsers = Object.fromEntries(
-            Object.entries(users || {}).map(([name, data]) => [
-                name,
-                {
-                    ...data,
-                    cards: { ...(data.cards || {}) },
-                    packs: { ...(data.packs || {}) },
-                },
-            ])
-        );
-
-        if (userName && simulatedUsers[userName]) {
-            for (const card of selectedTradeCards) {
-                if (!card?.name) continue;
-                simulatedUsers[userName].cards[card.name] =
-                    (Math.max(0, parseInt(simulatedUsers[userName].cards[card.name], 10) || 0) + 1);
-            }
-        }
-
-        recalcCardValues(simulatedUsers);
         const activeUser = getUser(userName);
 
         const buildOwnedDeckCards = React.useCallback(() => {
