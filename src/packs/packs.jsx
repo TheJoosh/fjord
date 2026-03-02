@@ -6,8 +6,6 @@ import { drawWeightedCards, getCardByName, recalcCardValues } from '../data/card
 import { Card } from '../deck/card';
 
 export function Packs({ userName }) {
-    recalcCardValues(users);
-
     const user = getUser(userName);
     const packs = user?.packs || {};
     const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
@@ -121,7 +119,6 @@ export function Packs({ userName }) {
                 if (!card?.name) continue;
                 user.cards[card.name] = (parseInt(user.cards[card.name], 10) || 0) + 1;
             }
-            recalcCardValues(users);
         }
 
         if (ownedCardsStorageKey) {
