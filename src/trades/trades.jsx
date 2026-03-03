@@ -49,6 +49,15 @@ export function Trades({ userName }) {
 
         const activeUser = getUser(userName);
 
+        const getCurrentCardValue = React.useCallback((cardLike) => {
+            if (!cardLike?.name) return 0;
+            const latest = getCardByName(cardLike.name);
+            if (latest && typeof latest.value === 'number') {
+                return latest.value;
+            }
+            return cardLike && typeof cardLike.value === 'number' ? cardLike.value : 0;
+        }, []);
+
         const buildOwnedDeckCards = React.useCallback(() => {
             const fallbackCards = activeUser?.cards || {};
             let sourceEntries = [];
@@ -345,13 +354,11 @@ export function Trades({ userName }) {
         };
 
         const userTradeValue = selectedTradeCards.reduce((sum, card) => {
-            const value = card && typeof card.value === 'number' ? card.value : 0;
-            return sum + value;
+            return sum + getCurrentCardValue(card);
         }, 0);
 
         const otherTradeValue = otherTradeCards.reduce((sum, card) => {
-            const value = card && typeof card.value === 'number' ? card.value : 0;
-            return sum + value;
+            return sum + getCurrentCardValue(card);
         }, 0);
 
         const handleCancelTrade = () => {
@@ -532,7 +539,7 @@ export function Trades({ userName }) {
                                 endurance={card.endurance}
                             />
                             <div className="card-value mt-1">
-                                <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                                <small>Value: ${getCurrentCardValue(card).toFixed(2)}</small>
                             </div>
                         </div>
                     ))}
@@ -569,7 +576,7 @@ export function Trades({ userName }) {
                                 endurance={card.endurance}
                             />
                             <div className="card-value mt-1">
-                                <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                                <small>Value: ${getCurrentCardValue(card).toFixed(2)}</small>
                             </div>
                             <button
                                 type="button"
