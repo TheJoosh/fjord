@@ -1,6 +1,7 @@
 export const users = {
   Tradey: {
     wallet: 0,
+    admin: false,
     cards: {
       "Loki, God of Mischief": 3,
       "Thrym, Frost Giant King": 3,
@@ -42,6 +43,7 @@ export const users = {
   Gary: {
     password: "gary123",
     wallet: 0,
+    admin: false,
     cards: {
       "Loki, God of Mischief": 2,
       "Odin, King of the Gods": 2,
@@ -68,6 +70,7 @@ export const users = {
   Steven: {
     password: "steve_pw",
     wallet: 0,
+    admin: false,
     cards: {
       "Thor, God of Thunder": 2,
       "Thrym, Frost Giant King": 2,
@@ -96,6 +99,7 @@ export const users = {
   Lucy: {
     password: "lucy$$$",
     wallet: 0,
+    admin: false,
     cards: {
       "Níðhǫggr, Curse Striker": 2,
       "Brynhildr, Shieldmaiden": 2,
@@ -116,11 +120,23 @@ export const users = {
   Packer: {
     password: "123",
     wallet: 1000,
+    admin: false,
     packs: {
       "Default Pack": 100,
       "Saga Pack": 100,
       "Mythbound Pack": 100,
       "Heroic Pack": 100,
+    },
+  },
+  Fjord: {
+    password: "leif",
+    wallet: 1000000,
+    admin: true,
+    packs: {
+      "Default Pack": 1000,
+      "Saga Pack": 1000,
+      "Mythbound Pack": 1000,
+      "Heroic Pack": 1000,
     },
   },
 }
