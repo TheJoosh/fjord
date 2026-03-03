@@ -104,56 +104,33 @@ export function Bank({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const selectedSellCountByName = React.useMemo(() => {
+    const byName = new Map();
+    for (const card of selectedSellCards) {
+      if (!card?.name) continue;
+      byName.set(card.name, (byName.get(card.name) || 0) + 1);
+    }
+    return byName;
+  }, [selectedSellCards]);
+
+  const availableOwnedDeckCards = React.useMemo(() => {
+    return ownedDeckCards
+      .map((card) => {
+        const selectedQty = selectedSellCountByName.get(card.name) || 0;
+        const availableQty = Math.max(0, (parseInt(card.qty, 10) || 0) - selectedQty);
+        if (availableQty <= 0) return null;
+        return { ...card, qty: availableQty };
+      })
+      .filter(Boolean);
+  }, [ownedDeckCards, selectedSellCountByName]);
+
   const handleDeckCardClick = (clickedCard) => {
     const cardName = clickedCard?.name;
-    if (!ownedCardsStorageKey || !cardName) return;
+    if (!cardName) return;
 
-    const currentQty = Math.max(0, parseInt(user?.cards?.[cardName], 10) || 0);
-    if (user?.cards && currentQty > 0) {
-      if (currentQty <= 1) {
-        delete user.cards[cardName];
-      } else {
-        user.cards[cardName] = currentQty - 1;
-      }
-    }
-
-    let sourceEntries = [];
-    try {
-      const raw = localStorage.getItem(ownedCardsStorageKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      sourceEntries = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      sourceEntries = [];
-    }
-
-    const byName = new Map();
-    if (sourceEntries.length > 0) {
-      for (const entry of sourceEntries) {
-        if (!entry?.name) continue;
-        const existingQty = byName.get(entry.name) || 0;
-        byName.set(entry.name, existingQty + Math.max(0, parseInt(entry.qty, 10) || 0));
-      }
-    } else {
-      for (const [name, qty] of Object.entries(user?.cards || {})) {
-        byName.set(name, Math.max(0, parseInt(qty, 10) || 0));
-      }
-    }
-
-    const nextQty = Math.max(0, (byName.get(cardName) || 0) - 1);
-    if (nextQty > 0) {
-      byName.set(cardName, nextQty);
-    } else {
-      byName.delete(cardName);
-    }
-
-    const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
-      name,
-      qty,
-      card: getCardByName(name),
-    }));
-
-    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
-    setOwnedDeckCards(buildOwnedDeckCards());
+    const availableEntry = availableOwnedDeckCards.find((card) => card.name === cardName);
+    const availableQty = Math.max(0, parseInt(availableEntry?.qty, 10) || 0);
+    if (availableQty <= 0) return;
 
     setSelectedSellCards((prev) => ([
       ...prev,
@@ -165,40 +142,6 @@ export function Bank({ userName }) {
   };
 
   const handleRemoveSellCard = (sellEntryId) => {
-    const selectedCard = selectedSellCards.find((card) => card.sellEntryId === sellEntryId);
-    if (!selectedCard?.name || !ownedCardsStorageKey) return;
-
-    const cardName = selectedCard.name;
-
-    if (user?.cards) {
-      user.cards[cardName] = (Math.max(0, parseInt(user.cards[cardName], 10) || 0) + 1);
-    }
-
-    let sourceEntries = [];
-    try {
-      const raw = localStorage.getItem(ownedCardsStorageKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      sourceEntries = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      sourceEntries = [];
-    }
-
-    const byName = new Map();
-    for (const entry of sourceEntries) {
-      if (!entry?.name) continue;
-      byName.set(entry.name, (byName.get(entry.name) || 0) + Math.max(0, parseInt(entry.qty, 10) || 0));
-    }
-
-    byName.set(cardName, (byName.get(cardName) || 0) + 1);
-
-    const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
-      name,
-      qty,
-      card: getCardByName(name),
-    }));
-
-    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
-    setOwnedDeckCards(buildOwnedDeckCards());
     setSelectedSellCards((prev) => prev.filter((card) => card.sellEntryId !== sellEntryId));
   };
 
@@ -289,6 +232,16 @@ export function Bank({ userName }) {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isSellOverlayOpen, buildOwnedDeckCards]);
+
+  React.useEffect(() => {
+    if (isSellMode) return;
+    setSelectedSellCards([]);
+  }, [isSellMode]);
+
+  React.useEffect(() => {
+    setSelectedSellCards([]);
+    setIsSellOverlayOpen(false);
+  }, [userName]);
 
   return (
     <main>
@@ -431,11 +384,11 @@ export function Bank({ userName }) {
               <button type="button" className="pexels-overlay-close" onClick={() => setIsSellOverlayOpen(false)}>Close</button>
             </div>
 
-            {!ownedDeckCards.length ? (
+            {!availableOwnedDeckCards.length ? (
               <div className="pexels-overlay-state">No cards found in your deck.</div>
             ) : (
               <div className="row deck-row pack-overlay-cards">
-                {ownedDeckCards.map((card) => {
+                {availableOwnedDeckCards.map((card) => {
                   const qty = card.qty;
                   if (!card) return null;
 
