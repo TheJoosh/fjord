@@ -8,8 +8,8 @@ export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
     const requestUserInputRef = React.useRef(null);
     const pendingTradeStorageKey = userName ? `pendingTrade:${userName}` : 'pendingTrade';
-    const loadPendingTrade = () => {
-        const parsed = storageService.getJson(pendingTradeStorageKey, null);
+    const loadPendingTrade = async () => {
+        const parsed = await storageService.getJson(pendingTradeStorageKey, null);
         if (!parsed || typeof parsed !== 'object') {
             return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
         }
@@ -20,21 +20,17 @@ export function Trades({ userName }) {
             otherTradeCards: Array.isArray(parsed.otherTradeCards) ? parsed.otherTradeCards : [],
         };
     };
-    const initialPendingTrade = loadPendingTrade();
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
     const [requestUserInput, setRequestUserInput] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
     const [tradeSuccessMessage, setTradeSuccessMessage] = React.useState('');
-    const [otherUserLabel, setOtherUserLabel] = React.useState(initialPendingTrade.otherUserLabel);
-    const [otherUserName, setOtherUserName] = React.useState(initialPendingTrade.otherUserName);
-    const [otherTradeCards, setOtherTradeCards] = React.useState(initialPendingTrade.otherTradeCards);
+    const [otherUserLabel, setOtherUserLabel] = React.useState('Other User');
+    const [otherUserName, setOtherUserName] = React.useState('');
+    const [otherTradeCards, setOtherTradeCards] = React.useState([]);
         const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
         const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
-        const [selectedTradeCards, setSelectedTradeCards] = React.useState(() => {
-            const parsed = storageService.getJson(tradeSelectionStorageKey, []);
-            return Array.isArray(parsed) ? parsed : [];
-        });
+        const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
         const hasValidTradePartner = Boolean(otherUserName);
 
         const activeUser = getUser(userName);
@@ -48,9 +44,9 @@ export function Trades({ userName }) {
             return cardLike && typeof cardLike.value === 'number' ? cardLike.value : 0;
         }, []);
 
-        const buildOwnedDeckCards = React.useCallback(() => {
+        const buildOwnedDeckCards = React.useCallback(async () => {
             const fallbackCards = activeUser?.cards || {};
-            const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
+            const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
 
             const byName = new Map();
 
@@ -78,21 +74,38 @@ export function Trades({ userName }) {
 
         React.useEffect(() => {
             if (!isDeckOverlayOpen) return;
-            setOwnedDeckCards(buildOwnedDeckCards());
+            (async () => {
+                setOwnedDeckCards(await buildOwnedDeckCards());
+            })();
         }, [isDeckOverlayOpen, buildOwnedDeckCards]);
 
         React.useEffect(() => {
-            const parsed = storageService.getJson(tradeSelectionStorageKey, []);
-            setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
+            (async () => {
+                const initialPendingTrade = await loadPendingTrade();
+                setOtherUserLabel(initialPendingTrade.otherUserLabel);
+                setOtherUserName(initialPendingTrade.otherUserName);
+                setOtherTradeCards(initialPendingTrade.otherTradeCards);
+            })();
+        }, [pendingTradeStorageKey]);
+
+        React.useEffect(() => {
+            (async () => {
+                const parsed = await storageService.getJson(tradeSelectionStorageKey, []);
+                setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
+            })();
         }, [tradeSelectionStorageKey]);
 
         React.useEffect(() => {
-            storageService.setJson(tradeSelectionStorageKey, selectedTradeCards);
+            (async () => {
+                await storageService.setJson(tradeSelectionStorageKey, selectedTradeCards);
+            })();
         }, [tradeSelectionStorageKey, selectedTradeCards]);
 
         React.useEffect(() => {
             if (!otherUserName) {
-                storageService.remove(pendingTradeStorageKey);
+                (async () => {
+                    await storageService.remove(pendingTradeStorageKey);
+                })();
                 return;
             }
 
@@ -101,7 +114,9 @@ export function Trades({ userName }) {
                 otherUserLabel: otherUserLabel || otherUserName,
                 otherTradeCards,
             };
-            storageService.setJson(pendingTradeStorageKey, payload);
+            (async () => {
+                await storageService.setJson(pendingTradeStorageKey, payload);
+            })();
         }, [pendingTradeStorageKey, otherUserName, otherUserLabel, otherTradeCards]);
 
         React.useEffect(() => {
@@ -128,11 +143,11 @@ export function Trades({ userName }) {
             return () => window.cancelAnimationFrame(frame);
         }, [isRequestOverlayOpen]);
 
-        const resolveUserNameFromStorage = (inputName) => {
+        const resolveUserNameFromStorage = async (inputName) => {
             const target = (inputName || '').trim();
             if (!target) return null;
 
-            const parsedUsers = storageService.getUsersMap();
+            const parsedUsers = await storageService.getUsersMap();
             const keys = Object.keys(parsedUsers);
             const exact = keys.find((name) => name === target);
             if (exact) return exact;
@@ -145,8 +160,8 @@ export function Trades({ userName }) {
             return fallbackKeys.find((name) => name.toLowerCase() === target.toLowerCase()) || null;
         };
 
-        const handleRequestTradeUser = () => {
-            const matchedUserName = resolveUserNameFromStorage(requestUserInput);
+        const handleRequestTradeUser = async () => {
+            const matchedUserName = await resolveUserNameFromStorage(requestUserInput);
             if (!matchedUserName) {
                 setRequestUserError('User not found');
                 return;
@@ -157,8 +172,8 @@ export function Trades({ userName }) {
                 return;
             }
 
-            const buildPoolFromDeck = (targetUserName) => {
-                let sourceEntries = storageService.getOwnedCards(targetUserName);
+            const buildPoolFromDeck = async (targetUserName) => {
+                let sourceEntries = await storageService.getOwnedCards(targetUserName);
 
                 if (!sourceEntries.length) {
                     const fallbackUser = getUser(targetUserName);
@@ -182,7 +197,7 @@ export function Trades({ userName }) {
                 return pool;
             };
 
-            const pool = buildPoolFromDeck(matchedUserName);
+            const pool = await buildPoolFromDeck(matchedUserName);
             const shuffled = [...pool].sort(() => Math.random() - 0.5);
             const pickCount = Math.min(
                 shuffled.length,
@@ -201,7 +216,7 @@ export function Trades({ userName }) {
             setIsRequestOverlayOpen(false);
         };
 
-        const handleDeckCardClick = (clickedCard) => {
+        const handleDeckCardClick = async (clickedCard) => {
             const cardName = clickedCard?.name;
             if (!userName || !cardName) return;
 
@@ -214,7 +229,7 @@ export function Trades({ userName }) {
                 }
             }
 
-            const sourceEntries = storageService.getOwnedCards(userName);
+            const sourceEntries = await storageService.getOwnedCards(userName);
 
             const byName = new Map();
             if (sourceEntries.length > 0) {
@@ -242,8 +257,8 @@ export function Trades({ userName }) {
                 card: getCardByName(name),
             }));
 
-            storageService.setOwnedCards(userName, nextOwned);
-            setOwnedDeckCards(buildOwnedDeckCards());
+            await storageService.setOwnedCards(userName, nextOwned);
+            setOwnedDeckCards(await buildOwnedDeckCards());
 
             setSelectedTradeCards((prev) => ([
                 ...prev,
@@ -254,7 +269,7 @@ export function Trades({ userName }) {
             ]));
         };
 
-        const handleRemoveTradeCard = (tradeEntryId) => {
+        const handleRemoveTradeCard = async (tradeEntryId) => {
             const tradeCard = selectedTradeCards.find((card) => card.tradeEntryId === tradeEntryId);
             if (!tradeCard?.name || !userName) return;
 
@@ -264,7 +279,7 @@ export function Trades({ userName }) {
                 activeUser.cards[cardName] = (Math.max(0, parseInt(activeUser.cards[cardName], 10) || 0) + 1);
             }
 
-            const sourceEntries = storageService.getOwnedCards(userName);
+            const sourceEntries = await storageService.getOwnedCards(userName);
 
             const byName = new Map();
             for (const entry of sourceEntries) {
@@ -280,8 +295,8 @@ export function Trades({ userName }) {
                 card: getCardByName(name),
             }));
 
-            storageService.setOwnedCards(userName, nextOwned);
-            setOwnedDeckCards(buildOwnedDeckCards());
+            await storageService.setOwnedCards(userName, nextOwned);
+            setOwnedDeckCards(await buildOwnedDeckCards());
             setSelectedTradeCards((prev) => prev.filter((card) => card.tradeEntryId !== tradeEntryId));
         };
 
@@ -293,7 +308,7 @@ export function Trades({ userName }) {
             return sum + getCurrentCardValue(card);
         }, 0);
 
-        const handleCancelTrade = () => {
+        const handleCancelTrade = async () => {
             if (selectedTradeCards.length) {
                 const restoreCounts = new Map();
                 for (const card of selectedTradeCards) {
@@ -308,7 +323,7 @@ export function Trades({ userName }) {
                 }
 
                 if (userName) {
-                    const sourceEntries = storageService.getOwnedCards(userName);
+                    const sourceEntries = await storageService.getOwnedCards(userName);
 
                     const byName = new Map();
                     for (const entry of sourceEntries) {
@@ -326,7 +341,7 @@ export function Trades({ userName }) {
                         card: getCardByName(name),
                     }));
 
-                    storageService.setOwnedCards(userName, nextOwned);
+                    await storageService.setOwnedCards(userName, nextOwned);
                 }
             }
 
@@ -336,11 +351,11 @@ export function Trades({ userName }) {
             setOtherUserLabel('Other User');
             setTradeSuccessMessage('');
             if (isDeckOverlayOpen) {
-                setOwnedDeckCards(buildOwnedDeckCards());
+                setOwnedDeckCards(await buildOwnedDeckCards());
             }
         };
 
-        const handleAcceptTrade = () => {
+        const handleAcceptTrade = async () => {
             if (!selectedTradeCards.length && !otherTradeCards.length) return;
 
             if (!userName || !otherUserName) return;
@@ -362,8 +377,8 @@ export function Trades({ userName }) {
                     card: getCardByName(name),
                 }));
 
-            const loadOwnedMap = (targetUserName, fallbackCards) => {
-                const sourceEntries = storageService.getOwnedCards(targetUserName);
+            const loadOwnedMap = async (targetUserName, fallbackCards) => {
+                const sourceEntries = await storageService.getOwnedCards(targetUserName);
 
                 if (sourceEntries.length > 0) {
                     return toCountMap(sourceEntries);
@@ -388,8 +403,8 @@ export function Trades({ userName }) {
 
             const targetUser = getUser(otherUserName);
 
-            const activeOwnedMap = loadOwnedMap(userName, activeUser?.cards || {});
-            const otherOwnedMap = loadOwnedMap(otherUserName, targetUser?.cards || {});
+            const activeOwnedMap = await loadOwnedMap(userName, activeUser?.cards || {});
+            const otherOwnedMap = await loadOwnedMap(otherUserName, targetUser?.cards || {});
 
             for (const [name, qty] of activeToOtherCounts.entries()) {
                 otherOwnedMap.set(name, (otherOwnedMap.get(name) || 0) + qty);
@@ -407,8 +422,8 @@ export function Trades({ userName }) {
             const nextActiveOwned = toOwnedArray(activeOwnedMap);
             const nextTargetOwned = toOwnedArray(otherOwnedMap);
 
-            storageService.setOwnedCards(userName, nextActiveOwned);
-            storageService.setOwnedCards(otherUserName, nextTargetOwned);
+            await storageService.setOwnedCards(userName, nextActiveOwned);
+            await storageService.setOwnedCards(otherUserName, nextTargetOwned);
 
             if (activeUser) {
                 activeUser.cards = Object.fromEntries(
@@ -428,7 +443,7 @@ export function Trades({ userName }) {
             setOtherUserLabel('Other User');
             setTradeSuccessMessage('Your trade was successful!');
             if (isDeckOverlayOpen) {
-                setOwnedDeckCards(buildOwnedDeckCards());
+                setOwnedDeckCards(await buildOwnedDeckCards());
             }
         };
 
