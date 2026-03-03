@@ -143,6 +143,136 @@ export function Bank({ userName }) {
     setSelectedSellCards((prev) => prev.filter((card) => card.sellEntryId !== sellEntryId));
   };
 
+  const handleBuyCard = (cardName) => {
+    if (!userName || !cardName) return;
+
+    const latestCard = getCardByName(cardName);
+    if (!latestCard) return;
+
+    const buyPrice = normalizeWalletValue((typeof latestCard.value === 'number' ? latestCard.value : 0) * 1.15);
+    const userObj = getUser(userName);
+    const currentWallet = normalizeWalletValue(userObj?.wallet);
+    if (!userObj || currentWallet < buyPrice) return;
+
+    const bankEntry = bankCards.find((entry) => entry.name === cardName);
+    const bankQty = Math.max(0, parseInt(bankEntry?.qty, 10) || 0);
+    if (bankQty <= 0) return;
+
+    const nextWallet = normalizeWalletValue(currentWallet - buyPrice);
+    userObj.wallet = nextWallet;
+    if (users[userName] && typeof users[userName] === 'object') {
+      users[userName].wallet = nextWallet;
+    }
+
+    try {
+      const rawUsers = localStorage.getItem('users');
+      const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
+      const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
+        ? parsedUsers
+        : {};
+
+      const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
+        ? userName
+        : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
+
+      if (storageUserKey) {
+        const existingStoredUser = usersMap[storageUserKey];
+        if (existingStoredUser && typeof existingStoredUser === 'object') {
+          usersMap[storageUserKey] = {
+            ...existingStoredUser,
+            wallet: nextWallet,
+          };
+        } else {
+          usersMap[storageUserKey] = {
+            wallet: nextWallet,
+          };
+        }
+      } else {
+        usersMap[userName] = {
+          ...(userObj || {}),
+          wallet: nextWallet,
+        };
+      }
+
+      localStorage.setItem('users', JSON.stringify(usersMap));
+    } catch {
+    }
+
+    let sourceEntries = [];
+    if (ownedCardsStorageKey) {
+      try {
+        const raw = localStorage.getItem(ownedCardsStorageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        sourceEntries = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        sourceEntries = [];
+      }
+    }
+
+    const nextOwnedByName = new Map();
+    if (sourceEntries.length > 0) {
+      for (const entry of sourceEntries) {
+        if (!entry?.name) continue;
+        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
+        nextOwnedByName.set(entry.name, (nextOwnedByName.get(entry.name) || 0) + qty);
+      }
+    } else {
+      for (const [name, qty] of Object.entries(userObj?.cards || {})) {
+        nextOwnedByName.set(name, Math.max(0, parseInt(qty, 10) || 0));
+      }
+    }
+    nextOwnedByName.set(cardName, (nextOwnedByName.get(cardName) || 0) + 1);
+
+    if (userObj && typeof userObj === 'object') {
+      const nextCardsObject = {};
+      for (const [name, qty] of nextOwnedByName.entries()) {
+        if (qty > 0) {
+          nextCardsObject[name] = qty;
+        }
+      }
+      userObj.cards = nextCardsObject;
+    }
+
+    if (ownedCardsStorageKey) {
+      const nextOwned = Array.from(nextOwnedByName.entries()).map(([name, qty]) => ({
+        name,
+        qty,
+      }));
+      localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+    }
+
+    setBankCards((prev) => {
+      const nextByName = new Map();
+
+      for (const entry of prev) {
+        if (!entry?.name) continue;
+        const currentQty = Math.max(0, parseInt(entry.qty, 10) || 0);
+        nextByName.set(entry.name, currentQty);
+      }
+
+      const currentQty = nextByName.get(cardName) || 0;
+      const nextQty = Math.max(0, currentQty - 1);
+      if (nextQty > 0) {
+        nextByName.set(cardName, nextQty);
+      } else {
+        nextByName.delete(cardName);
+      }
+
+      return Array.from(nextByName.entries())
+        .map(([name, qty]) => {
+          const card = getCardByName(name);
+          if (!card || qty <= 0) return null;
+          return { name, qty, card };
+        })
+        .filter(Boolean);
+    });
+
+    syncCardPopulationsFromOwnedCards(users);
+    recalcCardValues();
+    setOwnedDeckCards(buildOwnedDeckCards());
+    setSellSuccessMessage('');
+  };
+
   const handleSellCards = () => {
     if (!userName || selectedSellCards.length === 0) return;
 
@@ -426,7 +556,11 @@ export function Bank({ userName }) {
       {!isSellMode && (
         <div className="container-fluid">
           <div className="row deck-row">
-            {paginatedCards.map(({ name, card, qty }) => (
+            {paginatedCards.map(({ name, card, qty }) => {
+              const buyPrice = normalizeWalletValue((typeof card.value === 'number' ? card.value : 0) * 1.15);
+              const canAfford = walletValue >= buyPrice;
+
+              return (
                 <div className="col deck-col" key={name}>
                   <Card
                     image={card.image}
@@ -445,11 +579,17 @@ export function Bank({ userName }) {
                     </div>
                     <small>Author: {card.author || 'Unknown'}</small>
                   </div>
-                  <button type="button" className="picker">
-                    Buy for ${((typeof card.value === 'number' ? card.value : 0) * 1.15).toFixed(2)}?
+                  <button
+                    type="button"
+                    className="picker"
+                    onClick={() => handleBuyCard(name)}
+                    disabled={!canAfford}
+                  >
+                    Buy for ${buyPrice.toFixed(2)}?
                   </button>
                 </div>
-              ))}
+              );
+            })}
           </div>
         </div>
       )}
