@@ -445,6 +445,9 @@ export function Bank({ userName }) {
                     </div>
                     <small>Author: {card.author || 'Unknown'}</small>
                   </div>
+                  <button type="button" className="picker">
+                    Buy for ${((typeof card.value === 'number' ? card.value : 0) * 1.15).toFixed(2)}?
+                  </button>
                 </div>
               ))}
           </div>
