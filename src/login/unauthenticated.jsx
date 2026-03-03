@@ -24,7 +24,7 @@ export function Unauthenticated({ userName, onLogin }) {
     }
   };
 
-  const handleCreateAccount = () => {
+  const handleCreateAccount = async () => {
     const loginName = email.trim();
     if (!loginName || !password) {
       setMessage('Please enter both username and password.');
@@ -52,13 +52,13 @@ export function Unauthenticated({ userName, onLogin }) {
 
     users[loginName] = newUser;
 
-    const usersMap = storageService.getUsersMap();
+    const usersMap = await storageService.getUsersMap();
     usersMap[loginName] = newUser;
-    storageService.setUsersMap(usersMap);
+    await storageService.setUsersMap(usersMap);
 
-    const packsMap = storageService.getUsersPacksMap();
+    const packsMap = await storageService.getUsersPacksMap();
     packsMap[loginName] = { ...newUser.packs };
-    storageService.setUsersPacksMap(packsMap);
+    await storageService.setUsersPacksMap(packsMap);
 
     setMessage('Account created. Logging in...');
     onLogin(loginName);
