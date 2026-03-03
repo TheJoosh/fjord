@@ -9,6 +9,7 @@ import {
     recalcCardValues,
     syncCardPopulationsFromOwnedCards,
 } from '../data/cards';
+import { storageService } from '../services/storageService';
 import { Card } from '../data/card';
 
 export function Packs({ userName }) {
@@ -19,48 +20,15 @@ export function Packs({ userName }) {
     const heroicPackPrice = 8;
     const mythboundPackPrice = 11.5;
     const packs = user?.packs || {};
-    const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
     const getPacksFromStorage = (activeUserName, fallbackPacks) => {
         if (!activeUserName) return { ...(fallbackPacks || {}) };
-
-        try {
-            const rawPacksMap = localStorage.getItem('usersPacks');
-            const packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
-            const storedPacks = packsMap?.[activeUserName];
-            if (storedPacks && typeof storedPacks === 'object') {
-                return {
-                    'Default Pack': parseInt(storedPacks['Default Pack'], 10) || 0,
-                    'Saga Pack': parseInt(storedPacks['Saga Pack'], 10) || 0,
-                    'Heroic Pack': parseInt(storedPacks['Heroic Pack'], 10) || 0,
-                    'Mythbound Pack': parseInt(storedPacks['Mythbound Pack'], 10) || 0,
-                };
-            }
-        } catch {
-            // Ignore malformed localStorage and fallback to in-memory packs.
-        }
-
-        return {
-            'Default Pack': parseInt(fallbackPacks?.['Default Pack'], 10) || 0,
-            'Saga Pack': parseInt(fallbackPacks?.['Saga Pack'], 10) || 0,
-            'Heroic Pack': parseInt(fallbackPacks?.['Heroic Pack'], 10) || 0,
-            'Mythbound Pack': parseInt(fallbackPacks?.['Mythbound Pack'], 10) || 0,
-        };
+        return storageService.getUserPacks(activeUserName, fallbackPacks);
     };
 
     const persistPacksToStorage = (activeUserName, nextPacks) => {
         if (!activeUserName) return;
-
-        let packsMap = {};
-        try {
-            const rawPacksMap = localStorage.getItem('usersPacks');
-            packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
-        } catch {
-            packsMap = {};
-        }
-
-        packsMap[activeUserName] = { ...nextPacks };
-        localStorage.setItem('usersPacks', JSON.stringify(packsMap));
+        storageService.setUserPacks(activeUserName, nextPacks);
     };
 
     const startingPacks = getPacksFromStorage(userName, packs);
@@ -116,14 +84,8 @@ export function Packs({ userName }) {
             }
         }
 
-        if (ownedCardsStorageKey) {
-            let existingOwned = [];
-            try {
-                const raw = localStorage.getItem(ownedCardsStorageKey);
-                existingOwned = raw ? JSON.parse(raw) : [];
-            } catch {
-                existingOwned = [];
-            }
+        if (userName) {
+            const existingOwned = storageService.getOwnedCards(userName);
 
             const byName = new Map();
             for (const entry of existingOwned) {
@@ -147,7 +109,7 @@ export function Packs({ userName }) {
             }
 
             const nextOwned = Array.from(byName.values()).filter(entry => entry.qty > 0);
-            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+            storageService.setOwnedCards(userName, nextOwned);
         }
 
         setOpenedCards([]);
@@ -239,40 +201,31 @@ export function Packs({ userName }) {
             users[activeUserName].wallet = nextWalletValue;
         }
 
-        try {
-            const rawUsers = localStorage.getItem('users');
-            const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
-            const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
-                ? parsedUsers
-                : {};
+        const usersMap = storageService.getUsersMap();
+        const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, activeUserName)
+            ? activeUserName
+            : Object.keys(usersMap).find((name) => name.toLowerCase() === activeUserName.toLowerCase());
 
-            const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, activeUserName)
-                ? activeUserName
-                : Object.keys(usersMap).find((name) => name.toLowerCase() === activeUserName.toLowerCase());
-
-            if (storageUserKey) {
-                const existingStoredUser = usersMap[storageUserKey];
-                if (existingStoredUser && typeof existingStoredUser === 'object') {
-                    usersMap[storageUserKey] = {
-                        ...existingStoredUser,
-                        wallet: nextWalletValue,
-                    };
-                } else {
-                    usersMap[storageUserKey] = {
-                        wallet: nextWalletValue,
-                    };
-                }
+        if (storageUserKey) {
+            const existingStoredUser = usersMap[storageUserKey];
+            if (existingStoredUser && typeof existingStoredUser === 'object') {
+                usersMap[storageUserKey] = {
+                    ...existingStoredUser,
+                    wallet: nextWalletValue,
+                };
             } else {
-                usersMap[activeUserName] = {
-                    ...(activeUser || {}),
+                usersMap[storageUserKey] = {
                     wallet: nextWalletValue,
                 };
             }
-
-            localStorage.setItem('users', JSON.stringify(usersMap));
-        } catch {
-            // Ignore malformed localStorage writes.
+        } else {
+            usersMap[activeUserName] = {
+                ...(activeUser || {}),
+                wallet: nextWalletValue,
+            };
         }
+
+        storageService.setUsersMap(usersMap);
     };
 
     const buyPack = (packName, packPrice) => {
