@@ -12,9 +12,7 @@ export function Bank({ userName }) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [bankCards, setBankCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
-  const [isSellOverlayOpen, setIsSellOverlayOpen] = React.useState(false);
   const [isSellMode, setIsSellMode] = React.useState(false);
-  const [selectedSellCards, setSelectedSellCards] = React.useState([]);
   const [sellSuccessMessage, setSellSuccessMessage] = React.useState('');
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = storageService.getString(sortByStorageKey, 'Rarity');
@@ -80,62 +78,6 @@ export function Bank({ userName }) {
 
   const goToNextPage = () => {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
-  };
-
-  const selectedSellCountByName = React.useMemo(() => {
-    const byName = new Map();
-    for (const card of selectedSellCards) {
-      if (!card?.name) continue;
-      byName.set(card.name, (byName.get(card.name) || 0) + 1);
-    }
-    return byName;
-  }, [selectedSellCards]);
-
-  const availableOwnedDeckCards = React.useMemo(() => {
-    return ownedDeckCards
-      .map((card) => {
-        const selectedQty = selectedSellCountByName.get(card.name) || 0;
-        const availableQty = Math.max(0, (parseInt(card.qty, 10) || 0) - selectedQty);
-        if (availableQty <= 0) return null;
-        return { ...card, qty: availableQty };
-      })
-      .filter(Boolean);
-  }, [ownedDeckCards, selectedSellCountByName]);
-
-  const selectedSellValue = React.useMemo(() => {
-    return selectedSellCards.reduce((sum, card) => {
-      if (!card?.name) return sum;
-      const latest = getCardByName(card.name);
-      const value = latest && typeof latest.value === 'number'
-        ? latest.value
-        : (typeof card.value === 'number' ? card.value : 0);
-      return sum + value;
-    }, 0);
-  }, [selectedSellCards]);
-
-  const selectedSellPayoutValue = React.useMemo(() => {
-    return selectedSellValue * 0.85;
-  }, [selectedSellValue]);
-
-  const handleDeckCardClick = (clickedCard) => {
-    const cardName = clickedCard?.name;
-    if (!cardName) return;
-
-    const availableEntry = availableOwnedDeckCards.find((card) => card.name === cardName);
-    const availableQty = Math.max(0, parseInt(availableEntry?.qty, 10) || 0);
-    if (availableQty <= 0) return;
-
-    setSelectedSellCards((prev) => ([
-      ...prev,
-      {
-        ...clickedCard,
-        sellEntryId: `${clickedCard.name}-${Date.now()}-${Math.random()}`,
-      },
-    ]));
-  };
-
-  const handleRemoveSellCard = (sellEntryId) => {
-    setSelectedSellCards((prev) => prev.filter((card) => card.sellEntryId !== sellEntryId));
   };
 
   const handleBuyCard = (cardName) => {
@@ -251,19 +193,17 @@ export function Bank({ userName }) {
     setSellSuccessMessage('');
   };
 
-  const handleSellCards = () => {
-    if (!userName || selectedSellCards.length === 0) return;
+  const handleSellCard = (cardName) => {
+    if (!userName || !cardName) return;
 
-    const soldCount = selectedSellCards.length;
-    const payoutAmount = selectedSellPayoutValue;
+    const latestCard = getCardByName(cardName);
+    if (!latestCard) return;
 
-    const selectedCounts = new Map();
-    for (const card of selectedSellCards) {
-      if (!card?.name) continue;
-      selectedCounts.set(card.name, (selectedCounts.get(card.name) || 0) + 1);
-    }
-
+    const sellValue = typeof latestCard.value === 'number' ? latestCard.value : 0;
+    const payoutAmount = normalizeWalletValue(sellValue * 0.85);
     const userObj = getUser(userName);
+    if (!userObj) return;
+
     const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
 
     const nextOwnedByName = new Map();
@@ -279,14 +219,14 @@ export function Bank({ userName }) {
       }
     }
 
-    for (const [name, qtyToRemove] of selectedCounts.entries()) {
-      const currentQty = nextOwnedByName.get(name) || 0;
-      const nextQty = Math.max(0, currentQty - qtyToRemove);
-      if (nextQty > 0) {
-        nextOwnedByName.set(name, nextQty);
-      } else {
-        nextOwnedByName.delete(name);
-      }
+    const currentQty = nextOwnedByName.get(cardName) || 0;
+    if (currentQty <= 0) return;
+
+    const nextQty = Math.max(0, currentQty - 1);
+    if (nextQty > 0) {
+      nextOwnedByName.set(cardName, nextQty);
+    } else {
+      nextOwnedByName.delete(cardName);
     }
 
     if (userObj && typeof userObj === 'object') {
@@ -348,9 +288,7 @@ export function Bank({ userName }) {
         nextByName.set(entry.name, currentQty);
       }
 
-      for (const [name, qtyToAdd] of selectedCounts.entries()) {
-        nextByName.set(name, (nextByName.get(name) || 0) + qtyToAdd);
-      }
+      nextByName.set(cardName, (nextByName.get(cardName) || 0) + 1);
 
       return Array.from(nextByName.entries())
         .map(([name, qty]) => {
@@ -365,9 +303,7 @@ export function Bank({ userName }) {
     recalcCardValues();
 
     setOwnedDeckCards(buildOwnedDeckCards());
-    setSelectedSellCards([]);
-    setIsSellOverlayOpen(false);
-    setSellSuccessMessage(`Sold ${soldCount} card${soldCount === 1 ? '' : 's'} for $${payoutAmount.toFixed(2)}.`);
+    setSellSuccessMessage(`Sold 1 card for $${payoutAmount.toFixed(2)}.`);
   };
 
   const buildOwnedDeckCards = React.useCallback(() => {
@@ -424,7 +360,7 @@ export function Bank({ userName }) {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy]);
+  }, [sortBy, isSellMode]);
   
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -433,30 +369,19 @@ export function Bank({ userName }) {
   }, [currentPage, totalPages]);
 
   React.useEffect(() => {
-    if (!isSellOverlayOpen) return;
-
+    if (!isSellMode) return;
     setOwnedDeckCards(buildOwnedDeckCards());
-
-    const handleKeyDown = (event) => {
-      if (event.key !== 'Escape') return;
-      setIsSellOverlayOpen(false);
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSellOverlayOpen, buildOwnedDeckCards]);
+  }, [isSellMode, buildOwnedDeckCards]);
 
   React.useEffect(() => {
     if (isSellMode) return;
-    setSelectedSellCards([]);
     setSellSuccessMessage('');
   }, [isSellMode]);
 
   React.useEffect(() => {
-    setSelectedSellCards([]);
-    setIsSellOverlayOpen(false);
+    setOwnedDeckCards(buildOwnedDeckCards());
     setSellSuccessMessage('');
-  }, [userName]);
+  }, [userName, buildOwnedDeckCards]);
 
   return (
     <main className="bank-page">
@@ -547,20 +472,15 @@ export function Bank({ userName }) {
 
       {isSellMode && (
         <>
-          <div className="bank-sell-actions">
-            <button className="picker bank-sell-action-btn" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
-            {selectedSellCards.length > 0 && (
-              <button className="picker bank-sell-action-btn" onClick={handleSellCards}>Sell for ${selectedSellPayoutValue.toFixed(2)}?</button>
-            )}
-          </div>
-          <h3 className="value">Value: ${selectedSellValue.toFixed(2)}</h3>
-          <h3 className="value">Payout (85%): ${selectedSellPayoutValue.toFixed(2)}</h3>
           {sellSuccessMessage && <div className="trade-success-message">{sellSuccessMessage}</div>}
           <section className="yoUser">
             <div className="container-fluid">
               <div className="row deck-row">
-                {selectedSellCards.map((card) => (
-                  <div key={card.sellEntryId} className="col deck-col">
+                {ownedDeckCards.map((card) => {
+                  const payoutAmount = normalizeWalletValue(((typeof card.value === 'number' ? card.value : 0) * 0.85));
+
+                  return (
+                  <div key={card.name} className="col deck-col">
                     <Card
                       image={card.image}
                       name={card.name}
@@ -576,67 +496,17 @@ export function Bank({ userName }) {
                     </div>
                     <button
                       type="button"
-                      className="remove-trade-card-btn"
-                      onClick={() => handleRemoveSellCard(card.sellEntryId)}
+                      className="picker"
+                      onClick={() => handleSellCard(card.name)}
                     >
-                      Remove Card
+                      Sell for ${payoutAmount.toFixed(2)}?
                     </button>
                   </div>
-                ))}
+                )})}
               </div>
             </div>
           </section>
         </>
-      )}
-
-      {isSellOverlayOpen && (
-        <div className="pexels-overlay" onClick={() => setIsSellOverlayOpen(false)}>
-          <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
-            <div className="pexels-overlay-header">
-              <h3>Sell Cards</h3>
-              <button type="button" className="pexels-overlay-close" onClick={() => setIsSellOverlayOpen(false)}>Close</button>
-            </div>
-
-            {!availableOwnedDeckCards.length ? (
-              <div className="pexels-overlay-state">No cards found in your deck.</div>
-            ) : (
-              <div className="row deck-row pack-overlay-cards">
-                {availableOwnedDeckCards.map((card) => {
-                  const qty = card.qty;
-                  if (!card) return null;
-
-                  return (
-                    <div key={card.name} className="col deck-col pack-overlay-col">
-                      <button
-                        type="button"
-                        className="trade-deck-card-btn"
-                        onClick={() => handleDeckCardClick(card)}
-                        title="Remove 1 from your deck"
-                      >
-                        <Card
-                          image={card.image}
-                          name={card.name}
-                          cost={card.cost}
-                          rarity={card.rarity}
-                          cardType={card.cardType}
-                          description={card.description}
-                          strength={card.strength}
-                          endurance={card.endurance}
-                        />
-                      </button>
-                      <div className="card-value mt-1">
-                        <div className="card-meta-row">
-                          <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
-                          <small className="card-quantity">Quantity: {qty}</small>
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
       )}
     </main>
   );
