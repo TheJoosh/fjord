@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
-import { addCardToPendingApproval, cardNameExists } from '../data/cards';
-import { users } from '../data/users';
+import { addCardToPendingApproval, addCardToRarity, cardNameExists } from '../data/cards';
+import { getUser, users } from '../data/users';
 
 export function Designer({ userName }) { 
     const imageInputRef = useRef(null);
@@ -490,9 +490,11 @@ export function Designer({ userName }) {
                 ? 'Default.png'
                 : (previewImage || "Default.png");
         const activeUserName = (userName || localStorage.getItem('userName') || '').trim();
+        const activeUser = getUser(activeUserName);
+        const isAdminUser = Boolean(activeUser?.admin);
 
         try {
-            addCardToPendingApproval(cardName, {
+            const cardPayload = {
                 image: submittedImage,
                 cardType,
                 cost: parseInt(cost, 10) || cost,
@@ -502,7 +504,13 @@ export function Designer({ userName }) {
                 value: 0,
                 author: activeUserName,
                 rarity: calculatedRarity,
-            });
+            };
+
+            if (isAdminUser) {
+                addCardToRarity(calculatedRarity, cardName, cardPayload);
+            } else {
+                addCardToPendingApproval(cardName, cardPayload);
+            }
 
             if (activeUserName) {
                 const designedMapKey = 'usersDesigned';
