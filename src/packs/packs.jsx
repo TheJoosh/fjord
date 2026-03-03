@@ -312,7 +312,7 @@ export function Packs({ userName }) {
                     <div className="cardpack default">
                         <h3>Normal Pack</h3>
                         <div className="pack-price-row">
-                            <h4>$3.50</h4>
+                            <h4>${normalPackPrice.toFixed(2)}</h4>
                             <button
                                 type="button"
                                 className="open pack-buy-btn"
@@ -332,7 +332,7 @@ export function Packs({ userName }) {
                     <div className="cardpack saga">
                         <h3>Saga Pack</h3>
                         <div className="pack-price-row">
-                            <h4>$4.50</h4>
+                            <h4>${sagaPackPrice.toFixed(2)}</h4>
                             <button
                                 type="button"
                                 className="open pack-buy-btn"
@@ -352,7 +352,7 @@ export function Packs({ userName }) {
                     <div className="cardpack heroic">
                         <h3>Heroic Pack</h3>
                         <div className="pack-price-row">
-                            <h4>$7.50</h4>
+                            <h4>${heroicPackPrice.toFixed(2)}</h4>
                             <button
                                 type="button"
                                 className="open pack-buy-btn"
@@ -372,7 +372,7 @@ export function Packs({ userName }) {
                     <div className="cardpack mythbound">
                         <h3>Mythbound Pack</h3>
                         <div className="pack-price-row">
-                            <h4>$11.25</h4>
+                            <h4>${mythboundPackPrice.toFixed(2)}</h4>
                             <button
                                 type="button"
                                 className="open pack-buy-btn"
