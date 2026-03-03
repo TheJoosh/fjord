@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
-import { getUser } from '../data/users';
+import { getUser, normalizeWalletValue } from '../data/users';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
@@ -38,6 +38,7 @@ export function Deck({ userName }) {
 
   // calculate total deck value
   let deckValue = 0;
+  const walletValue = normalizeWalletValue(user?.wallet);
   if (user) {
     for (const [name, qty] of Object.entries(effectiveCards)) {
       const card = getCardByName(name);
@@ -174,6 +175,10 @@ export function Deck({ userName }) {
           <div className="deck-value-row">
             <div className="deck-value">
               Deck Value: ${deckValue.toFixed(2)}
+              <br></br>
+              Wallet: ${walletValue.toFixed(2)}
+            </div>
+            <div className="deck-value">
             </div>
             <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
               {showPagination && (
