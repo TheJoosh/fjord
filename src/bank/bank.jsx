@@ -584,6 +584,7 @@ export function Bank({ userName }) {
                     className="picker"
                     onClick={() => handleBuyCard(name)}
                     disabled={!canAfford}
+                    style={!canAfford ? { color: 'red' } : undefined}
                   >
                     Buy for ${buyPrice.toFixed(2)}?
                   </button>
