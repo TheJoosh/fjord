@@ -238,7 +238,7 @@ export function Bank({ userName }) {
       }
       userObj.cards = nextCardsObject;
 
-      const nextWallet = normalizeWalletValue((userObj.wallet || 0) + selectedSellPayoutValue);
+      const nextWallet = normalizeWalletValue((userObj.wallet || 0) + payoutAmount);
       userObj.wallet = nextWallet;
       if (users[userName] && typeof users[userName] === 'object') {
         users[userName].wallet = nextWallet;
