@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
-import { addCardToRarity, cardNameExists } from '../data/cards';
+import { addCardToPendingApproval, cardNameExists } from '../data/cards';
 import { users } from '../data/users';
 
 export function Designer({ userName }) { 
@@ -492,7 +492,7 @@ export function Designer({ userName }) {
         const activeUserName = (userName || localStorage.getItem('userName') || '').trim();
 
         try {
-            addCardToRarity(calculatedRarity, cardName, {
+            addCardToPendingApproval(cardName, {
                 image: submittedImage,
                 cardType,
                 cost: parseInt(cost, 10) || cost,
@@ -501,6 +501,7 @@ export function Designer({ userName }) {
                 endurance: displayStats.endurance,
                 value: 0,
                 author: activeUserName,
+                rarity: calculatedRarity,
             });
 
             if (activeUserName) {
