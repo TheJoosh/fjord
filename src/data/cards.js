@@ -492,7 +492,7 @@ function toPersistablePendingApproval(source) {
   return result;
 }
 
-function hydrateCardsByRarityFromStorage() {
+async function hydrateCardsByRarityFromStorage() {
   if (!canUseLocalStorage()) return;
 
   const defaultCardsByRarity = {};
@@ -501,7 +501,7 @@ function hydrateCardsByRarityFromStorage() {
   }
 
   try {
-    const parsed = storageService.getJson(CARDS_STORAGE_KEY, null);
+    const parsed = await storageService.getJson(CARDS_STORAGE_KEY, null);
     if (parsed && typeof parsed === 'object') {
         const merged = {};
 
@@ -532,19 +532,19 @@ function hydrateCardsByRarityFromStorage() {
 
   try {
     const payload = toPersistableCardsByRarity(cardsByRarity);
-    storageService.setJson(CARDS_STORAGE_KEY, payload);
+    await storageService.setJson(CARDS_STORAGE_KEY, payload);
   } catch {
     // Ignore storage write failures on hydration.
   }
 }
 
-function hydratePendingApprovalFromStorage() {
+async function hydratePendingApprovalFromStorage() {
   if (!canUseLocalStorage()) return;
 
   let merged = {};
 
   try {
-    const parsed = storageService.getJson(PENDING_APPROVAL_STORAGE_KEY, null);
+    const parsed = await storageService.getJson(PENDING_APPROVAL_STORAGE_KEY, null);
     if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
       merged = { ...parsed };
     }
@@ -559,7 +559,7 @@ function hydratePendingApprovalFromStorage() {
 
   try {
     const payload = toPersistablePendingApproval(pendingApproval);
-    storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
+    await storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
   } catch {
     // Ignore storage write failures on hydration.
   }
@@ -569,14 +569,14 @@ export function persistCardsByRarity() {
   if (!canUseLocalStorage()) return;
 
   const payload = toPersistableCardsByRarity(cardsByRarity);
-  storageService.setJson(CARDS_STORAGE_KEY, payload);
+  void storageService.setJson(CARDS_STORAGE_KEY, payload);
 }
 
 export function persistPendingApproval() {
   if (!canUseLocalStorage()) return;
 
   const payload = toPersistablePendingApproval(pendingApproval);
-  storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
+  void storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
 }
 
 export function addCardToRarity(rarity, name, cardData) {
@@ -636,30 +636,6 @@ export function updatePendingApprovalCard(previousName, nextName, cardData) {
 
 function getKnownUserNames(usersObj) {
   const names = new Set(Object.keys(usersObj || {}));
-
-  if (!canUseLocalStorage()) {
-    return Array.from(names);
-  }
-
-  try {
-    const parsedUsers = storageService.getJson('users', null);
-
-    if (parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)) {
-      for (const name of Object.keys(parsedUsers)) {
-        names.add(name);
-      }
-    } else if (Array.isArray(parsedUsers)) {
-      for (const entry of parsedUsers) {
-        const name =
-          typeof entry === 'string'
-            ? entry
-            : entry?.name || entry?.userName || null;
-        if (name) names.add(name);
-      }
-    }
-  } catch {
-  }
-
   return Array.from(names);
 }
 
@@ -671,20 +647,6 @@ export function syncCardPopulationsFromOwnedCards(usersObj) {
 
   for (const userName of knownUsers) {
     let usedOwnedCardsStorage = false;
-
-    if (canUseLocalStorage()) {
-      try {
-        const parsedOwned = storageService.getOwnedCards(userName);
-        if (Array.isArray(parsedOwned) && parsedOwned.length > 0) {
-          usedOwnedCardsStorage = true;
-          for (const entry of parsedOwned) {
-            if (!entry?.name) continue;
-            totals[entry.name] = (totals[entry.name] || 0) + normalizePopulationValue(entry.qty);
-          }
-        }
-      } catch {
-      }
-    }
 
     if (!usedOwnedCardsStorage) {
       const fallbackUser = usersObj?.[userName];
@@ -740,8 +702,8 @@ export function incrementCardPopulations(cards) {
   return cardsByRarity;
 }
 
-hydrateCardsByRarityFromStorage();
-hydratePendingApprovalFromStorage();
+void hydrateCardsByRarityFromStorage();
+void hydratePendingApprovalFromStorage();
 
 
 export function getCardByName(name) {
