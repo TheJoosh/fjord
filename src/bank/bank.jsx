@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
-import { getCardByName, getCardScarcityScore } from '../data/cards';
-import { getUser, normalizeWalletValue } from '../data/users';
+import { getCardByName, getCardScarcityScore, recalcCardValues, syncCardPopulationsFromOwnedCards } from '../data/cards';
+import { getUser, normalizeWalletValue, users } from '../data/users';
 
 export function Bank({ userName }) {
   const bankCardsStorageKey = 'bankCards';
@@ -158,6 +158,139 @@ export function Bank({ userName }) {
 
   const handleRemoveSellCard = (sellEntryId) => {
     setSelectedSellCards((prev) => prev.filter((card) => card.sellEntryId !== sellEntryId));
+  };
+
+  const handleSellCards = () => {
+    if (!userName || selectedSellCards.length === 0) return;
+
+    const selectedCounts = new Map();
+    for (const card of selectedSellCards) {
+      if (!card?.name) continue;
+      selectedCounts.set(card.name, (selectedCounts.get(card.name) || 0) + 1);
+    }
+
+    const userObj = getUser(userName);
+    let sourceEntries = [];
+
+    if (ownedCardsStorageKey) {
+      try {
+        const raw = localStorage.getItem(ownedCardsStorageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        sourceEntries = Array.isArray(parsed) ? parsed : [];
+      } catch {
+        sourceEntries = [];
+      }
+    }
+
+    const nextOwnedByName = new Map();
+    if (sourceEntries.length > 0) {
+      for (const entry of sourceEntries) {
+        if (!entry?.name) continue;
+        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
+        nextOwnedByName.set(entry.name, (nextOwnedByName.get(entry.name) || 0) + qty);
+      }
+    } else {
+      for (const [name, qty] of Object.entries(userObj?.cards || {})) {
+        nextOwnedByName.set(name, Math.max(0, parseInt(qty, 10) || 0));
+      }
+    }
+
+    for (const [name, qtyToRemove] of selectedCounts.entries()) {
+      const currentQty = nextOwnedByName.get(name) || 0;
+      const nextQty = Math.max(0, currentQty - qtyToRemove);
+      if (nextQty > 0) {
+        nextOwnedByName.set(name, nextQty);
+      } else {
+        nextOwnedByName.delete(name);
+      }
+    }
+
+    if (userObj && typeof userObj === 'object') {
+      const nextCardsObject = {};
+      for (const [name, qty] of nextOwnedByName.entries()) {
+        if (qty > 0) {
+          nextCardsObject[name] = qty;
+        }
+      }
+      userObj.cards = nextCardsObject;
+
+      const nextWallet = normalizeWalletValue((userObj.wallet || 0) + selectedSellPayoutValue);
+      userObj.wallet = nextWallet;
+      if (users[userName] && typeof users[userName] === 'object') {
+        users[userName].wallet = nextWallet;
+      }
+
+      try {
+        const rawUsers = localStorage.getItem('users');
+        const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
+        const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
+          ? parsedUsers
+          : {};
+
+        const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
+          ? userName
+          : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
+
+        if (storageUserKey) {
+          const existingStoredUser = usersMap[storageUserKey];
+          if (existingStoredUser && typeof existingStoredUser === 'object') {
+            usersMap[storageUserKey] = {
+              ...existingStoredUser,
+              wallet: nextWallet,
+            };
+          } else {
+            usersMap[storageUserKey] = {
+              wallet: nextWallet,
+            };
+          }
+        } else {
+          usersMap[userName] = {
+            ...(userObj || {}),
+            wallet: nextWallet,
+          };
+        }
+
+        localStorage.setItem('users', JSON.stringify(usersMap));
+      } catch {
+      }
+    }
+
+    if (ownedCardsStorageKey) {
+      const nextOwned = Array.from(nextOwnedByName.entries()).map(([name, qty]) => ({
+        name,
+        qty,
+      }));
+      localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+    }
+
+    setBankCards((prev) => {
+      const nextByName = new Map();
+
+      for (const entry of prev) {
+        if (!entry?.name) continue;
+        const currentQty = Math.max(0, parseInt(entry.qty, 10) || 0);
+        nextByName.set(entry.name, currentQty);
+      }
+
+      for (const [name, qtyToAdd] of selectedCounts.entries()) {
+        nextByName.set(name, (nextByName.get(name) || 0) + qtyToAdd);
+      }
+
+      return Array.from(nextByName.entries())
+        .map(([name, qty]) => {
+          const card = getCardByName(name);
+          if (!card || qty <= 0) return null;
+          return { name, qty, card };
+        })
+        .filter(Boolean);
+    });
+
+    syncCardPopulationsFromOwnedCards(users);
+    recalcCardValues();
+
+    setOwnedDeckCards(buildOwnedDeckCards());
+    setSelectedSellCards([]);
+    setIsSellOverlayOpen(false);
   };
 
   const buildOwnedDeckCards = React.useCallback(() => {
@@ -358,6 +491,7 @@ export function Bank({ userName }) {
       {isSellMode && (
         <>
           <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
+          <button className="picker" onClick={handleSellCards} disabled={!selectedSellCards.length}>Sell</button>
           <h3 className="value">Value: ${selectedSellValue.toFixed(2)}</h3>
           <h3 className="value">Payout (85%): ${selectedSellPayoutValue.toFixed(2)}</h3>
           <section className="yoUser">
