@@ -2,27 +2,23 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName } from '../data/cards';
 import { getUser, users } from '../data/users';
+import { storageService } from '../services/storageService';
 
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
     const requestUserInputRef = React.useRef(null);
     const pendingTradeStorageKey = userName ? `pendingTrade:${userName}` : 'pendingTrade';
     const loadPendingTrade = () => {
-        try {
-            const raw = localStorage.getItem(pendingTradeStorageKey);
-            const parsed = raw ? JSON.parse(raw) : null;
-            if (!parsed || typeof parsed !== 'object') {
-                return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
-            }
-
-            return {
-                otherUserLabel: parsed.otherUserLabel || parsed.otherUserName || 'Other User',
-                otherUserName: parsed.otherUserName || '',
-                otherTradeCards: Array.isArray(parsed.otherTradeCards) ? parsed.otherTradeCards : [],
-            };
-        } catch {
+        const parsed = storageService.getJson(pendingTradeStorageKey, null);
+        if (!parsed || typeof parsed !== 'object') {
             return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
         }
+
+        return {
+            otherUserLabel: parsed.otherUserLabel || parsed.otherUserName || 'Other User',
+            otherUserName: parsed.otherUserName || '',
+            otherTradeCards: Array.isArray(parsed.otherTradeCards) ? parsed.otherTradeCards : [],
+        };
     };
     const initialPendingTrade = loadPendingTrade();
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
@@ -36,15 +32,9 @@ export function Trades({ userName }) {
         const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
         const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : 'tradeSelection';
         const [selectedTradeCards, setSelectedTradeCards] = React.useState(() => {
-            try {
-                const raw = localStorage.getItem(tradeSelectionStorageKey);
-                const parsed = raw ? JSON.parse(raw) : [];
-                return Array.isArray(parsed) ? parsed : [];
-            } catch {
-                return [];
-            }
+            const parsed = storageService.getJson(tradeSelectionStorageKey, []);
+            return Array.isArray(parsed) ? parsed : [];
         });
-        const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
         const hasValidTradePartner = Boolean(otherUserName);
 
         const activeUser = getUser(userName);
@@ -60,19 +50,7 @@ export function Trades({ userName }) {
 
         const buildOwnedDeckCards = React.useCallback(() => {
             const fallbackCards = activeUser?.cards || {};
-            let sourceEntries = [];
-
-            if (ownedCardsStorageKey) {
-                try {
-                    const raw = localStorage.getItem(ownedCardsStorageKey);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    if (Array.isArray(parsed)) {
-                        sourceEntries = parsed;
-                    }
-                } catch {
-                    sourceEntries = [];
-                }
-            }
+            const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
 
             const byName = new Map();
 
@@ -96,7 +74,7 @@ export function Trades({ userName }) {
                 })
                 .filter(Boolean)
                 .sort((a, b) => a.name.localeCompare(b.name));
-        }, [activeUser, ownedCardsStorageKey]);
+        }, [activeUser, userName]);
 
         React.useEffect(() => {
             if (!isDeckOverlayOpen) return;
@@ -104,22 +82,17 @@ export function Trades({ userName }) {
         }, [isDeckOverlayOpen, buildOwnedDeckCards]);
 
         React.useEffect(() => {
-            try {
-                const raw = localStorage.getItem(tradeSelectionStorageKey);
-                const parsed = raw ? JSON.parse(raw) : [];
-                setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
-            } catch {
-                setSelectedTradeCards([]);
-            }
+            const parsed = storageService.getJson(tradeSelectionStorageKey, []);
+            setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
         }, [tradeSelectionStorageKey]);
 
         React.useEffect(() => {
-            localStorage.setItem(tradeSelectionStorageKey, JSON.stringify(selectedTradeCards));
+            storageService.setJson(tradeSelectionStorageKey, selectedTradeCards);
         }, [tradeSelectionStorageKey, selectedTradeCards]);
 
         React.useEffect(() => {
             if (!otherUserName) {
-                localStorage.removeItem(pendingTradeStorageKey);
+                storageService.remove(pendingTradeStorageKey);
                 return;
             }
 
@@ -128,7 +101,7 @@ export function Trades({ userName }) {
                 otherUserLabel: otherUserLabel || otherUserName,
                 otherTradeCards,
             };
-            localStorage.setItem(pendingTradeStorageKey, JSON.stringify(payload));
+            storageService.setJson(pendingTradeStorageKey, payload);
         }, [pendingTradeStorageKey, otherUserName, otherUserLabel, otherTradeCards]);
 
         React.useEffect(() => {
@@ -159,30 +132,12 @@ export function Trades({ userName }) {
             const target = (inputName || '').trim();
             if (!target) return null;
 
-            try {
-                const rawUsers = localStorage.getItem('users');
-                const parsedUsers = rawUsers ? JSON.parse(rawUsers) : null;
-
-                if (parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)) {
-                    const keys = Object.keys(parsedUsers);
-                    const exact = keys.find((name) => name === target);
-                    if (exact) return exact;
-                    const insensitive = keys.find((name) => name.toLowerCase() === target.toLowerCase());
-                    if (insensitive) return insensitive;
-                }
-
-                if (Array.isArray(parsedUsers)) {
-                    const names = parsedUsers
-                        .map((entry) => (typeof entry === 'string' ? entry : entry?.name || entry?.userName || null))
-                        .filter(Boolean);
-                    const exact = names.find((name) => name === target);
-                    if (exact) return exact;
-                    const insensitive = names.find((name) => name.toLowerCase() === target.toLowerCase());
-                    if (insensitive) return insensitive;
-                }
-            } catch {
-                // Ignore malformed localStorage value.
-            }
+            const parsedUsers = storageService.getUsersMap();
+            const keys = Object.keys(parsedUsers);
+            const exact = keys.find((name) => name === target);
+            if (exact) return exact;
+            const insensitive = keys.find((name) => name.toLowerCase() === target.toLowerCase());
+            if (insensitive) return insensitive;
 
             const fallbackKeys = Object.keys(users || {});
             const exactFallback = fallbackKeys.find((name) => name === target);
@@ -203,16 +158,7 @@ export function Trades({ userName }) {
             }
 
             const buildPoolFromDeck = (targetUserName) => {
-                const storageKey = `ownedCards:${targetUserName}`;
-                let sourceEntries = [];
-
-                try {
-                    const raw = localStorage.getItem(storageKey);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    sourceEntries = Array.isArray(parsed) ? parsed : [];
-                } catch {
-                    sourceEntries = [];
-                }
+                let sourceEntries = storageService.getOwnedCards(targetUserName);
 
                 if (!sourceEntries.length) {
                     const fallbackUser = getUser(targetUserName);
@@ -257,7 +203,7 @@ export function Trades({ userName }) {
 
         const handleDeckCardClick = (clickedCard) => {
             const cardName = clickedCard?.name;
-            if (!ownedCardsStorageKey || !cardName) return;
+            if (!userName || !cardName) return;
 
             const currentQty = Math.max(0, parseInt(activeUser?.cards?.[cardName], 10) || 0);
             if (activeUser?.cards && currentQty > 0) {
@@ -268,14 +214,7 @@ export function Trades({ userName }) {
                 }
             }
 
-            let sourceEntries = [];
-            try {
-                const raw = localStorage.getItem(ownedCardsStorageKey);
-                const parsed = raw ? JSON.parse(raw) : [];
-                sourceEntries = Array.isArray(parsed) ? parsed : [];
-            } catch {
-                sourceEntries = [];
-            }
+            const sourceEntries = storageService.getOwnedCards(userName);
 
             const byName = new Map();
             if (sourceEntries.length > 0) {
@@ -303,7 +242,7 @@ export function Trades({ userName }) {
                 card: getCardByName(name),
             }));
 
-            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+            storageService.setOwnedCards(userName, nextOwned);
             setOwnedDeckCards(buildOwnedDeckCards());
 
             setSelectedTradeCards((prev) => ([
@@ -317,7 +256,7 @@ export function Trades({ userName }) {
 
         const handleRemoveTradeCard = (tradeEntryId) => {
             const tradeCard = selectedTradeCards.find((card) => card.tradeEntryId === tradeEntryId);
-            if (!tradeCard?.name || !ownedCardsStorageKey) return;
+            if (!tradeCard?.name || !userName) return;
 
             const cardName = tradeCard.name;
 
@@ -325,14 +264,7 @@ export function Trades({ userName }) {
                 activeUser.cards[cardName] = (Math.max(0, parseInt(activeUser.cards[cardName], 10) || 0) + 1);
             }
 
-            let sourceEntries = [];
-            try {
-                const raw = localStorage.getItem(ownedCardsStorageKey);
-                const parsed = raw ? JSON.parse(raw) : [];
-                sourceEntries = Array.isArray(parsed) ? parsed : [];
-            } catch {
-                sourceEntries = [];
-            }
+            const sourceEntries = storageService.getOwnedCards(userName);
 
             const byName = new Map();
             for (const entry of sourceEntries) {
@@ -348,7 +280,7 @@ export function Trades({ userName }) {
                 card: getCardByName(name),
             }));
 
-            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+            storageService.setOwnedCards(userName, nextOwned);
             setOwnedDeckCards(buildOwnedDeckCards());
             setSelectedTradeCards((prev) => prev.filter((card) => card.tradeEntryId !== tradeEntryId));
         };
@@ -375,15 +307,8 @@ export function Trades({ userName }) {
                     }
                 }
 
-                if (ownedCardsStorageKey) {
-                    let sourceEntries = [];
-                    try {
-                        const raw = localStorage.getItem(ownedCardsStorageKey);
-                        const parsed = raw ? JSON.parse(raw) : [];
-                        sourceEntries = Array.isArray(parsed) ? parsed : [];
-                    } catch {
-                        sourceEntries = [];
-                    }
+                if (userName) {
+                    const sourceEntries = storageService.getOwnedCards(userName);
 
                     const byName = new Map();
                     for (const entry of sourceEntries) {
@@ -401,7 +326,7 @@ export function Trades({ userName }) {
                         card: getCardByName(name),
                     }));
 
-                    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+                    storageService.setOwnedCards(userName, nextOwned);
                 }
             }
 
@@ -418,7 +343,7 @@ export function Trades({ userName }) {
         const handleAcceptTrade = () => {
             if (!selectedTradeCards.length && !otherTradeCards.length) return;
 
-            if (!ownedCardsStorageKey || !otherUserName) return;
+            if (!userName || !otherUserName) return;
 
             const toCountMap = (entries) => {
                 const byName = new Map();
@@ -437,15 +362,8 @@ export function Trades({ userName }) {
                     card: getCardByName(name),
                 }));
 
-            const loadOwnedMap = (storageKey, fallbackCards) => {
-                let sourceEntries = [];
-                try {
-                    const raw = localStorage.getItem(storageKey);
-                    const parsed = raw ? JSON.parse(raw) : [];
-                    sourceEntries = Array.isArray(parsed) ? parsed : [];
-                } catch {
-                    sourceEntries = [];
-                }
+            const loadOwnedMap = (targetUserName, fallbackCards) => {
+                const sourceEntries = storageService.getOwnedCards(targetUserName);
 
                 if (sourceEntries.length > 0) {
                     return toCountMap(sourceEntries);
@@ -468,11 +386,10 @@ export function Trades({ userName }) {
                 otherToActiveCounts.set(card.name, (otherToActiveCounts.get(card.name) || 0) + 1);
             }
 
-            const targetOwnedCardsStorageKey = `ownedCards:${otherUserName}`;
             const targetUser = getUser(otherUserName);
 
-            const activeOwnedMap = loadOwnedMap(ownedCardsStorageKey, activeUser?.cards || {});
-            const otherOwnedMap = loadOwnedMap(targetOwnedCardsStorageKey, targetUser?.cards || {});
+            const activeOwnedMap = loadOwnedMap(userName, activeUser?.cards || {});
+            const otherOwnedMap = loadOwnedMap(otherUserName, targetUser?.cards || {});
 
             for (const [name, qty] of activeToOtherCounts.entries()) {
                 otherOwnedMap.set(name, (otherOwnedMap.get(name) || 0) + qty);
@@ -490,8 +407,8 @@ export function Trades({ userName }) {
             const nextActiveOwned = toOwnedArray(activeOwnedMap);
             const nextTargetOwned = toOwnedArray(otherOwnedMap);
 
-            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextActiveOwned));
-            localStorage.setItem(targetOwnedCardsStorageKey, JSON.stringify(nextTargetOwned));
+            storageService.setOwnedCards(userName, nextActiveOwned);
+            storageService.setOwnedCards(otherUserName, nextTargetOwned);
 
             if (activeUser) {
                 activeUser.cards = Object.fromEntries(
