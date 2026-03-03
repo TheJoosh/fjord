@@ -609,6 +609,14 @@ export function addCardToPendingApproval(name, cardData) {
   return true;
 }
 
+export function removeCardFromPendingApproval(name) {
+  if (!name || !pendingApproval[name]) return false;
+
+  delete pendingApproval[name];
+  persistPendingApproval();
+  return true;
+}
+
 function getKnownUserNames(usersObj) {
   const names = new Set(Object.keys(usersObj || {}));
 
