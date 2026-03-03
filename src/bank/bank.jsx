@@ -13,15 +13,12 @@ export function Bank({ userName }) {
   const [bankCards, setBankCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [isSellMode, setIsSellMode] = React.useState(false);
-  const [sortBy, setSortBy] = React.useState(() => {
-    const saved = storageService.getString(sortByStorageKey, 'Rarity');
-    return sortOptions.includes(saved) ? saved : 'Rarity';
-  });
+  const [sortBy, setSortBy] = React.useState('Rarity');
   const user = getUser(userName);
   const walletValue = normalizeWalletValue(user?.wallet);
 
-  const loadBankCards = React.useCallback(() => {
-    const parsed = storageService.getJson(bankCardsStorageKey, []);
+  const loadBankCards = React.useCallback(async () => {
+    const parsed = await storageService.getJson(bankCardsStorageKey, []);
     const sourceEntries = Array.isArray(parsed) ? parsed : [];
 
     return sourceEntries
@@ -102,7 +99,7 @@ export function Bank({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
-  const handleBuyCard = (cardName) => {
+  const handleBuyCard = async (cardName) => {
     if (!userName || !cardName) return;
 
     const latestCard = getCardByName(cardName);
@@ -123,7 +120,7 @@ export function Bank({ userName }) {
       users[userName].wallet = nextWallet;
     }
 
-    const usersMap = storageService.getUsersMap();
+    const usersMap = await storageService.getUsersMap();
     const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
       ? userName
       : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
@@ -147,9 +144,9 @@ export function Bank({ userName }) {
       };
     }
 
-    storageService.setUsersMap(usersMap);
+    await storageService.setUsersMap(usersMap);
 
-    const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
+    const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
 
     const nextOwnedByName = new Map();
     if (sourceEntries.length > 0) {
@@ -180,7 +177,7 @@ export function Bank({ userName }) {
         name,
         qty,
       }));
-      storageService.setOwnedCards(userName, nextOwned);
+      await storageService.setOwnedCards(userName, nextOwned);
     }
 
     setBankCards((prev) => {
@@ -211,10 +208,10 @@ export function Bank({ userName }) {
 
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
-    setOwnedDeckCards(buildOwnedDeckCards());
+    setOwnedDeckCards(await buildOwnedDeckCards());
   };
 
-  const handleSellCard = (cardName) => {
+  const handleSellCard = async (cardName) => {
     if (!userName || !cardName) return;
 
     const latestCard = getCardByName(cardName);
@@ -225,7 +222,7 @@ export function Bank({ userName }) {
     const userObj = getUser(userName);
     if (!userObj) return;
 
-    const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
+    const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
 
     const nextOwnedByName = new Map();
     if (sourceEntries.length > 0) {
@@ -265,7 +262,7 @@ export function Bank({ userName }) {
         users[userName].wallet = nextWallet;
       }
 
-      const usersMap = storageService.getUsersMap();
+      const usersMap = await storageService.getUsersMap();
       const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
         ? userName
         : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
@@ -289,7 +286,7 @@ export function Bank({ userName }) {
         };
       }
 
-      storageService.setUsersMap(usersMap);
+      await storageService.setUsersMap(usersMap);
     }
 
     if (userName) {
@@ -297,7 +294,7 @@ export function Bank({ userName }) {
         name,
         qty,
       }));
-      storageService.setOwnedCards(userName, nextOwned);
+      await storageService.setOwnedCards(userName, nextOwned);
     }
 
     setBankCards((prev) => {
@@ -323,12 +320,12 @@ export function Bank({ userName }) {
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
 
-    setOwnedDeckCards(buildOwnedDeckCards());
+    setOwnedDeckCards(await buildOwnedDeckCards());
   };
 
-  const buildOwnedDeckCards = React.useCallback(() => {
+  const buildOwnedDeckCards = React.useCallback(async () => {
     const fallbackCards = user?.cards || {};
-    const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
+    const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
 
     const byName = new Map();
 
@@ -355,7 +352,9 @@ export function Bank({ userName }) {
   }, [user, userName]);
 
   React.useEffect(() => {
-    setBankCards(loadBankCards());
+    (async () => {
+      setBankCards(await loadBankCards());
+    })();
   }, [loadBankCards]);
 
   React.useEffect(() => {
@@ -366,16 +365,22 @@ export function Bank({ userName }) {
       }))
       .filter((entry) => entry.qty > 0);
 
-    storageService.setJson(bankCardsStorageKey, persistable);
+    (async () => {
+      await storageService.setJson(bankCardsStorageKey, persistable);
+    })();
   }, [bankCards]);
 
   React.useEffect(() => {
-    storageService.setString(sortByStorageKey, sortBy);
+    (async () => {
+      await storageService.setString(sortByStorageKey, sortBy);
+    })();
   }, [sortByStorageKey, sortBy]);
 
   React.useEffect(() => {
-    const saved = storageService.getString(sortByStorageKey, 'Rarity');
-    setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+    (async () => {
+      const saved = await storageService.getString(sortByStorageKey, 'Rarity');
+      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+    })();
   }, [sortByStorageKey]);
 
   React.useEffect(() => {
@@ -390,11 +395,15 @@ export function Bank({ userName }) {
 
   React.useEffect(() => {
     if (!isSellMode) return;
-    setOwnedDeckCards(buildOwnedDeckCards());
+    (async () => {
+      setOwnedDeckCards(await buildOwnedDeckCards());
+    })();
   }, [isSellMode, buildOwnedDeckCards]);
 
   React.useEffect(() => {
-    setOwnedDeckCards(buildOwnedDeckCards());
+    (async () => {
+      setOwnedDeckCards(await buildOwnedDeckCards());
+    })();
   }, [userName, buildOwnedDeckCards]);
 
   return (
