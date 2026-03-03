@@ -232,6 +232,76 @@ export function Packs({ userName }) {
         persistPacksToStorage(userName, nextPacks);
     };
 
+    const persistWalletToStorage = (activeUserName, nextWalletValue, activeUser) => {
+        if (!activeUserName) return;
+
+        if (users[activeUserName] && typeof users[activeUserName] === 'object') {
+            users[activeUserName].wallet = nextWalletValue;
+        }
+
+        try {
+            const rawUsers = localStorage.getItem('users');
+            const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
+            const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
+                ? parsedUsers
+                : {};
+
+            const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, activeUserName)
+                ? activeUserName
+                : Object.keys(usersMap).find((name) => name.toLowerCase() === activeUserName.toLowerCase());
+
+            if (storageUserKey) {
+                const existingStoredUser = usersMap[storageUserKey];
+                if (existingStoredUser && typeof existingStoredUser === 'object') {
+                    usersMap[storageUserKey] = {
+                        ...existingStoredUser,
+                        wallet: nextWalletValue,
+                    };
+                } else {
+                    usersMap[storageUserKey] = {
+                        wallet: nextWalletValue,
+                    };
+                }
+            } else {
+                usersMap[activeUserName] = {
+                    ...(activeUser || {}),
+                    wallet: nextWalletValue,
+                };
+            }
+
+            localStorage.setItem('users', JSON.stringify(usersMap));
+        } catch {
+            // Ignore malformed localStorage writes.
+        }
+    };
+
+    const buyPack = (packName, packPrice) => {
+        if (!userName || !user || !packName) return;
+
+        const currentWallet = normalizeWalletValue(user.wallet);
+        if (currentWallet < packPrice) return;
+
+        const nextWallet = normalizeWalletValue(currentWallet - packPrice);
+        user.wallet = nextWallet;
+        persistWalletToStorage(userName, nextWallet, user);
+
+        const nextPacks = {
+            'Default Pack': defaultPackCount,
+            'Saga Pack': sagaPackCount,
+            'Heroic Pack': heroicPackCount,
+            'Mythbound Pack': mythboundPackCount,
+        };
+        nextPacks[packName] = (parseInt(nextPacks[packName], 10) || 0) + 1;
+
+        setDefaultPackCount(nextPacks['Default Pack']);
+        setSagaPackCount(nextPacks['Saga Pack']);
+        setHeroicPackCount(nextPacks['Heroic Pack']);
+        setMythboundPackCount(nextPacks['Mythbound Pack']);
+
+        if (user?.packs) Object.assign(user.packs, nextPacks);
+        persistPacksToStorage(userName, nextPacks);
+    };
+
   return (
     <main>
         <div className="container-fluid">
@@ -248,6 +318,7 @@ export function Packs({ userName }) {
                                 className="open pack-buy-btn"
                                 disabled={walletValue < normalPackPrice}
                                 style={walletValue < normalPackPrice ? { color: 'red' } : undefined}
+                                onClick={() => buyPack('Default Pack', normalPackPrice)}
                             >
                                 Buy
                             </button>
@@ -267,6 +338,7 @@ export function Packs({ userName }) {
                                 className="open pack-buy-btn"
                                 disabled={walletValue < sagaPackPrice}
                                 style={walletValue < sagaPackPrice ? { color: 'red' } : undefined}
+                                onClick={() => buyPack('Saga Pack', sagaPackPrice)}
                             >
                                 Buy
                             </button>
@@ -286,6 +358,7 @@ export function Packs({ userName }) {
                                 className="open pack-buy-btn"
                                 disabled={walletValue < heroicPackPrice}
                                 style={walletValue < heroicPackPrice ? { color: 'red' } : undefined}
+                                onClick={() => buyPack('Heroic Pack', heroicPackPrice)}
                             >
                                 Buy
                             </button>
@@ -305,6 +378,7 @@ export function Packs({ userName }) {
                                 className="open pack-buy-btn"
                                 disabled={walletValue < mythboundPackPrice}
                                 style={walletValue < mythboundPackPrice ? { color: 'red' } : undefined}
+                                onClick={() => buyPack('Mythbound Pack', mythboundPackPrice)}
                             >
                                 Buy
                             </button>
