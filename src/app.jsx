@@ -9,6 +9,7 @@ import { Deck } from './deck/deck';
 import { Designer } from './designer/designer';
 import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
+import { Bank } from './bank/bank';
 import { getUser, users } from './data/users';
 import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 
@@ -100,6 +101,11 @@ export default function App() {
                     {authState === AuthState.Authenticated && (
                         <li><NavLink to="/designer">Design Cards</NavLink></li>
                     )}
+
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/bank">Bank</NavLink></li>
+                    )}
+
                     {authState === AuthState.Authenticated && (
                         <li><button className="nav-link btn btn-link text-light p-0" onClick={logout}>Logout</button></li>
                     )}
@@ -130,6 +136,7 @@ export default function App() {
                                 <Route path='/designer' element={<Designer userName={userName} />} />
                 <Route path='/trades' element={<Trades userName={userName} />} />
                 <Route path='/packs' element={<Packs userName={userName} />} />
+                <Route path='/bank' element={<Bank userName={userName} />} />
                 <Route path='*' element={<NotFound />} />
             </Routes>
 
