@@ -25,38 +25,38 @@ function normalizeObjectMap(value) {
 }
 
 export const storageService = {
-  getString(key, fallback = '') {
+  async getString(key, fallback = '') {
     if (!key || !canUseLocalStorage()) return fallback;
     const value = localStorage.getItem(key);
     return value == null ? fallback : value;
   },
 
-  setString(key, value) {
+  async setString(key, value) {
     if (!key || !canUseLocalStorage()) return;
     localStorage.setItem(key, String(value ?? ''));
   },
 
-  getJson(key, fallback) {
+  async getJson(key, fallback) {
     if (!key) return fallback;
     return readJson(key, fallback);
   },
 
-  setJson(key, value) {
+  async setJson(key, value) {
     if (!key) return;
     writeJson(key, value);
   },
 
-  remove(key) {
+  async remove(key) {
     if (!key || !canUseLocalStorage()) return;
     localStorage.removeItem(key);
   },
 
-  getCurrentUserName() {
+  async getCurrentUserName() {
     if (!canUseLocalStorage()) return '';
     return (localStorage.getItem('userName') || '').trim();
   },
 
-  setCurrentUserName(userName) {
+  async setCurrentUserName(userName) {
     if (!canUseLocalStorage()) return;
     if (userName) {
       localStorage.setItem('userName', userName);
@@ -65,24 +65,24 @@ export const storageService = {
     localStorage.removeItem('userName');
   },
 
-  getUsersMap() {
+  async getUsersMap() {
     return normalizeObjectMap(readJson('users', {}));
   },
 
-  setUsersMap(usersMap) {
+  async setUsersMap(usersMap) {
     writeJson('users', normalizeObjectMap(usersMap));
   },
 
-  getUsersPacksMap() {
+  async getUsersPacksMap() {
     return normalizeObjectMap(readJson('usersPacks', {}));
   },
 
-  setUsersPacksMap(packsMap) {
+  async setUsersPacksMap(packsMap) {
     writeJson('usersPacks', normalizeObjectMap(packsMap));
   },
 
-  getUserPacks(userName, fallbackPacks = {}) {
-    const packsMap = this.getUsersPacksMap();
+  async getUserPacks(userName, fallbackPacks = {}) {
+    const packsMap = await this.getUsersPacksMap();
     const source = packsMap?.[userName] || fallbackPacks || {};
 
     return {
@@ -93,41 +93,41 @@ export const storageService = {
     };
   },
 
-  setUserPacks(userName, nextPacks) {
+  async setUserPacks(userName, nextPacks) {
     if (!userName) return;
-    const packsMap = this.getUsersPacksMap();
+    const packsMap = await this.getUsersPacksMap();
     packsMap[userName] = {
       ...(packsMap[userName] || {}),
       ...(nextPacks || {}),
     };
-    this.setUsersPacksMap(packsMap);
+    await this.setUsersPacksMap(packsMap);
   },
 
-  getOwnedCards(userName) {
+  async getOwnedCards(userName) {
     if (!userName) return [];
     const entries = readJson(`ownedCards:${userName}`, []);
     return Array.isArray(entries) ? entries : [];
   },
 
-  setOwnedCards(userName, entries) {
+  async setOwnedCards(userName, entries) {
     if (!userName) return;
     writeJson(`ownedCards:${userName}`, Array.isArray(entries) ? entries : []);
   },
 
-  getDesignedMap() {
+  async getDesignedMap() {
     return normalizeObjectMap(readJson('usersDesigned', {}));
   },
 
-  setDesignedMap(designedMap) {
+  async setDesignedMap(designedMap) {
     writeJson('usersDesigned', normalizeObjectMap(designedMap));
   },
 
-  getDesignedCount(userName) {
+  async getDesignedCount(userName) {
     if (!userName || !canUseLocalStorage()) return 0;
     return parseInt(localStorage.getItem(`designed:${userName}`), 10) || 0;
   },
 
-  setDesignedCount(userName, count) {
+  async setDesignedCount(userName, count) {
     if (!userName || !canUseLocalStorage()) return;
     localStorage.setItem(`designed:${userName}`, String(parseInt(count, 10) || 0));
   },
