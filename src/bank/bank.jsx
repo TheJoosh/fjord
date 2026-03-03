@@ -10,6 +10,7 @@ export function Bank({ userName }) {
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [bankCards, setBankCards] = React.useState([]);
+  const [isSellOverlayOpen, setIsSellOverlayOpen] = React.useState(false);
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = localStorage.getItem(sortByStorageKey);
     return sortOptions.includes(saved) ? saved : 'Rarity';
@@ -130,6 +131,18 @@ export function Bank({ userName }) {
     }
   }, [currentPage, totalPages]);
 
+  React.useEffect(() => {
+    if (!isSellOverlayOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key !== 'Escape') return;
+      setIsSellOverlayOpen(false);
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isSellOverlayOpen]);
+
   return (
     <main>
       <div className="user">
@@ -156,6 +169,7 @@ export function Bank({ userName }) {
         </div>
         {
           <div className="deck-value-row">
+            <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Sell Cards!</button>
             <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
               {showPagination && (
                 <div className="deck-pagination">
@@ -218,6 +232,50 @@ export function Bank({ userName }) {
             ))}
         </div>
       </div>
+
+      {isSellOverlayOpen && (
+        <div className="pexels-overlay" onClick={() => setIsSellOverlayOpen(false)}>
+          <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
+            <div className="pexels-overlay-header">
+              <h3>Sell Cards</h3>
+              <button type="button" className="pexels-overlay-close" onClick={() => setIsSellOverlayOpen(false)}>Close</button>
+            </div>
+
+            {!bankCards.length ? (
+              <div className="pexels-overlay-state">No cards found in the bank inventory.</div>
+            ) : (
+              <div className="row deck-row pack-overlay-cards">
+                {sortedOwned.map((entry) => {
+                  const card = entry.card;
+                  const qty = entry.qty;
+                  if (!card) return null;
+
+                  return (
+                    <div key={entry.name} className="col deck-col pack-overlay-col">
+                      <Card
+                        image={card.image}
+                        name={card.name}
+                        cost={card.cost}
+                        rarity={card.rarity}
+                        cardType={card.cardType}
+                        description={card.description}
+                        strength={card.strength}
+                        endurance={card.endurance}
+                      />
+                      <div className="card-value mt-1">
+                        <div className="card-meta-row">
+                          <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                          <small className="card-quantity">Quantity: {qty}</small>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
