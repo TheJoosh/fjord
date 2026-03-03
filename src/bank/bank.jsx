@@ -514,7 +514,9 @@ export function Bank({ userName }) {
     <main className="bank-page">
       <div className="user">
         <div className="user-header-row">
-          <h2>Bank - buy cards to add to your deck</h2>
+          <h2>
+            Bank - {isSellMode ? 'sell cards at a slight markdown' : 'buy cards to add to your deck'}
+          </h2>
           {!isSellMode && (
             <div className="deck-controls">
               <label className="sort-by-control">
