@@ -1,5 +1,6 @@
 import React from 'react';
 import { getUser, users } from '../data/users';
+import { storageService } from '../services/storageService';
 
 // component used when the user is not signed in
 export function Unauthenticated({ userName, onLogin }) {
@@ -51,25 +52,13 @@ export function Unauthenticated({ userName, onLogin }) {
 
     users[loginName] = newUser;
 
-    let usersMap = {};
-    try {
-      const rawUsersMap = localStorage.getItem('users');
-      usersMap = rawUsersMap ? JSON.parse(rawUsersMap) : {};
-    } catch {
-      usersMap = {};
-    }
+    const usersMap = storageService.getUsersMap();
     usersMap[loginName] = newUser;
-    localStorage.setItem('users', JSON.stringify(usersMap));
+    storageService.setUsersMap(usersMap);
 
-    let packsMap = {};
-    try {
-      const rawPacksMap = localStorage.getItem('usersPacks');
-      packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
-    } catch {
-      packsMap = {};
-    }
+    const packsMap = storageService.getUsersPacksMap();
     packsMap[loginName] = { ...newUser.packs };
-    localStorage.setItem('usersPacks', JSON.stringify(packsMap));
+    storageService.setUsersPacksMap(packsMap);
 
     setMessage('Account created. Logging in...');
     onLogin(loginName);
