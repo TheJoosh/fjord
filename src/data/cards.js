@@ -410,6 +410,8 @@ export const cardsByRarity = {
 };
 
 const CARDS_STORAGE_KEY = 'cardsByRarity';
+const PENDING_APPROVAL_STORAGE_KEY = 'pendingApproval';
+export const pendingApproval = {};
 let cardScarcityByName = {};
 
 function recalcTotalPopulation() {
@@ -471,6 +473,23 @@ function toPersistableCardsByRarity(source) {
   return result;
 }
 
+function toPersistablePendingApproval(source) {
+  const result = {};
+
+  for (const [name, card] of Object.entries(source || {})) {
+    if (!card || typeof card !== 'object') continue;
+
+    const persistableCard = { ...card };
+    if (typeof persistableCard.image === 'string' && persistableCard.image.startsWith('data:')) {
+      persistableCard.image = 'Default.png';
+    }
+    persistableCard.population = normalizePopulationValue(persistableCard.population);
+    result[name] = persistableCard;
+  }
+
+  return result;
+}
+
 function hydrateCardsByRarityFromStorage() {
   if (!canUseLocalStorage()) return;
 
@@ -520,11 +539,48 @@ function hydrateCardsByRarityFromStorage() {
   }
 }
 
+function hydratePendingApprovalFromStorage() {
+  if (!canUseLocalStorage()) return;
+
+  let merged = {};
+
+  try {
+    const raw = localStorage.getItem(PENDING_APPROVAL_STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+        merged = { ...parsed };
+      }
+    }
+  } catch {
+    merged = {};
+  }
+
+  for (const key of Object.keys(pendingApproval)) {
+    delete pendingApproval[key];
+  }
+  Object.assign(pendingApproval, merged);
+
+  try {
+    const payload = toPersistablePendingApproval(pendingApproval);
+    localStorage.setItem(PENDING_APPROVAL_STORAGE_KEY, JSON.stringify(payload));
+  } catch {
+    // Ignore storage write failures on hydration.
+  }
+}
+
 export function persistCardsByRarity() {
   if (!canUseLocalStorage()) return;
 
   const payload = toPersistableCardsByRarity(cardsByRarity);
   localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(payload));
+}
+
+export function persistPendingApproval() {
+  if (!canUseLocalStorage()) return;
+
+  const payload = toPersistablePendingApproval(pendingApproval);
+  localStorage.setItem(PENDING_APPROVAL_STORAGE_KEY, JSON.stringify(payload));
 }
 
 export function addCardToRarity(rarity, name, cardData) {
@@ -539,6 +595,17 @@ export function addCardToRarity(rarity, name, cardData) {
     population: normalizePopulationValue(cardData.population),
   };
   persistCardsByRarity();
+  return true;
+}
+
+export function addCardToPendingApproval(name, cardData) {
+  if (!name || !cardData) return false;
+
+  pendingApproval[name] = {
+    ...cardData,
+    population: normalizePopulationValue(cardData.population),
+  };
+  persistPendingApproval();
   return true;
 }
 
@@ -651,6 +718,7 @@ export function incrementCardPopulations(cards) {
 }
 
 hydrateCardsByRarityFromStorage();
+hydratePendingApprovalFromStorage();
 
 
 export function getCardByName(name) {
@@ -678,6 +746,12 @@ export function cardNameExists(name) {
       if (normalizeCardName(existingName) === normalized) {
         return true;
       }
+    }
+  }
+
+  for (const existingName of Object.keys(pendingApproval || {})) {
+    if (normalizeCardName(existingName) === normalized) {
+      return true;
     }
   }
 
