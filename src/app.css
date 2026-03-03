@@ -522,6 +522,19 @@ main {
   z-index: 4;
 }
 
+.pack-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pack-price-row .pack-buy-btn {
+  position: static;
+  bottom: auto;
+  font-size: 14px;
+  padding: 4px 10px;
+}
+
 .default {
   background-image: url("../public/Card Images/thor.png");
   background-blend-mode: multiply;

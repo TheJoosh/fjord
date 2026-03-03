@@ -237,7 +237,10 @@ export function Packs({ userName }) {
                 <div className="col">
                     <div className="cardpack default">
                         <h3>Normal Pack</h3>
-                        <h4>$3.50</h4>
+                        <div className="pack-price-row">
+                            <h4>$3.50</h4>
+                            <button type="button" className="open pack-buy-btn">Buy</button>
+                        </div>
                         <h4>10 cards</h4>
                         <button className="open" onClick={openNormalPack} disabled={defaultPackCount <= 0}>Unopened Packs: {defaultPackCount}</button>
                     </div>
@@ -246,7 +249,10 @@ export function Packs({ userName }) {
                 <div className="col">
                     <div className="cardpack saga">
                         <h3>Saga Pack</h3>
-                        <h4>$4.50</h4>
+                        <div className="pack-price-row">
+                            <h4>$4.50</h4>
+                            <button type="button" className="open pack-buy-btn">Buy</button>
+                        </div>
                         <h4>2x Mythical and Legendary cards</h4>
                         <button className="open" onClick={openSagaPack} disabled={sagaPackCount <= 0}>Unopened Packs: {sagaPackCount}</button>
                     </div>
@@ -255,7 +261,10 @@ export function Packs({ userName }) {
                 <div className="col">
                     <div className="cardpack heroic">
                         <h3>Heroic Pack</h3>
-                        <h4>$7.50</h4>
+                        <div className="pack-price-row">
+                            <h4>$7.50</h4>
+                            <button type="button" className="open pack-buy-btn">Buy</button>
+                        </div>
                         <h4>No Common cards</h4>
                         <button className="open" onClick={openHeroicPack} disabled={heroicPackCount <= 0}>Unopened Packs: {heroicPackCount}</button>
                     </div>
@@ -264,7 +273,10 @@ export function Packs({ userName }) {
                 <div className="col">
                     <div className="cardpack mythbound">
                         <h3>Mythbound Pack</h3>
-                        <h4>$11.25</h4>
+                        <div className="pack-price-row">
+                            <h4>$11.25</h4>
+                            <button type="button" className="open pack-buy-btn">Buy</button>
+                        </div>
                         <h4>No Common or Uncommon cards</h4>
                         <button className="open" onClick={openMythboundPack} disabled={mythboundPackCount <= 0}>Unopened Packs: {mythboundPackCount}</button>
                     </div>
