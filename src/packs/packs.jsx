@@ -21,22 +21,20 @@ export function Packs({ userName }) {
     const mythboundPackPrice = 11.5;
     const packs = user?.packs || {};
 
-    const getPacksFromStorage = (activeUserName, fallbackPacks) => {
+    const getPacksFromStorage = async (activeUserName, fallbackPacks) => {
         if (!activeUserName) return { ...(fallbackPacks || {}) };
-        return storageService.getUserPacks(activeUserName, fallbackPacks);
+        return await storageService.getUserPacks(activeUserName, fallbackPacks);
     };
 
-    const persistPacksToStorage = (activeUserName, nextPacks) => {
+    const persistPacksToStorage = async (activeUserName, nextPacks) => {
         if (!activeUserName) return;
-        storageService.setUserPacks(activeUserName, nextPacks);
+        await storageService.setUserPacks(activeUserName, nextPacks);
     };
 
-    const startingPacks = getPacksFromStorage(userName, packs);
-
-    const [defaultPackCount, setDefaultPackCount] = React.useState(startingPacks['Default Pack'] ?? 0);
-    const [sagaPackCount, setSagaPackCount] = React.useState(startingPacks['Saga Pack'] ?? 0);
-    const [heroicPackCount, setHeroicPackCount] = React.useState(startingPacks['Heroic Pack'] ?? 0);
-    const [mythboundPackCount, setMythboundPackCount] = React.useState(startingPacks['Mythbound Pack'] ?? 0);
+    const [defaultPackCount, setDefaultPackCount] = React.useState(packs['Default Pack'] ?? 0);
+    const [sagaPackCount, setSagaPackCount] = React.useState(packs['Saga Pack'] ?? 0);
+    const [heroicPackCount, setHeroicPackCount] = React.useState(packs['Heroic Pack'] ?? 0);
+    const [mythboundPackCount, setMythboundPackCount] = React.useState(packs['Mythbound Pack'] ?? 0);
     const [openedCards, setOpenedCards] = React.useState([]);
     const [isPackOverlayOpen, setIsPackOverlayOpen] = React.useState(false);
 
@@ -46,11 +44,13 @@ export function Packs({ userName }) {
     }, 0);
 
     React.useEffect(() => {
-        const latestPacks = getPacksFromStorage(userName, packs);
-        setDefaultPackCount(latestPacks['Default Pack'] ?? 0);
-        setSagaPackCount(latestPacks['Saga Pack'] ?? 0);
-        setHeroicPackCount(latestPacks['Heroic Pack'] ?? 0);
-        setMythboundPackCount(latestPacks['Mythbound Pack'] ?? 0);
+        (async () => {
+            const latestPacks = await getPacksFromStorage(userName, packs);
+            setDefaultPackCount(latestPacks['Default Pack'] ?? 0);
+            setSagaPackCount(latestPacks['Saga Pack'] ?? 0);
+            setHeroicPackCount(latestPacks['Heroic Pack'] ?? 0);
+            setMythboundPackCount(latestPacks['Mythbound Pack'] ?? 0);
+        })();
     }, [userName]);
 
     const showOpenedCards = (cards) => {
@@ -70,7 +70,7 @@ export function Packs({ userName }) {
         });
     };
 
-    const claimOpenedCards = () => {
+    const claimOpenedCards = async () => {
         if (!openedCards.length) {
             setIsPackOverlayOpen(false);
             return;
@@ -85,7 +85,7 @@ export function Packs({ userName }) {
         }
 
         if (userName) {
-            const existingOwned = storageService.getOwnedCards(userName);
+            const existingOwned = await storageService.getOwnedCards(userName);
 
             const byName = new Map();
             for (const entry of existingOwned) {
@@ -109,7 +109,7 @@ export function Packs({ userName }) {
             }
 
             const nextOwned = Array.from(byName.values()).filter(entry => entry.qty > 0);
-            storageService.setOwnedCards(userName, nextOwned);
+            await storageService.setOwnedCards(userName, nextOwned);
         }
 
         setOpenedCards([]);
@@ -130,7 +130,7 @@ export function Packs({ userName }) {
         return () => window.removeEventListener('keydown', onKeyDown);
     }, [isPackOverlayOpen, claimOpenedCards]);
 
-    const openNormalPack = () => {
+    const openNormalPack = async () => {
         if (defaultPackCount <= 0) return;
         const cards = drawWeightedCards(10, 47, 28, 14, 7, 3, 1);
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
@@ -143,10 +143,10 @@ export function Packs({ userName }) {
             'Mythbound Pack': mythboundPackCount,
         };
         if (user?.packs) Object.assign(user.packs, nextPacks);
-        persistPacksToStorage(userName, nextPacks);
+        await persistPacksToStorage(userName, nextPacks);
     };
 
-    const openSagaPack = () => {
+    const openSagaPack = async () => {
         if (sagaPackCount <= 0) return;
         const cards = drawWeightedCards(10, 32, 30, 23, 7, 7, 1);
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
@@ -159,10 +159,10 @@ export function Packs({ userName }) {
             'Mythbound Pack': mythboundPackCount,
         };
         if (user?.packs) Object.assign(user.packs, nextPacks);
-        persistPacksToStorage(userName, nextPacks);
+        await persistPacksToStorage(userName, nextPacks);
     };
 
-    const openHeroicPack = () => {
+    const openHeroicPack = async () => {
         if (heroicPackCount <= 0) return;
         const cards = drawWeightedCards(10, 0, 35, 30, 18, 12, 5);
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
@@ -175,10 +175,10 @@ export function Packs({ userName }) {
             'Mythbound Pack': mythboundPackCount,
         };
         if (user?.packs) Object.assign(user.packs, nextPacks);
-        persistPacksToStorage(userName, nextPacks);
+        await persistPacksToStorage(userName, nextPacks);
     };
 
-    const openMythboundPack = () => {
+    const openMythboundPack = async () => {
         if (mythboundPackCount <= 0) return;
         const cards = drawWeightedCards(10, 0, 0, 40, 30, 20, 10);
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
@@ -191,17 +191,17 @@ export function Packs({ userName }) {
             'Mythbound Pack': nextCount,
         };
         if (user?.packs) Object.assign(user.packs, nextPacks);
-        persistPacksToStorage(userName, nextPacks);
+        await persistPacksToStorage(userName, nextPacks);
     };
 
-    const persistWalletToStorage = (activeUserName, nextWalletValue, activeUser) => {
+    const persistWalletToStorage = async (activeUserName, nextWalletValue, activeUser) => {
         if (!activeUserName) return;
 
         if (users[activeUserName] && typeof users[activeUserName] === 'object') {
             users[activeUserName].wallet = nextWalletValue;
         }
 
-        const usersMap = storageService.getUsersMap();
+        const usersMap = await storageService.getUsersMap();
         const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, activeUserName)
             ? activeUserName
             : Object.keys(usersMap).find((name) => name.toLowerCase() === activeUserName.toLowerCase());
@@ -225,10 +225,10 @@ export function Packs({ userName }) {
             };
         }
 
-        storageService.setUsersMap(usersMap);
+        await storageService.setUsersMap(usersMap);
     };
 
-    const buyPack = (packName, packPrice) => {
+    const buyPack = async (packName, packPrice) => {
         if (!userName || !user || !packName) return;
 
         const currentWallet = normalizeWalletValue(user.wallet);
@@ -236,7 +236,7 @@ export function Packs({ userName }) {
 
         const nextWallet = normalizeWalletValue(currentWallet - packPrice);
         user.wallet = nextWallet;
-        persistWalletToStorage(userName, nextWallet, user);
+        await persistWalletToStorage(userName, nextWallet, user);
 
         const nextPacks = {
             'Default Pack': defaultPackCount,
@@ -252,7 +252,7 @@ export function Packs({ userName }) {
         setMythboundPackCount(nextPacks['Mythbound Pack']);
 
         if (user?.packs) Object.assign(user.packs, nextPacks);
-        persistPacksToStorage(userName, nextPacks);
+        await persistPacksToStorage(userName, nextPacks);
     };
 
   return (
