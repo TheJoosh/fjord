@@ -9,7 +9,6 @@ export function Bank({ userName }) {
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
-  const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [bankCards, setBankCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
@@ -71,28 +70,11 @@ export function Bank({ userName }) {
     return a.name.localeCompare(b.name);
   });
 
-  const renderedCards = sortedOwned.flatMap((entry) => {
-    const card = entry.card;
-    if (!card) return [];
-
-    const qty = entry.qty || 0;
-    const copiesToRender = showDuplicates ? qty : 1;
-    const showStack = !showDuplicates && qty > 1;
-
-    return Array.from({ length: copiesToRender }).map((_, i) => ({
-      entry,
-      card,
-      qty,
-      copyIndex: i,
-      showStack,
-    }));
-  });
-
-  const totalRenderedCards = renderedCards.length;
+  const totalRenderedCards = sortedOwned.length;
   const totalPages = Math.max(1, Math.ceil(totalRenderedCards / cardsPerPage));
   const startIndex = totalRenderedCards === 0 ? 0 : (currentPage - 1) * cardsPerPage + 1;
   const endIndex = Math.min(currentPage * cardsPerPage, totalRenderedCards);
-  const paginatedCards = renderedCards.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
+  const paginatedCards = sortedOwned.slice((currentPage - 1) * cardsPerPage, currentPage * cardsPerPage);
   const showPagination = totalPages > 1;
   const showPreviousPageArrow = currentPage > 1;
   const showNextPageArrow = currentPage < totalPages;
@@ -364,7 +346,7 @@ export function Bank({ userName }) {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [showDuplicates, sortBy]);
+  }, [sortBy]);
   
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -413,14 +395,6 @@ export function Bank({ userName }) {
                   ))}
                 </select>
               </label>
-              <label className="show-duplicates-control">
-                <input
-                  type="checkbox"
-                  checked={showDuplicates}
-                  onChange={(e) => setShowDuplicates(e.target.checked)}
-                />
-                <span>Show duplicates</span>
-              </label>
             </div>
           )}
         </div>
@@ -452,42 +426,22 @@ export function Bank({ userName }) {
       {!isSellMode && (
         <div className="container-fluid">
           <div className="row deck-row">
-            {paginatedCards.map(({ entry, card, qty, copyIndex, showStack }) => (
-                <div className="col deck-col" key={`${entry.name}-${copyIndex}`}>
-                  <div className={showStack ? 'card-stack' : ''}>
-                    {showStack && (
-                      <div className="card-stack-ghost" aria-hidden="true">
-                        <Card
-                          image={card.image}
-                          name={card.name}
-                          cost={card.cost}
-                          rarity={card.rarity}
-                          cardType={card.cardType}
-                          description={card.description}
-                          strength={card.strength}
-                          endurance={card.endurance}
-                        />
-                      </div>
-                    )}
-                    <div className="card-stack-main">
-                      <Card
-                        image={card.image}
-                        name={card.name}
-                        cost={card.cost}
-                        rarity={card.rarity}
-                        cardType={card.cardType}
-                        description={card.description}
-                        strength={card.strength}
-                        endurance={card.endurance}
-                      />
-                    </div>
-                  </div>
+            {paginatedCards.map(({ name, card, qty }) => (
+                <div className="col deck-col" key={name}>
+                  <Card
+                    image={card.image}
+                    name={card.name}
+                    cost={card.cost}
+                    rarity={card.rarity}
+                    cardType={card.cardType}
+                    description={card.description}
+                    strength={card.strength}
+                    endurance={card.endurance}
+                  />
                   <div className="card-value mt-1">
                     <div className="card-meta-row">
                       <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
-                      {!showDuplicates && (
-                        <small className="card-quantity">Quantity: {qty}</small>
-                      )}
+                      <small className="card-quantity">Quantity: {qty}</small>
                     </div>
                     <small>Author: {card.author || 'Unknown'}</small>
                   </div>
