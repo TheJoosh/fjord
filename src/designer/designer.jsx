@@ -26,15 +26,74 @@ export function Designer({ userName }) {
 
     const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
+    function fileToDataUrl(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function loadImage(dataUrl) {
+        return new Promise((resolve, reject) => {
+            const img = new Image();
+            img.onload = () => resolve(img);
+            img.onerror = reject;
+            img.src = dataUrl;
+        });
+    }
+
+    async function optimizeUploadedImage(file) {
+        const originalDataUrl = await fileToDataUrl(file);
+
+        try {
+            const image = await loadImage(originalDataUrl);
+            const sourceWidth = image.naturalWidth || image.width;
+            const sourceHeight = image.naturalHeight || image.height;
+
+            if (!sourceWidth || !sourceHeight) {
+                return originalDataUrl;
+            }
+
+            const maxDimension = 1400;
+            const scale = Math.min(1, maxDimension / Math.max(sourceWidth, sourceHeight));
+            const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+            const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+
+            const canvas = document.createElement('canvas');
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+
+            const context = canvas.getContext('2d');
+            if (!context) {
+                return originalDataUrl;
+            }
+
+            context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+            const optimizedDataUrl = canvas.toDataURL('image/webp', 0.82);
+            if (!optimizedDataUrl) {
+                return originalDataUrl;
+            }
+
+            return optimizedDataUrl.length < originalDataUrl.length ? optimizedDataUrl : originalDataUrl;
+        } catch {
+            return originalDataUrl;
+        }
+    }
+
     function handleFileChange(e) {
         const input = e.target;
         if (!input || !input.files || input.files.length === 0) return;
         const file = input.files[0];
-        const reader = new FileReader();
-        reader.onload = () => {
-            setPreviewImage(reader.result);
-        };
-        reader.readAsDataURL(file);
+
+        if (!file.type.startsWith('image/')) return;
+
+        (async () => {
+            const optimizedImage = await optimizeUploadedImage(file);
+            setPreviewImage(optimizedImage);
+        })();
     }
 
     function handleCostChange(e) {
