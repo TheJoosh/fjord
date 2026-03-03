@@ -13,6 +13,7 @@ import { Bank } from './bank/bank';
 import { Approve } from './approve/approve';
 import { getUser, users } from './data/users';
 import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
+import { storageService } from './services/storageService';
 
 export default function App() {
 
@@ -21,7 +22,7 @@ export default function App() {
         recalcCardValues();
     }, []);
 
-  const [userName, setUserName] = React.useState(localStorage.getItem('userName') || '');
+    const [userName, setUserName] = React.useState(storageService.getCurrentUserName() || '');
   const currentAuthState = userName ? AuthState.Authenticated : AuthState.Unauthenticated;
   const [authState, setAuthState] = React.useState(currentAuthState);
     const activeUser = getUser(userName);
@@ -32,19 +33,11 @@ export default function App() {
         if (!activeUserName) return;
 
         const tradeSelectionStorageKey = `tradeSelection:${activeUserName}`;
-        const ownedCardsStorageKey = `ownedCards:${activeUserName}`;
-
-        let selectedTradeCards = [];
-        try {
-            const rawTradeSelection = localStorage.getItem(tradeSelectionStorageKey);
-            const parsedTradeSelection = rawTradeSelection ? JSON.parse(rawTradeSelection) : [];
-            selectedTradeCards = Array.isArray(parsedTradeSelection) ? parsedTradeSelection : [];
-        } catch {
-            selectedTradeCards = [];
-        }
+        let selectedTradeCards = storageService.getJson(tradeSelectionStorageKey, []);
+        selectedTradeCards = Array.isArray(selectedTradeCards) ? selectedTradeCards : [];
 
         if (!selectedTradeCards.length) {
-            localStorage.removeItem(tradeSelectionStorageKey);
+            storageService.remove(tradeSelectionStorageKey);
             return;
         }
 
@@ -69,10 +62,10 @@ export default function App() {
                 }))
                 .filter(entry => entry.qty > 0);
 
-            localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+            storageService.setOwnedCards(activeUserName, nextOwned);
         }
 
-        localStorage.removeItem(tradeSelectionStorageKey);
+        storageService.remove(tradeSelectionStorageKey);
     };
 
   const logout = () => {
@@ -80,7 +73,7 @@ export default function App() {
         restoreTradedCardsOnLogout(logoutUserName);
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
-    localStorage.removeItem('userName');
+        storageService.setCurrentUserName('');
     navigate('/');
   };
 
@@ -131,9 +124,9 @@ export default function App() {
                     setUserName(userName);
 
                                         if (authState === AuthState.Authenticated && userName) {
-                                            localStorage.setItem('userName', userName);
+                                            storageService.setCurrentUserName(userName);
                                         } else {
-                                            localStorage.removeItem('userName');
+                                            storageService.setCurrentUserName('');
                                         }
 
                     }}
