@@ -511,7 +511,7 @@ export function Bank({ userName }) {
   }, [userName]);
 
   return (
-    <main>
+    <main className="bank-page">
       <div className="user">
         <div className="user-header-row">
           <h2>Bank - buy cards to add to your deck</h2>
@@ -597,10 +597,12 @@ export function Bank({ userName }) {
 
       {isSellMode && (
         <>
-          <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
-          {selectedSellCards.length > 0 && (
-            <button className="picker" onClick={handleSellCards}>Sell for ${selectedSellPayoutValue.toFixed(2)}?</button>
-          )}
+          <div className="bank-sell-actions">
+            <button className="picker bank-sell-action-btn" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
+            {selectedSellCards.length > 0 && (
+              <button className="picker bank-sell-action-btn" onClick={handleSellCards}>Sell for ${selectedSellPayoutValue.toFixed(2)}?</button>
+            )}
+          </div>
           <h3 className="value">Value: ${selectedSellValue.toFixed(2)}</h3>
           <h3 className="value">Payout (85%): ${selectedSellPayoutValue.toFixed(2)}</h3>
           {sellSuccessMessage && <div className="trade-success-message">{sellSuccessMessage}</div>}
