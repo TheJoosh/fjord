@@ -241,7 +241,14 @@ export function Approve({ userName }) {
                 </div>
                 <div>
                   <span>Rarity:</span>
-                  <input type="text" value={editingDraft.rarity} onChange={(event) => handleEditDraftChange('rarity', event.target.value)} />
+                  <select value={editingDraft.rarity} onChange={(event) => handleEditDraftChange('rarity', event.target.value)}>
+                    <option value="Common">Common</option>
+                    <option value="Uncommon">Uncommon</option>
+                    <option value="Rare">Rare</option>
+                    <option value="Loric">Loric</option>
+                    <option value="Mythical">Mythical</option>
+                    <option value="Legendary">Legendary</option>
+                  </select>
                 </div>
                 <div>
                   <span>Type:</span>
