@@ -1,18 +1,20 @@
+import { storageService } from '../services/storageService';
+
 export const cardsByRarity = {
-    Placeholder: {
+  Placeholder: {
     "Placeholder": {
       image: "Placeholder.png",
       cardType: "Card",
       cost: "-",
-      description: 
+      description:
         "This is a placeholder card. Please replace it with your own design!",
       strength: "-",
       endurance: "-",
       value: 0,
       author: "Fjord",
     },
-    },
-    Legendary: {
+  },
+  Legendary: {
     "Loki, God of Mischief": {
       image: "loki.png",
       cardType: "God",
@@ -499,10 +501,8 @@ function hydrateCardsByRarityFromStorage() {
   }
 
   try {
-    const raw = localStorage.getItem(CARDS_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object') {
+    const parsed = storageService.getJson(CARDS_STORAGE_KEY, null);
+    if (parsed && typeof parsed === 'object') {
         const merged = {};
 
         for (const [rarity, group] of Object.entries(defaultCardsByRarity)) {
@@ -523,7 +523,6 @@ function hydrateCardsByRarityFromStorage() {
           delete cardsByRarity[key];
         }
         Object.assign(cardsByRarity, merged);
-      }
     }
   } catch {
     // Ignore malformed localStorage data and continue with in-memory defaults.
@@ -533,7 +532,7 @@ function hydrateCardsByRarityFromStorage() {
 
   try {
     const payload = toPersistableCardsByRarity(cardsByRarity);
-    localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(payload));
+    storageService.setJson(CARDS_STORAGE_KEY, payload);
   } catch {
     // Ignore storage write failures on hydration.
   }
@@ -545,12 +544,9 @@ function hydratePendingApprovalFromStorage() {
   let merged = {};
 
   try {
-    const raw = localStorage.getItem(PENDING_APPROVAL_STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-        merged = { ...parsed };
-      }
+    const parsed = storageService.getJson(PENDING_APPROVAL_STORAGE_KEY, null);
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+      merged = { ...parsed };
     }
   } catch {
     merged = {};
@@ -563,7 +559,7 @@ function hydratePendingApprovalFromStorage() {
 
   try {
     const payload = toPersistablePendingApproval(pendingApproval);
-    localStorage.setItem(PENDING_APPROVAL_STORAGE_KEY, JSON.stringify(payload));
+    storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
   } catch {
     // Ignore storage write failures on hydration.
   }
@@ -573,14 +569,14 @@ export function persistCardsByRarity() {
   if (!canUseLocalStorage()) return;
 
   const payload = toPersistableCardsByRarity(cardsByRarity);
-  localStorage.setItem(CARDS_STORAGE_KEY, JSON.stringify(payload));
+  storageService.setJson(CARDS_STORAGE_KEY, payload);
 }
 
 export function persistPendingApproval() {
   if (!canUseLocalStorage()) return;
 
   const payload = toPersistablePendingApproval(pendingApproval);
-  localStorage.setItem(PENDING_APPROVAL_STORAGE_KEY, JSON.stringify(payload));
+  storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
 }
 
 export function addCardToRarity(rarity, name, cardData) {
@@ -646,8 +642,7 @@ function getKnownUserNames(usersObj) {
   }
 
   try {
-    const rawUsers = localStorage.getItem('users');
-    const parsedUsers = rawUsers ? JSON.parse(rawUsers) : null;
+    const parsedUsers = storageService.getJson('users', null);
 
     if (parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)) {
       for (const name of Object.keys(parsedUsers)) {
@@ -679,8 +674,7 @@ export function syncCardPopulationsFromOwnedCards(usersObj) {
 
     if (canUseLocalStorage()) {
       try {
-        const rawOwned = localStorage.getItem(`ownedCards:${userName}`);
-        const parsedOwned = rawOwned ? JSON.parse(rawOwned) : [];
+        const parsedOwned = storageService.getOwnedCards(userName);
         if (Array.isArray(parsedOwned) && parsedOwned.length > 0) {
           usedOwnedCardsStorage = true;
           for (const entry of parsedOwned) {
