@@ -412,6 +412,20 @@ export const cardsByRarity = {
 const CARDS_STORAGE_KEY = 'cardsByRarity';
 let cardScarcityByName = {};
 
+function recalcTotalPopulation() {
+  let total = 0;
+  for (const group of Object.values(cardsByRarity || {})) {
+    if (!group || typeof group !== 'object') continue;
+    for (const card of Object.values(group)) {
+      if (!card || typeof card !== 'object') continue;
+      total += normalizePopulationValue(card.population);
+    }
+  }
+
+  cardsByRarity.totalPopulation = total;
+  return total;
+}
+
 function normalizePopulationValue(value) {
   return Math.max(0, parseInt(value, 10) || 0);
 }
@@ -423,6 +437,10 @@ function ensurePopulationFields(source) {
       if (!card || typeof card !== 'object') continue;
       card.population = normalizePopulationValue(card.population);
     }
+  }
+
+  if (source === cardsByRarity) {
+    recalcTotalPopulation();
   }
 }
 
@@ -601,6 +619,8 @@ export function syncCardPopulationsFromOwnedCards(usersObj) {
     }
   }
 
+  recalcTotalPopulation();
+
   persistCardsByRarity();
   return cardsByRarity;
 }
@@ -623,6 +643,8 @@ export function incrementCardPopulations(cards) {
       break;
     }
   }
+
+  recalcTotalPopulation();
 
   persistCardsByRarity();
   return cardsByRarity;
@@ -681,16 +703,16 @@ export function recalcCardValues() {
   ensurePopulationFields(cardsByRarity);
 
   const totals = {};
-  let totalPopulation = 0;
   for (const group of Object.values(cardsByRarity || {})) {
     if (!group || typeof group !== 'object') continue;
     for (const [name, data] of Object.entries(group)) {
       if (!data || typeof data !== 'object') continue;
       const population = normalizePopulationValue(data.population);
       totals[name] = population;
-      totalPopulation += population;
     }
   }
+
+  const totalPopulation = normalizePopulationValue(cardsByRarity.totalPopulation);
 
   
   const compute = (rarity, name) => {
