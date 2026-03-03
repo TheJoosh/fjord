@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import '../app.css';
-import { getUser, users } from '../data/users';
+import { getUser, normalizeWalletValue, users } from '../data/users';
 import {
     drawWeightedCards,
     getCardByName,
@@ -13,6 +13,7 @@ import { Card } from '../data/card';
 
 export function Packs({ userName }) {
     const user = getUser(userName);
+    const walletValue = normalizeWalletValue(user?.wallet);
     const packs = user?.packs || {};
     const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
@@ -232,6 +233,7 @@ export function Packs({ userName }) {
         <div className="container-fluid">
             <div className="row" width="100%" justify-content="center">
                 <h2>Open Packs!</h2>
+                <h3>Wallet: ${walletValue.toFixed(2)}</h3>
                 <div className="col">
                     <div className="cardpack default">
                         <h3>Normal Pack</h3>
