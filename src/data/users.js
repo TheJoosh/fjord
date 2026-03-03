@@ -183,11 +183,15 @@ function ensureUsersWallets() {
   for (const [username, userObj] of Object.entries(users || {})) {
     ensureUserProfileFields(username, userObj);
   }
+}
 
-  const storedUsers = storageService.getUsersMap();
+ensureUsersWallets();
+
+async function hydrateUsersFromStorage() {
+  const storedUsers = await storageService.getUsersMap();
 
   let hasChanges = false;
-  for (const [username, userObj] of Object.entries(storedUsers)) {
+  for (const [username, userObj] of Object.entries(storedUsers || {})) {
     if (!userObj || typeof userObj !== 'object') continue;
 
     const prevWallet = userObj.wallet;
@@ -221,15 +225,11 @@ function ensureUsersWallets() {
   }
 
   if (hasChanges) {
-    storageService.setUsersMap(storedUsers);
+    await storageService.setUsersMap(storedUsers);
   }
 }
 
-ensureUsersWallets();
-
-function getStoredUsersMap() {
-  return storageService.getUsersMap();
-}
+void hydrateUsersFromStorage();
 
 export function getUser(username) {
   if (!username) return null;
@@ -239,20 +239,12 @@ export function getUser(username) {
     return users[username];
   }
 
-  const storedUsers = getStoredUsersMap();
-  if (storedUsers[username]) {
-    ensureUserProfileFields(username, storedUsers[username]);
-    users[username] = storedUsers[username];
-    return users[username];
-  }
-
-  const insensitiveKey = Object.keys(storedUsers).find(
+  const insensitiveKey = Object.keys(users || {}).find(
     (name) => name.toLowerCase() === username.toLowerCase()
   );
 
   if (insensitiveKey) {
-    ensureUserProfileFields(insensitiveKey, storedUsers[insensitiveKey]);
-    users[insensitiveKey] = storedUsers[insensitiveKey];
+    ensureUserProfileFields(insensitiveKey, users[insensitiveKey]);
     return users[insensitiveKey];
   }
 
