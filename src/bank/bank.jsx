@@ -403,32 +403,34 @@ export function Bank({ userName }) {
       <div className="user">
         <div className="user-header-row">
           <h2>Bank - buy cards to add to your deck</h2>
-          <div className="deck-controls">
-            <label className="sort-by-control">
-              <span>Sort By</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                {sortOptions.map((option) => (
-                  <option key={option} value={option}>{option}</option>
-                ))}
-              </select>
-            </label>
-            <label className="show-duplicates-control">
-              <input
-                type="checkbox"
-                checked={showDuplicates}
-                onChange={(e) => setShowDuplicates(e.target.checked)}
-              />
-              <span>Show duplicates</span>
-            </label>
-          </div>
+          {!isSellMode && (
+            <div className="deck-controls">
+              <label className="sort-by-control">
+                <span>Sort By</span>
+                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                  {sortOptions.map((option) => (
+                    <option key={option} value={option}>{option}</option>
+                  ))}
+                </select>
+              </label>
+              <label className="show-duplicates-control">
+                <input
+                  type="checkbox"
+                  checked={showDuplicates}
+                  onChange={(e) => setShowDuplicates(e.target.checked)}
+                />
+                <span>Show duplicates</span>
+              </label>
+            </div>
+          )}
         </div>
         {
           <div className="deck-value-row">
             <div className="deck-value">
               Wallet: ${walletValue.toFixed(2)}
             </div>
-            <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
-              {showPagination && (
+            <div className="deck-value-pagination-slot" aria-hidden={isSellMode || !showPagination}>
+              {!isSellMode && showPagination && (
                 <div className="deck-pagination">
                   {showPreviousPageArrow && (
                     <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
