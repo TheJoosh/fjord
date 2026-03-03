@@ -1,5 +1,6 @@
 export const users = {
   Tradey: {
+    wallet: 0,
     cards: {
       "Loki, God of Mischief": 3,
       "Thrym, Frost Giant King": 3,
@@ -124,6 +125,71 @@ export const users = {
   },
 }
 
+function canUseLocalStorage() {
+  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
+}
+
+export function normalizeWalletValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Number(parsed.toFixed(2)));
+}
+
+function getDefaultWalletForUser(username) {
+  if (!username) return 0;
+  return normalizeWalletValue(users?.[username]?.wallet);
+}
+
+function ensureUserWallet(username, userObj) {
+  if (!userObj || typeof userObj !== 'object') return;
+  const fallback = getDefaultWalletForUser(username);
+  userObj.wallet = normalizeWalletValue(
+    userObj.wallet != null ? userObj.wallet : fallback
+  );
+}
+
+function ensureUsersWallets() {
+  for (const [username, userObj] of Object.entries(users || {})) {
+    ensureUserWallet(username, userObj);
+  }
+
+  if (!canUseLocalStorage()) return;
+
+  let storedUsers = {};
+  try {
+    const rawUsers = localStorage.getItem('users');
+    const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
+    storedUsers = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
+      ? parsedUsers
+      : {};
+  } catch {
+    storedUsers = {};
+  }
+
+  let hasChanges = false;
+  for (const [username, userObj] of Object.entries(storedUsers)) {
+    if (!userObj || typeof userObj !== 'object') continue;
+
+    const prevWallet = userObj.wallet;
+    ensureUserWallet(username, userObj);
+    if (prevWallet !== userObj.wallet) {
+      hasChanges = true;
+    }
+
+    if (!users[username]) {
+      users[username] = userObj;
+    } else {
+      ensureUserWallet(username, users[username]);
+    }
+  }
+
+  if (hasChanges) {
+    localStorage.setItem('users', JSON.stringify(storedUsers));
+  }
+}
+
+ensureUsersWallets();
+
 function getStoredUsersMap() {
   try {
     const rawUsers = localStorage.getItem('users');
@@ -140,11 +206,13 @@ export function getUser(username) {
   if (!username) return null;
 
   if (users[username]) {
+    ensureUserWallet(username, users[username]);
     return users[username];
   }
 
   const storedUsers = getStoredUsersMap();
   if (storedUsers[username]) {
+    ensureUserWallet(username, storedUsers[username]);
     users[username] = storedUsers[username];
     return users[username];
   }
@@ -154,6 +222,7 @@ export function getUser(username) {
   );
 
   if (insensitiveKey) {
+    ensureUserWallet(insensitiveKey, storedUsers[insensitiveKey]);
     users[insensitiveKey] = storedUsers[insensitiveKey];
     return users[insensitiveKey];
   }
