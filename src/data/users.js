@@ -156,6 +156,11 @@ function getDefaultWalletForUser(username) {
   return normalizeWalletValue(users?.[username]?.wallet);
 }
 
+function getDefaultAdminForUser(username) {
+  if (!username) return false;
+  return Boolean(users?.[username]?.admin);
+}
+
 function ensureUserWallet(username, userObj) {
   if (!userObj || typeof userObj !== 'object') return;
   const fallback = getDefaultWalletForUser(username);
@@ -164,9 +169,21 @@ function ensureUserWallet(username, userObj) {
   );
 }
 
+function ensureUserAdmin(username, userObj) {
+  if (!userObj || typeof userObj !== 'object') return;
+  if (typeof userObj.admin === 'boolean') return;
+  userObj.admin = getDefaultAdminForUser(username);
+}
+
+function ensureUserProfileFields(username, userObj) {
+  if (!userObj || typeof userObj !== 'object') return;
+  ensureUserWallet(username, userObj);
+  ensureUserAdmin(username, userObj);
+}
+
 function ensureUsersWallets() {
   for (const [username, userObj] of Object.entries(users || {})) {
-    ensureUserWallet(username, userObj);
+    ensureUserProfileFields(username, userObj);
   }
 
   if (!canUseLocalStorage()) return;
@@ -187,15 +204,32 @@ function ensureUsersWallets() {
     if (!userObj || typeof userObj !== 'object') continue;
 
     const prevWallet = userObj.wallet;
-    ensureUserWallet(username, userObj);
-    if (prevWallet !== userObj.wallet) {
+    const prevAdmin = userObj.admin;
+    ensureUserProfileFields(username, userObj);
+    if (prevWallet !== userObj.wallet || prevAdmin !== userObj.admin) {
       hasChanges = true;
     }
 
     if (!users[username]) {
       users[username] = userObj;
     } else {
-      ensureUserWallet(username, users[username]);
+      ensureUserProfileFields(username, users[username]);
+    }
+  }
+
+  for (const [username, userObj] of Object.entries(users || {})) {
+    const existingStored = storedUsers[username];
+    if (!existingStored || typeof existingStored !== 'object') {
+      storedUsers[username] = { ...userObj };
+      hasChanges = true;
+      continue;
+    }
+
+    const prevWallet = existingStored.wallet;
+    const prevAdmin = existingStored.admin;
+    ensureUserProfileFields(username, existingStored);
+    if (prevWallet !== existingStored.wallet || prevAdmin !== existingStored.admin) {
+      hasChanges = true;
     }
   }
 
@@ -222,13 +256,13 @@ export function getUser(username) {
   if (!username) return null;
 
   if (users[username]) {
-    ensureUserWallet(username, users[username]);
+    ensureUserProfileFields(username, users[username]);
     return users[username];
   }
 
   const storedUsers = getStoredUsersMap();
   if (storedUsers[username]) {
-    ensureUserWallet(username, storedUsers[username]);
+    ensureUserProfileFields(username, storedUsers[username]);
     users[username] = storedUsers[username];
     return users[username];
   }
@@ -238,7 +272,7 @@ export function getUser(username) {
   );
 
   if (insensitiveKey) {
-    ensureUserWallet(insensitiveKey, storedUsers[insensitiveKey]);
+    ensureUserProfileFields(insensitiveKey, storedUsers[insensitiveKey]);
     users[insensitiveKey] = storedUsers[insensitiveKey];
     return users[insensitiveKey];
   }
