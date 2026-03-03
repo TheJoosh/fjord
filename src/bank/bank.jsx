@@ -15,6 +15,7 @@ export function Bank({ userName }) {
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [isSellOverlayOpen, setIsSellOverlayOpen] = React.useState(false);
   const [isSellMode, setIsSellMode] = React.useState(false);
+  const [selectedSellCards, setSelectedSellCards] = React.useState([]);
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = localStorage.getItem(sortByStorageKey);
     return sortOptions.includes(saved) ? saved : 'Rarity';
@@ -101,6 +102,104 @@ export function Bank({ userName }) {
 
   const goToNextPage = () => {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
+  };
+
+  const handleDeckCardClick = (clickedCard) => {
+    const cardName = clickedCard?.name;
+    if (!ownedCardsStorageKey || !cardName) return;
+
+    const currentQty = Math.max(0, parseInt(user?.cards?.[cardName], 10) || 0);
+    if (user?.cards && currentQty > 0) {
+      if (currentQty <= 1) {
+        delete user.cards[cardName];
+      } else {
+        user.cards[cardName] = currentQty - 1;
+      }
+    }
+
+    let sourceEntries = [];
+    try {
+      const raw = localStorage.getItem(ownedCardsStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      sourceEntries = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      sourceEntries = [];
+    }
+
+    const byName = new Map();
+    if (sourceEntries.length > 0) {
+      for (const entry of sourceEntries) {
+        if (!entry?.name) continue;
+        const existingQty = byName.get(entry.name) || 0;
+        byName.set(entry.name, existingQty + Math.max(0, parseInt(entry.qty, 10) || 0));
+      }
+    } else {
+      for (const [name, qty] of Object.entries(user?.cards || {})) {
+        byName.set(name, Math.max(0, parseInt(qty, 10) || 0));
+      }
+    }
+
+    const nextQty = Math.max(0, (byName.get(cardName) || 0) - 1);
+    if (nextQty > 0) {
+      byName.set(cardName, nextQty);
+    } else {
+      byName.delete(cardName);
+    }
+
+    const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
+      name,
+      qty,
+      card: getCardByName(name),
+    }));
+
+    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+    setOwnedDeckCards(buildOwnedDeckCards());
+
+    setSelectedSellCards((prev) => ([
+      ...prev,
+      {
+        ...clickedCard,
+        sellEntryId: `${clickedCard.name}-${Date.now()}-${Math.random()}`,
+      },
+    ]));
+  };
+
+  const handleRemoveSellCard = (sellEntryId) => {
+    const selectedCard = selectedSellCards.find((card) => card.sellEntryId === sellEntryId);
+    if (!selectedCard?.name || !ownedCardsStorageKey) return;
+
+    const cardName = selectedCard.name;
+
+    if (user?.cards) {
+      user.cards[cardName] = (Math.max(0, parseInt(user.cards[cardName], 10) || 0) + 1);
+    }
+
+    let sourceEntries = [];
+    try {
+      const raw = localStorage.getItem(ownedCardsStorageKey);
+      const parsed = raw ? JSON.parse(raw) : [];
+      sourceEntries = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      sourceEntries = [];
+    }
+
+    const byName = new Map();
+    for (const entry of sourceEntries) {
+      if (!entry?.name) continue;
+      byName.set(entry.name, (byName.get(entry.name) || 0) + Math.max(0, parseInt(entry.qty, 10) || 0));
+    }
+
+    byName.set(cardName, (byName.get(cardName) || 0) + 1);
+
+    const nextOwned = Array.from(byName.entries()).map(([name, qty]) => ({
+      name,
+      qty,
+      card: getCardByName(name),
+    }));
+
+    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+    setOwnedDeckCards(buildOwnedDeckCards());
+    setSelectedSellCards((prev) => prev.filter((card) => card.sellEntryId !== sellEntryId));
   };
 
   const buildOwnedDeckCards = React.useCallback(() => {
@@ -288,6 +387,42 @@ export function Bank({ userName }) {
         </div>
       )}
 
+      {isSellMode && (
+        <>
+          <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
+          <section className="yoUser">
+            <div className="container-fluid">
+              <div className="row deck-row">
+                {selectedSellCards.map((card) => (
+                  <div key={card.sellEntryId} className="col deck-col">
+                    <Card
+                      image={card.image}
+                      name={card.name}
+                      cost={card.cost}
+                      rarity={card.rarity}
+                      cardType={card.cardType}
+                      description={card.description}
+                      strength={card.strength}
+                      endurance={card.endurance}
+                    />
+                    <div className="card-value mt-1">
+                      <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                    </div>
+                    <button
+                      type="button"
+                      className="remove-trade-card-btn"
+                      onClick={() => handleRemoveSellCard(card.sellEntryId)}
+                    >
+                      Remove Card
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
+
       {isSellOverlayOpen && (
         <div className="pexels-overlay" onClick={() => setIsSellOverlayOpen(false)}>
           <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
@@ -306,16 +441,23 @@ export function Bank({ userName }) {
 
                   return (
                     <div key={card.name} className="col deck-col pack-overlay-col">
-                      <Card
-                        image={card.image}
-                        name={card.name}
-                        cost={card.cost}
-                        rarity={card.rarity}
-                        cardType={card.cardType}
-                        description={card.description}
-                        strength={card.strength}
-                        endurance={card.endurance}
-                      />
+                      <button
+                        type="button"
+                        className="trade-deck-card-btn"
+                        onClick={() => handleDeckCardClick(card)}
+                        title="Remove 1 from your deck"
+                      >
+                        <Card
+                          image={card.image}
+                          name={card.name}
+                          cost={card.cost}
+                          rarity={card.rarity}
+                          cardType={card.cardType}
+                          description={card.description}
+                          strength={card.strength}
+                          endurance={card.endurance}
+                        />
+                      </button>
                       <div className="card-value mt-1">
                         <div className="card-meta-row">
                           <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
