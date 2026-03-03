@@ -37,6 +37,7 @@ export function Unauthenticated({ userName, onLogin }) {
 
     const newUser = {
       password,
+      wallet: 0,
       cards: {},
       packs: {
         'Default Pack': 1,
