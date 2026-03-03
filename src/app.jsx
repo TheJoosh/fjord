@@ -2,7 +2,7 @@ import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
 import './utils/tilt';
-import { NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { Login } from './login/login';
 import { AuthState } from './login/authState';
 import { Deck } from './deck/deck';
@@ -10,6 +10,7 @@ import { Designer } from './designer/designer';
 import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
 import { Bank } from './bank/bank';
+import { Approve } from './approve/approve';
 import { getUser, users } from './data/users';
 import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 
@@ -23,6 +24,8 @@ export default function App() {
   const [userName, setUserName] = React.useState(localStorage.getItem('userName') || '');
   const currentAuthState = userName ? AuthState.Authenticated : AuthState.Unauthenticated;
   const [authState, setAuthState] = React.useState(currentAuthState);
+    const activeUser = getUser(userName);
+    const isAdminUser = Boolean(activeUser?.admin);
   const navigate = useNavigate();
 
     const restoreTradedCardsOnLogout = (activeUserName) => {
@@ -106,6 +109,10 @@ export default function App() {
                         <li><NavLink to="/bank">Bank</NavLink></li>
                     )}
 
+                    {authState === AuthState.Authenticated && isAdminUser && (
+                        <li><NavLink to="/approve">Approve</NavLink></li>
+                    )}
+
                     {authState === AuthState.Authenticated && (
                         <li><button className="nav-link btn btn-link text-light p-0" onClick={logout}>Logout</button></li>
                     )}
@@ -137,6 +144,7 @@ export default function App() {
                 <Route path='/trades' element={<Trades userName={userName} />} />
                 <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='/bank' element={<Bank userName={userName} />} />
+                <Route path='/approve' element={isAdminUser ? <Approve userName={userName} /> : <Navigate to='/' replace />} />
                 <Route path='*' element={<NotFound />} />
             </Routes>
 
