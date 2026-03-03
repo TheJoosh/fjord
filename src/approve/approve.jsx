@@ -1,10 +1,11 @@
 import React from 'react';
 import { Card } from '../data/card';
-import { pendingApproval } from '../data/cards';
+import { addCardToRarity, pendingApproval, removeCardFromPendingApproval } from '../data/cards';
 
 export function Approve({ userName }) {
   const title = "Approve Cards";
   const cardsPerPage = 40;
+  const [pendingVersion, setPendingVersion] = React.useState(0);
   const renderedCards = Object.entries(pendingApproval)
     .map(([name, card]) => ({
       name,
@@ -32,9 +33,31 @@ export function Approve({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const handleApprove = (name, card) => {
+    if (!name || !card) return;
+    const confirmed = window.confirm(`Are you sure you want to approve "${name}"?`);
+    if (!confirmed) return;
+    const rarity = card.rarity || 'Common';
+
+    addCardToRarity(rarity, name, {
+      ...card,
+      rarity,
+    });
+    removeCardFromPendingApproval(name);
+    setPendingVersion((value) => value + 1);
+  };
+
+  const handleDiscard = (name) => {
+    if (!name) return;
+    const confirmed = window.confirm(`Are you sure you want to discard "${name}"?`);
+    if (!confirmed) return;
+    removeCardFromPendingApproval(name);
+    setPendingVersion((value) => value + 1);
+  };
+
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [userName]);
+  }, [userName, pendingVersion]);
 
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -87,6 +110,22 @@ export function Approve({ userName }) {
                 </div>
                 <div className="card-value mt-1">
                   <small>Author: {card.author || 'Unknown'}</small>
+                </div>
+                <div className="deck-controls mt-2">
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-success me-2"
+                    onClick={() => handleApprove(name, card)}
+                  >
+                    Approve
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-danger"
+                    onClick={() => handleDiscard(name)}
+                  >
+                    Discard
+                  </button>
                 </div>
               </div>
             ))}
