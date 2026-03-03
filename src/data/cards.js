@@ -617,6 +617,27 @@ export function removeCardFromPendingApproval(name) {
   return true;
 }
 
+export function updatePendingApprovalCard(previousName, nextName, cardData) {
+  if (!previousName || !nextName || !cardData) return false;
+  if (!pendingApproval[previousName]) return false;
+
+  if (previousName !== nextName && pendingApproval[nextName]) {
+    return false;
+  }
+
+  if (previousName !== nextName) {
+    delete pendingApproval[previousName];
+  }
+
+  pendingApproval[nextName] = {
+    ...cardData,
+    population: normalizePopulationValue(cardData.population),
+  };
+
+  persistPendingApproval();
+  return true;
+}
+
 function getKnownUserNames(usersObj) {
   const names = new Set(Object.keys(usersObj || {}));
 
