@@ -475,7 +475,7 @@ export function Designer({ userName }) {
                                     : `${abilities} - `)
         : "Description";
 
-    function handleSubmitCard(e) {
+    async function handleSubmitCard(e) {
         e.preventDefault();
         if (!isSubmitReady) return;
 
@@ -490,7 +490,8 @@ export function Designer({ userName }) {
             typeof previewImage === 'string' && previewImage.startsWith('data:')
                 ? 'Default.png'
                 : (previewImage || "Default.png");
-        const activeUserName = (userName || storageService.getCurrentUserName() || '').trim();
+        const savedUserName = await storageService.getCurrentUserName();
+        const activeUserName = (userName || savedUserName || '').trim();
         const activeUser = getUser(activeUserName);
         const isAdminUser = Boolean(activeUser?.admin);
 
@@ -515,7 +516,7 @@ export function Designer({ userName }) {
 
             if (activeUserName) {
                 const designedMapKey = 'usersDesigned';
-                let designedMap = storageService.getDesignedMap();
+                let designedMap = await storageService.getDesignedMap();
 
                 const fallbackDesigned = parseInt(users?.[activeUserName]?.designed, 10) || 0;
                 const currentDesigned = parseInt(designedMap?.[activeUserName], 10);
@@ -523,8 +524,8 @@ export function Designer({ userName }) {
                 const nextDesigned = safeCurrentDesigned + 1;
 
                 designedMap[activeUserName] = nextDesigned;
-                storageService.setDesignedMap(designedMap);
-                storageService.setDesignedCount(activeUserName, nextDesigned);
+                await storageService.setDesignedMap(designedMap);
+                await storageService.setDesignedCount(activeUserName, nextDesigned);
 
                 if (users?.[activeUserName]) {
                     users[activeUserName].designed = nextDesigned;
@@ -539,13 +540,13 @@ export function Designer({ userName }) {
                     setSubmitMessage(`You earned a ${rewardMessageName}`);
 
                     const userPacksStorageKey = 'usersPacks';
-                    let packsMap = storageService.getUsersPacksMap();
+                    let packsMap = await storageService.getUsersPacksMap();
 
                     packsMap[activeUserName] = {
                         ...(packsMap[activeUserName] || {}),
                         ...users[activeUserName].packs,
                     };
-                    storageService.setUsersPacksMap(packsMap);
+                    await storageService.setUsersPacksMap(packsMap);
                 }
             }
         } catch (error) {
