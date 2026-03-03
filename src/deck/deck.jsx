@@ -12,18 +12,10 @@ export function Deck({ userName }) {
   const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
-  const [sortBy, setSortBy] = React.useState(() => {
-    const saved = storageService.getString(sortByStorageKey, 'Rarity');
-    return sortOptions.includes(saved) ? saved : 'Rarity';
-  });
+  const [sortBy, setSortBy] = React.useState('Rarity');
+  const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
   
   const user = getUser(userName);
-
-  let selectedTradeCards = [];
-  if (tradeSelectionStorageKey) {
-    const parsed = storageService.getJson(tradeSelectionStorageKey, []);
-    selectedTradeCards = Array.isArray(parsed) ? parsed : [];
-  }
 
   const effectiveCards = { ...(user?.cards || {}) };
   for (const card of selectedTradeCards) {
@@ -120,17 +112,35 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     if (!userName) return;
-    storageService.setOwnedCards(userName, ownedFromUser);
+    (async () => {
+      await storageService.setOwnedCards(userName, ownedFromUser);
+    })();
   }, [userName, ownedFromUser]);
 
   React.useEffect(() => {
-    storageService.setString(sortByStorageKey, sortBy);
+    (async () => {
+      await storageService.setString(sortByStorageKey, sortBy);
+    })();
   }, [sortByStorageKey, sortBy]);
 
   React.useEffect(() => {
-    const saved = storageService.getString(sortByStorageKey, 'Rarity');
-    setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+    (async () => {
+      const saved = await storageService.getString(sortByStorageKey, 'Rarity');
+      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+    })();
   }, [sortByStorageKey]);
+
+  React.useEffect(() => {
+    if (!tradeSelectionStorageKey) {
+      setSelectedTradeCards([]);
+      return;
+    }
+
+    (async () => {
+      const parsed = await storageService.getJson(tradeSelectionStorageKey, []);
+      setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
+    })();
+  }, [tradeSelectionStorageKey]);
 
   React.useEffect(() => {
     setCurrentPage(1);
