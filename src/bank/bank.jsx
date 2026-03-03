@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
-import { getUser } from '../data/users';
+import { getUser, normalizeWalletValue } from '../data/users';
 
 export function Bank({ userName }) {
   const bankCardsStorageKey = 'bankCards';
@@ -19,6 +19,7 @@ export function Bank({ userName }) {
     return sortOptions.includes(saved) ? saved : 'Rarity';
   });
   const user = getUser(userName);
+  const walletValue = normalizeWalletValue(user?.wallet);
 
   const loadBankCards = React.useCallback(() => {
     try {
@@ -215,7 +216,9 @@ export function Bank({ userName }) {
         </div>
         {
           <div className="deck-value-row">
-            <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Sell Cards!</button>
+            <div className="deck-value">
+              Wallet: ${walletValue.toFixed(2)}
+            </div>
             <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
               {showPagination && (
                 <div className="deck-pagination">
@@ -229,6 +232,7 @@ export function Bank({ userName }) {
                 </div>
               )}
             </div>
+            <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Sell Cards!</button>
           </div>
         }
       </div>
