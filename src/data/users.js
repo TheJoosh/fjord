@@ -40,6 +40,7 @@ export const users = {
   },
   Gary: {
     password: "gary123",
+    wallet: 0,
     cards: {
       "Loki, God of Mischief": 2,
       "Odin, King of the Gods": 2,
@@ -65,6 +66,7 @@ export const users = {
   },
   Steven: {
     password: "steve_pw",
+    wallet: 0,
     cards: {
       "Thor, God of Thunder": 2,
       "Thrym, Frost Giant King": 2,
@@ -92,6 +94,7 @@ export const users = {
   },
   Lucy: {
     password: "lucy$$$",
+    wallet: 0,
     cards: {
       "Níðhǫggr, Curse Striker": 2,
       "Brynhildr, Shieldmaiden": 2,
@@ -111,6 +114,7 @@ export const users = {
   },
   Packer: {
     password: "123",
+    wallet: 1000,
     packs: {
       "Default Pack": 100,
       "Saga Pack": 100,
