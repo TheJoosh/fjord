@@ -2,10 +2,10 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore, recalcCardValues, syncCardPopulationsFromOwnedCards } from '../data/cards';
 import { getUser, normalizeWalletValue, users } from '../data/users';
+import { storageService } from '../services/storageService';
 
 export function Bank({ userName }) {
   const bankCardsStorageKey = 'bankCards';
-  const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
@@ -17,33 +17,28 @@ export function Bank({ userName }) {
   const [selectedSellCards, setSelectedSellCards] = React.useState([]);
   const [sellSuccessMessage, setSellSuccessMessage] = React.useState('');
   const [sortBy, setSortBy] = React.useState(() => {
-    const saved = localStorage.getItem(sortByStorageKey);
+    const saved = storageService.getString(sortByStorageKey, 'Rarity');
     return sortOptions.includes(saved) ? saved : 'Rarity';
   });
   const user = getUser(userName);
   const walletValue = normalizeWalletValue(user?.wallet);
 
   const loadBankCards = React.useCallback(() => {
-    try {
-      const raw = localStorage.getItem(bankCardsStorageKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      const sourceEntries = Array.isArray(parsed) ? parsed : [];
+    const parsed = storageService.getJson(bankCardsStorageKey, []);
+    const sourceEntries = Array.isArray(parsed) ? parsed : [];
 
-      return sourceEntries
-        .map((entry) => {
-          if (!entry?.name) return null;
-          const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
-          if (qty <= 0) return null;
+    return sourceEntries
+      .map((entry) => {
+        if (!entry?.name) return null;
+        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
+        if (qty <= 0) return null;
 
-          const card = getCardByName(entry.name);
-          if (!card) return null;
+        const card = getCardByName(entry.name);
+        if (!card) return null;
 
-          return { name: entry.name, qty, card };
-        })
-        .filter(Boolean);
-    } catch {
-      return [];
-    }
+        return { name: entry.name, qty, card };
+      })
+      .filter(Boolean);
   }, []);
 
   const sortedOwned = [...bankCards].sort((a, b) => {
@@ -164,50 +159,33 @@ export function Bank({ userName }) {
       users[userName].wallet = nextWallet;
     }
 
-    try {
-      const rawUsers = localStorage.getItem('users');
-      const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
-      const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
-        ? parsedUsers
-        : {};
+    const usersMap = storageService.getUsersMap();
+    const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
+      ? userName
+      : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
 
-      const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
-        ? userName
-        : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
-
-      if (storageUserKey) {
-        const existingStoredUser = usersMap[storageUserKey];
-        if (existingStoredUser && typeof existingStoredUser === 'object') {
-          usersMap[storageUserKey] = {
-            ...existingStoredUser,
-            wallet: nextWallet,
-          };
-        } else {
-          usersMap[storageUserKey] = {
-            wallet: nextWallet,
-          };
-        }
+    if (storageUserKey) {
+      const existingStoredUser = usersMap[storageUserKey];
+      if (existingStoredUser && typeof existingStoredUser === 'object') {
+        usersMap[storageUserKey] = {
+          ...existingStoredUser,
+          wallet: nextWallet,
+        };
       } else {
-        usersMap[userName] = {
-          ...(userObj || {}),
+        usersMap[storageUserKey] = {
           wallet: nextWallet,
         };
       }
-
-      localStorage.setItem('users', JSON.stringify(usersMap));
-    } catch {
+    } else {
+      usersMap[userName] = {
+        ...(userObj || {}),
+        wallet: nextWallet,
+      };
     }
 
-    let sourceEntries = [];
-    if (ownedCardsStorageKey) {
-      try {
-        const raw = localStorage.getItem(ownedCardsStorageKey);
-        const parsed = raw ? JSON.parse(raw) : [];
-        sourceEntries = Array.isArray(parsed) ? parsed : [];
-      } catch {
-        sourceEntries = [];
-      }
-    }
+    storageService.setUsersMap(usersMap);
+
+    const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
 
     const nextOwnedByName = new Map();
     if (sourceEntries.length > 0) {
@@ -233,12 +211,12 @@ export function Bank({ userName }) {
       userObj.cards = nextCardsObject;
     }
 
-    if (ownedCardsStorageKey) {
+    if (userName) {
       const nextOwned = Array.from(nextOwnedByName.entries()).map(([name, qty]) => ({
         name,
         qty,
       }));
-      localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+      storageService.setOwnedCards(userName, nextOwned);
     }
 
     setBankCards((prev) => {
@@ -286,17 +264,7 @@ export function Bank({ userName }) {
     }
 
     const userObj = getUser(userName);
-    let sourceEntries = [];
-
-    if (ownedCardsStorageKey) {
-      try {
-        const raw = localStorage.getItem(ownedCardsStorageKey);
-        const parsed = raw ? JSON.parse(raw) : [];
-        sourceEntries = Array.isArray(parsed) ? parsed : [];
-      } catch {
-        sourceEntries = [];
-      }
-    }
+    const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
 
     const nextOwnedByName = new Map();
     if (sourceEntries.length > 0) {
@@ -336,47 +304,39 @@ export function Bank({ userName }) {
         users[userName].wallet = nextWallet;
       }
 
-      try {
-        const rawUsers = localStorage.getItem('users');
-        const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
-        const usersMap = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
-          ? parsedUsers
-          : {};
+      const usersMap = storageService.getUsersMap();
+      const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
+        ? userName
+        : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
 
-        const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
-          ? userName
-          : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
-
-        if (storageUserKey) {
-          const existingStoredUser = usersMap[storageUserKey];
-          if (existingStoredUser && typeof existingStoredUser === 'object') {
-            usersMap[storageUserKey] = {
-              ...existingStoredUser,
-              wallet: nextWallet,
-            };
-          } else {
-            usersMap[storageUserKey] = {
-              wallet: nextWallet,
-            };
-          }
+      if (storageUserKey) {
+        const existingStoredUser = usersMap[storageUserKey];
+        if (existingStoredUser && typeof existingStoredUser === 'object') {
+          usersMap[storageUserKey] = {
+            ...existingStoredUser,
+            wallet: nextWallet,
+          };
         } else {
-          usersMap[userName] = {
-            ...(userObj || {}),
+          usersMap[storageUserKey] = {
             wallet: nextWallet,
           };
         }
-
-        localStorage.setItem('users', JSON.stringify(usersMap));
-      } catch {
+      } else {
+        usersMap[userName] = {
+          ...(userObj || {}),
+          wallet: nextWallet,
+        };
       }
+
+      storageService.setUsersMap(usersMap);
     }
 
-    if (ownedCardsStorageKey) {
+    if (userName) {
       const nextOwned = Array.from(nextOwnedByName.entries()).map(([name, qty]) => ({
         name,
         qty,
       }));
-      localStorage.setItem(ownedCardsStorageKey, JSON.stringify(nextOwned));
+      storageService.setOwnedCards(userName, nextOwned);
     }
 
     setBankCards((prev) => {
@@ -412,19 +372,7 @@ export function Bank({ userName }) {
 
   const buildOwnedDeckCards = React.useCallback(() => {
     const fallbackCards = user?.cards || {};
-    let sourceEntries = [];
-
-    if (ownedCardsStorageKey) {
-      try {
-        const raw = localStorage.getItem(ownedCardsStorageKey);
-        const parsed = raw ? JSON.parse(raw) : [];
-        if (Array.isArray(parsed)) {
-          sourceEntries = parsed;
-        }
-      } catch {
-        sourceEntries = [];
-      }
-    }
+    const sourceEntries = userName ? storageService.getOwnedCards(userName) : [];
 
     const byName = new Map();
 
@@ -448,7 +396,7 @@ export function Bank({ userName }) {
       })
       .filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name));
-  }, [user, ownedCardsStorageKey]);
+  }, [user, userName]);
 
   React.useEffect(() => {
     setBankCards(loadBankCards());
@@ -462,15 +410,15 @@ export function Bank({ userName }) {
       }))
       .filter((entry) => entry.qty > 0);
 
-    localStorage.setItem(bankCardsStorageKey, JSON.stringify(persistable));
+    storageService.setJson(bankCardsStorageKey, persistable);
   }, [bankCards]);
 
   React.useEffect(() => {
-    localStorage.setItem(sortByStorageKey, sortBy);
+    storageService.setString(sortByStorageKey, sortBy);
   }, [sortByStorageKey, sortBy]);
 
   React.useEffect(() => {
-    const saved = localStorage.getItem(sortByStorageKey);
+    const saved = storageService.getString(sortByStorageKey, 'Rarity');
     setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
   }, [sortByStorageKey]);
 
