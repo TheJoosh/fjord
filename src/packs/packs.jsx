@@ -16,8 +16,8 @@ export function Packs({ userName }) {
     const walletValue = normalizeWalletValue(user?.wallet);
     const normalPackPrice = 3.5;
     const sagaPackPrice = 4.5;
-    const heroicPackPrice = 7.5;
-    const mythboundPackPrice = 11.25;
+    const heroicPackPrice = 8;
+    const mythboundPackPrice = 11.5;
     const packs = user?.packs || {};
     const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
