@@ -501,7 +501,7 @@ export function Bank({ userName }) {
         <>
           <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
           {selectedSellCards.length > 0 && (
-            <button className="picker" onClick={handleSellCards}>Sell for ${selectedSellPayout}?</button>
+            <button className="picker" onClick={handleSellCards}>Sell for ${selectedSellPayoutValue.toFixed(2)}?</button>
           )}
           <h3 className="value">Value: ${selectedSellValue.toFixed(2)}</h3>
           <h3 className="value">Payout (85%): ${selectedSellPayoutValue.toFixed(2)}</h3>
