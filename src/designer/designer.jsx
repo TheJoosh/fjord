@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
 import { addCardToPendingApproval, addCardToRarity, cardNameExists } from '../data/cards';
 import { getUser, users } from '../data/users';
+import { storageService } from '../services/storageService';
 
 export function Designer({ userName }) { 
     const imageInputRef = useRef(null);
@@ -489,7 +490,7 @@ export function Designer({ userName }) {
             typeof previewImage === 'string' && previewImage.startsWith('data:')
                 ? 'Default.png'
                 : (previewImage || "Default.png");
-        const activeUserName = (userName || localStorage.getItem('userName') || '').trim();
+        const activeUserName = (userName || storageService.getCurrentUserName() || '').trim();
         const activeUser = getUser(activeUserName);
         const isAdminUser = Boolean(activeUser?.admin);
 
@@ -514,14 +515,7 @@ export function Designer({ userName }) {
 
             if (activeUserName) {
                 const designedMapKey = 'usersDesigned';
-                let designedMap = {};
-
-                try {
-                    const rawDesignedMap = localStorage.getItem(designedMapKey);
-                    designedMap = rawDesignedMap ? JSON.parse(rawDesignedMap) : {};
-                } catch {
-                    designedMap = {};
-                }
+                let designedMap = storageService.getDesignedMap();
 
                 const fallbackDesigned = parseInt(users?.[activeUserName]?.designed, 10) || 0;
                 const currentDesigned = parseInt(designedMap?.[activeUserName], 10);
@@ -529,8 +523,8 @@ export function Designer({ userName }) {
                 const nextDesigned = safeCurrentDesigned + 1;
 
                 designedMap[activeUserName] = nextDesigned;
-                localStorage.setItem(designedMapKey, JSON.stringify(designedMap));
-                localStorage.setItem(`designed:${activeUserName}`, String(nextDesigned));
+                storageService.setDesignedMap(designedMap);
+                storageService.setDesignedCount(activeUserName, nextDesigned);
 
                 if (users?.[activeUserName]) {
                     users[activeUserName].designed = nextDesigned;
@@ -545,19 +539,13 @@ export function Designer({ userName }) {
                     setSubmitMessage(`You earned a ${rewardMessageName}`);
 
                     const userPacksStorageKey = 'usersPacks';
-                    let packsMap = {};
-                    try {
-                        const rawPacksMap = localStorage.getItem(userPacksStorageKey);
-                        packsMap = rawPacksMap ? JSON.parse(rawPacksMap) : {};
-                    } catch {
-                        packsMap = {};
-                    }
+                    let packsMap = storageService.getUsersPacksMap();
 
                     packsMap[activeUserName] = {
                         ...(packsMap[activeUserName] || {}),
                         ...users[activeUserName].packs,
                     };
-                    localStorage.setItem(userPacksStorageKey, JSON.stringify(packsMap));
+                    storageService.setUsersPacksMap(packsMap);
                 }
             }
         } catch (error) {
