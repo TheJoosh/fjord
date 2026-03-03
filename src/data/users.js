@@ -1,3 +1,5 @@
+import { storageService } from '../services/storageService';
+
 export const users = {
   Tradey: {
     wallet: 0,
@@ -141,10 +143,6 @@ export const users = {
   },
 }
 
-function canUseLocalStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
-
 export function normalizeWalletValue(value) {
   const parsed = Number(value);
   if (!Number.isFinite(parsed)) return 0;
@@ -186,18 +184,7 @@ function ensureUsersWallets() {
     ensureUserProfileFields(username, userObj);
   }
 
-  if (!canUseLocalStorage()) return;
-
-  let storedUsers = {};
-  try {
-    const rawUsers = localStorage.getItem('users');
-    const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
-    storedUsers = parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
-      ? parsedUsers
-      : {};
-  } catch {
-    storedUsers = {};
-  }
+  const storedUsers = storageService.getUsersMap();
 
   let hasChanges = false;
   for (const [username, userObj] of Object.entries(storedUsers)) {
@@ -234,22 +221,14 @@ function ensureUsersWallets() {
   }
 
   if (hasChanges) {
-    localStorage.setItem('users', JSON.stringify(storedUsers));
+    storageService.setUsersMap(storedUsers);
   }
 }
 
 ensureUsersWallets();
 
 function getStoredUsersMap() {
-  try {
-    const rawUsers = localStorage.getItem('users');
-    const parsedUsers = rawUsers ? JSON.parse(rawUsers) : {};
-    return parsedUsers && typeof parsedUsers === 'object' && !Array.isArray(parsedUsers)
-      ? parsedUsers
-      : {};
-  } catch {
-    return {};
-  }
+  return storageService.getUsersMap();
 }
 
 export function getUser(username) {
