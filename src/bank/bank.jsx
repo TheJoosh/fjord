@@ -13,7 +13,6 @@ export function Bank({ userName }) {
   const [bankCards, setBankCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [isSellMode, setIsSellMode] = React.useState(false);
-  const [sellSuccessMessage, setSellSuccessMessage] = React.useState('');
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = storageService.getString(sortByStorageKey, 'Rarity');
     return sortOptions.includes(saved) ? saved : 'Rarity';
@@ -62,6 +61,29 @@ export function Bank({ userName }) {
 
     return a.name.localeCompare(b.name);
   });
+
+  const sortedOwnedDeckCards = React.useMemo(() => {
+    return [...ownedDeckCards].sort((a, b) => {
+      if (sortBy === 'Value') {
+        const av = typeof a?.value === 'number' ? a.value : 0;
+        const bv = typeof b?.value === 'number' ? b.value : 0;
+        const vDiff = bv - av;
+        if (vDiff !== 0) return vDiff;
+        return (a?.name || '').localeCompare(b?.name || '');
+      }
+
+      if (sortBy === 'Name') {
+        return (a?.name || '').localeCompare(b?.name || '');
+      }
+
+      const aScarcity = getCardScarcityScore(a?.name);
+      const bScarcity = getCardScarcityScore(b?.name);
+      const scarcityDiff = bScarcity - aScarcity;
+      if (scarcityDiff !== 0) return scarcityDiff;
+
+      return (a?.name || '').localeCompare(b?.name || '');
+    });
+  }, [ownedDeckCards, sortBy]);
 
   const totalRenderedCards = sortedOwned.length;
   const totalPages = Math.max(1, Math.ceil(totalRenderedCards / cardsPerPage));
@@ -190,7 +212,6 @@ export function Bank({ userName }) {
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
     setOwnedDeckCards(buildOwnedDeckCards());
-    setSellSuccessMessage('');
   };
 
   const handleSellCard = (cardName) => {
@@ -303,7 +324,6 @@ export function Bank({ userName }) {
     recalcCardValues();
 
     setOwnedDeckCards(buildOwnedDeckCards());
-    setSellSuccessMessage(`Sold 1 card for $${payoutAmount.toFixed(2)}.`);
   };
 
   const buildOwnedDeckCards = React.useCallback(() => {
@@ -374,13 +394,7 @@ export function Bank({ userName }) {
   }, [isSellMode, buildOwnedDeckCards]);
 
   React.useEffect(() => {
-    if (isSellMode) return;
-    setSellSuccessMessage('');
-  }, [isSellMode]);
-
-  React.useEffect(() => {
     setOwnedDeckCards(buildOwnedDeckCards());
-    setSellSuccessMessage('');
   }, [userName, buildOwnedDeckCards]);
 
   return (
@@ -390,18 +404,16 @@ export function Bank({ userName }) {
           <h2>
             Bank - {isSellMode ? 'sell cards at a slight markdown' : 'buy cards to add to your deck'}
           </h2>
-          {!isSellMode && (
-            <div className="deck-controls">
-              <label className="sort-by-control">
-                <span>Sort By</span>
-                <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
-                  {sortOptions.map((option) => (
-                    <option key={option} value={option}>{option}</option>
-                  ))}
-                </select>
-              </label>
-            </div>
-          )}
+          <div className="deck-controls">
+            <label className="sort-by-control">
+              <span>Sort By</span>
+              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+                {sortOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+          </div>
         </div>
         {
           <div className="deck-value-row">
@@ -427,6 +439,8 @@ export function Bank({ userName }) {
           </div>
         }
       </div>
+
+      <h3 className="value">{isSellMode ? `${userName || 'User'}'s Deck` : 'Bank Inventory'}</h3>
 
       {!isSellMode && (
         <div className="container-fluid">
@@ -472,11 +486,10 @@ export function Bank({ userName }) {
 
       {isSellMode && (
         <>
-          {sellSuccessMessage && <div className="trade-success-message">{sellSuccessMessage}</div>}
           <section className="yoUser">
             <div className="container-fluid">
               <div className="row deck-row">
-                {ownedDeckCards.map((card) => {
+                {sortedOwnedDeckCards.map((card) => {
                   const payoutAmount = normalizeWalletValue(((typeof card.value === 'number' ? card.value : 0) * 0.85));
 
                   return (
@@ -492,7 +505,10 @@ export function Bank({ userName }) {
                       endurance={card.endurance}
                     />
                     <div className="card-value mt-1">
-                      <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                      <div className="card-meta-row">
+                        <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                        <small className="card-quantity">Quantity: {card.qty}</small>
+                      </div>
                     </div>
                     <button
                       type="button"
