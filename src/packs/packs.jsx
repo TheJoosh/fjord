@@ -14,6 +14,10 @@ import { Card } from '../data/card';
 export function Packs({ userName }) {
     const user = getUser(userName);
     const walletValue = normalizeWalletValue(user?.wallet);
+    const normalPackPrice = 3.5;
+    const sagaPackPrice = 4.5;
+    const heroicPackPrice = 7.5;
+    const mythboundPackPrice = 11.25;
     const packs = user?.packs || {};
     const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
 
@@ -239,7 +243,14 @@ export function Packs({ userName }) {
                         <h3>Normal Pack</h3>
                         <div className="pack-price-row">
                             <h4>$3.50</h4>
-                            <button type="button" className="open pack-buy-btn">Buy</button>
+                            <button
+                                type="button"
+                                className="open pack-buy-btn"
+                                disabled={walletValue < normalPackPrice}
+                                style={walletValue < normalPackPrice ? { color: 'red' } : undefined}
+                            >
+                                Buy
+                            </button>
                         </div>
                         <h4>10 cards</h4>
                         <button className="open" onClick={openNormalPack} disabled={defaultPackCount <= 0}>Unopened Packs: {defaultPackCount}</button>
@@ -251,7 +262,14 @@ export function Packs({ userName }) {
                         <h3>Saga Pack</h3>
                         <div className="pack-price-row">
                             <h4>$4.50</h4>
-                            <button type="button" className="open pack-buy-btn">Buy</button>
+                            <button
+                                type="button"
+                                className="open pack-buy-btn"
+                                disabled={walletValue < sagaPackPrice}
+                                style={walletValue < sagaPackPrice ? { color: 'red' } : undefined}
+                            >
+                                Buy
+                            </button>
                         </div>
                         <h4>2x Mythical and Legendary cards</h4>
                         <button className="open" onClick={openSagaPack} disabled={sagaPackCount <= 0}>Unopened Packs: {sagaPackCount}</button>
@@ -263,7 +281,14 @@ export function Packs({ userName }) {
                         <h3>Heroic Pack</h3>
                         <div className="pack-price-row">
                             <h4>$7.50</h4>
-                            <button type="button" className="open pack-buy-btn">Buy</button>
+                            <button
+                                type="button"
+                                className="open pack-buy-btn"
+                                disabled={walletValue < heroicPackPrice}
+                                style={walletValue < heroicPackPrice ? { color: 'red' } : undefined}
+                            >
+                                Buy
+                            </button>
                         </div>
                         <h4>No Common cards</h4>
                         <button className="open" onClick={openHeroicPack} disabled={heroicPackCount <= 0}>Unopened Packs: {heroicPackCount}</button>
@@ -275,7 +300,14 @@ export function Packs({ userName }) {
                         <h3>Mythbound Pack</h3>
                         <div className="pack-price-row">
                             <h4>$11.25</h4>
-                            <button type="button" className="open pack-buy-btn">Buy</button>
+                            <button
+                                type="button"
+                                className="open pack-buy-btn"
+                                disabled={walletValue < mythboundPackPrice}
+                                style={walletValue < mythboundPackPrice ? { color: 'red' } : undefined}
+                            >
+                                Buy
+                            </button>
                         </div>
                         <h4>No Common or Uncommon cards</h4>
                         <button className="open" onClick={openMythboundPack} disabled={mythboundPackCount <= 0}>Unopened Packs: {mythboundPackCount}</button>

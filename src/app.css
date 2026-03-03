@@ -528,6 +528,11 @@ main {
   gap: 8px;
 }
 
+.pack-price-row h4,
+.pack-price-row .pack-buy-btn {
+  margin: 0;
+}
+
 .pack-price-row .pack-buy-btn {
   position: static;
   bottom: auto;
