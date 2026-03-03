@@ -440,7 +440,7 @@ export function Bank({ userName }) {
         }
       </div>
 
-      <h3 className="value">{isSellMode ? `${userName || 'User'}'s Deck` : 'Bank Inventory'}</h3>
+      <h3 className="value" style={{ textAlign: 'center', fontSize: '2rem' }}>{isSellMode ? `${userName || 'User'}'s Deck` : 'Bank Inventory'}</h3>
 
       {!isSellMode && (
         <div className="container-fluid">
