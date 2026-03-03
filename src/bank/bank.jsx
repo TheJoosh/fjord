@@ -124,6 +124,21 @@ export function Bank({ userName }) {
       .filter(Boolean);
   }, [ownedDeckCards, selectedSellCountByName]);
 
+  const selectedSellValue = React.useMemo(() => {
+    return selectedSellCards.reduce((sum, card) => {
+      if (!card?.name) return sum;
+      const latest = getCardByName(card.name);
+      const value = latest && typeof latest.value === 'number'
+        ? latest.value
+        : (typeof card.value === 'number' ? card.value : 0);
+      return sum + value;
+    }, 0);
+  }, [selectedSellCards]);
+
+  const selectedSellPayoutValue = React.useMemo(() => {
+    return selectedSellValue * 0.85;
+  }, [selectedSellValue]);
+
   const handleDeckCardClick = (clickedCard) => {
     const cardName = clickedCard?.name;
     if (!cardName) return;
@@ -343,6 +358,8 @@ export function Bank({ userName }) {
       {isSellMode && (
         <>
           <button className="picker" onClick={() => setIsSellOverlayOpen(true)}>Pick from your deck</button>
+          <h3 className="value">Value: ${selectedSellValue.toFixed(2)}</h3>
+          <h3 className="value">Payout (85%): ${selectedSellPayoutValue.toFixed(2)}</h3>
           <section className="yoUser">
             <div className="container-fluid">
               <div className="row deck-row">
