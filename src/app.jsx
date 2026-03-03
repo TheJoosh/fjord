@@ -22,22 +22,22 @@ export default function App() {
         recalcCardValues();
     }, []);
 
-    const [userName, setUserName] = React.useState(storageService.getCurrentUserName() || '');
+    const [userName, setUserName] = React.useState('');
   const currentAuthState = userName ? AuthState.Authenticated : AuthState.Unauthenticated;
   const [authState, setAuthState] = React.useState(currentAuthState);
     const activeUser = getUser(userName);
     const isAdminUser = Boolean(activeUser?.admin);
   const navigate = useNavigate();
 
-    const restoreTradedCardsOnLogout = (activeUserName) => {
+    const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
 
         const tradeSelectionStorageKey = `tradeSelection:${activeUserName}`;
-        let selectedTradeCards = storageService.getJson(tradeSelectionStorageKey, []);
+        let selectedTradeCards = await storageService.getJson(tradeSelectionStorageKey, []);
         selectedTradeCards = Array.isArray(selectedTradeCards) ? selectedTradeCards : [];
 
         if (!selectedTradeCards.length) {
-            storageService.remove(tradeSelectionStorageKey);
+            await storageService.remove(tradeSelectionStorageKey);
             return;
         }
 
@@ -62,20 +62,28 @@ export default function App() {
                 }))
                 .filter(entry => entry.qty > 0);
 
-            storageService.setOwnedCards(activeUserName, nextOwned);
+                        await storageService.setOwnedCards(activeUserName, nextOwned);
         }
 
-        storageService.remove(tradeSelectionStorageKey);
+                await storageService.remove(tradeSelectionStorageKey);
     };
 
-  const logout = () => {
+    const logout = async () => {
         const logoutUserName = userName;
-        restoreTradedCardsOnLogout(logoutUserName);
+                await restoreTradedCardsOnLogout(logoutUserName);
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
-        storageService.setCurrentUserName('');
+                await storageService.setCurrentUserName('');
     navigate('/');
   };
+
+    React.useEffect(() => {
+        (async () => {
+            const savedUserName = await storageService.getCurrentUserName();
+            setUserName(savedUserName || '');
+            setAuthState(savedUserName ? AuthState.Authenticated : AuthState.Unauthenticated);
+        })();
+    }, []);
 
   return (
     <div className="body bg-dark text-light">
@@ -119,14 +127,14 @@ export default function App() {
                 
                     userName={userName}
                     authState={authState}
-                    onAuthChange={(userName, authState) => {
+                    onAuthChange={async (userName, authState) => {
                     setAuthState(authState);
                     setUserName(userName);
 
                                         if (authState === AuthState.Authenticated && userName) {
-                                            storageService.setCurrentUserName(userName);
+                                            await storageService.setCurrentUserName(userName);
                                         } else {
-                                            storageService.setCurrentUserName('');
+                                            await storageService.setCurrentUserName('');
                                         }
 
                     }}
