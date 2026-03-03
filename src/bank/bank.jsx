@@ -1,20 +1,24 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
+import { getUser } from '../data/users';
 
 export function Bank({ userName }) {
   const bankCardsStorageKey = 'bankCards';
+  const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [bankCards, setBankCards] = React.useState([]);
+  const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [isSellOverlayOpen, setIsSellOverlayOpen] = React.useState(false);
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = localStorage.getItem(sortByStorageKey);
     return sortOptions.includes(saved) ? saved : 'Rarity';
   });
+  const user = getUser(userName);
 
   const loadBankCards = React.useCallback(() => {
     try {
@@ -97,6 +101,46 @@ export function Bank({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const buildOwnedDeckCards = React.useCallback(() => {
+    const fallbackCards = user?.cards || {};
+    let sourceEntries = [];
+
+    if (ownedCardsStorageKey) {
+      try {
+        const raw = localStorage.getItem(ownedCardsStorageKey);
+        const parsed = raw ? JSON.parse(raw) : [];
+        if (Array.isArray(parsed)) {
+          sourceEntries = parsed;
+        }
+      } catch {
+        sourceEntries = [];
+      }
+    }
+
+    const byName = new Map();
+
+    if (sourceEntries.length > 0) {
+      for (const entry of sourceEntries) {
+        if (!entry?.name) continue;
+        const currentQty = byName.get(entry.name) || 0;
+        byName.set(entry.name, currentQty + Math.max(0, parseInt(entry.qty, 10) || 0));
+      }
+    } else {
+      for (const [name, qty] of Object.entries(fallbackCards)) {
+        byName.set(name, Math.max(0, parseInt(qty, 10) || 0));
+      }
+    }
+
+    return Array.from(byName.entries())
+      .map(([name, qty]) => {
+        const card = getCardByName(name);
+        if (!card || qty <= 0) return null;
+        return { ...card, qty };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [user, ownedCardsStorageKey]);
+
   React.useEffect(() => {
     setBankCards(loadBankCards());
   }, [loadBankCards]);
@@ -134,6 +178,8 @@ export function Bank({ userName }) {
   React.useEffect(() => {
     if (!isSellOverlayOpen) return;
 
+    setOwnedDeckCards(buildOwnedDeckCards());
+
     const handleKeyDown = (event) => {
       if (event.key !== 'Escape') return;
       setIsSellOverlayOpen(false);
@@ -141,13 +187,13 @@ export function Bank({ userName }) {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isSellOverlayOpen]);
+  }, [isSellOverlayOpen, buildOwnedDeckCards]);
 
   return (
     <main>
       <div className="user">
         <div className="user-header-row">
-          <h2>Bank</h2>
+          <h2>Bank - sell your cards for a slight markdown</h2>
           <div className="deck-controls">
             <label className="sort-by-control">
               <span>Sort By</span>
@@ -241,17 +287,16 @@ export function Bank({ userName }) {
               <button type="button" className="pexels-overlay-close" onClick={() => setIsSellOverlayOpen(false)}>Close</button>
             </div>
 
-            {!bankCards.length ? (
-              <div className="pexels-overlay-state">No cards found in the bank inventory.</div>
+            {!ownedDeckCards.length ? (
+              <div className="pexels-overlay-state">No cards found in your deck.</div>
             ) : (
               <div className="row deck-row pack-overlay-cards">
-                {sortedOwned.map((entry) => {
-                  const card = entry.card;
-                  const qty = entry.qty;
+                {ownedDeckCards.map((card) => {
+                  const qty = card.qty;
                   if (!card) return null;
 
                   return (
-                    <div key={entry.name} className="col deck-col pack-overlay-col">
+                    <div key={card.name} className="col deck-col pack-overlay-col">
                       <Card
                         image={card.image}
                         name={card.name}
