@@ -1,5 +1,5 @@
 import React from 'react';
-import { Card } from '../deck/card';
+import { Card } from '../data/card';
 import { getCardByName } from '../data/cards';
 import { getUser, users } from '../data/users';
 

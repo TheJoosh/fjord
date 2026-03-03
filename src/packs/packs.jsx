@@ -9,7 +9,7 @@ import {
     recalcCardValues,
     syncCardPopulationsFromOwnedCards,
 } from '../data/cards';
-import { Card } from '../deck/card';
+import { Card } from '../data/card';
 
 export function Packs({ userName }) {
     const user = getUser(userName);

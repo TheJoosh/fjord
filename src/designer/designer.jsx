@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Card } from '../deck/card';
+import { Card } from '../data/card';
 import { addCardToRarity, cardNameExists } from '../data/cards';
 import { users } from '../data/users';
 
