@@ -159,7 +159,7 @@ header {
   padding-top: 0.5%;
   font-family: "Cinzel";
   color: whitesmoke;
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   width: initial;
   background-position: center;
   background-size: cover;
@@ -173,7 +173,7 @@ footer {
   padding: 1%;
   font-family: "Cinzel";
   color: whitesmoke;
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   width: initial;
   background-position: center;
   background-size: cover;
@@ -317,7 +317,7 @@ li {
 
 .deck-pagination-arrow {
   font-family: "Cinzel";
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   background-size: cover;
   background-position: center;
   background-color: #582f0e;
@@ -334,7 +334,7 @@ li {
 
 .sort-by-control select {
   font-family: "Cinzel";
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   background-size: cover;
   background-position: center;
   background-color: #582f0e;
@@ -886,7 +886,7 @@ main {
 
 /* Make the class select use same wood/header background and white text */
 .design-form select {
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   background-size: cover;
   background-position: center;
   background-color: #582f0e;
@@ -952,7 +952,7 @@ main {
   font-family: "Cinzel";
   font-size: 20px;
   background-color: #582f0e;
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   background-size: cover;
   background-position: center;
   background-blend-mode: multiply;
@@ -965,7 +965,7 @@ button {
   font-family: "Cinzel";
   font-size: 20px;
   background-color: #582f0e;
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   background-size: cover;
   background-position: center;
   background-blend-mode: multiply;
@@ -983,7 +983,7 @@ button {
   font-size: 20px;
   font-weight: 600;
   background-color: #582f0e;
-  background-image: url("../public/wood.jpg");
+  background-image: url("/wood.jpg");
   background-size: cover;
   background-position: center;
   background-blend-mode: multiply;
