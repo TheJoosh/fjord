@@ -5,6 +5,7 @@ import { getUser, users } from '../data/users';
 
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
+    const requestUserInputRef = React.useRef(null);
     const pendingTradeStorageKey = userName ? `pendingTrade:${userName}` : 'pendingTrade';
     const loadPendingTrade = () => {
         try {
@@ -133,6 +134,17 @@ export function Trades({ userName }) {
             window.addEventListener('keydown', handleKeyDown);
             return () => window.removeEventListener('keydown', handleKeyDown);
         }, [isRequestOverlayOpen, isDeckOverlayOpen]);
+
+        React.useEffect(() => {
+            if (!isRequestOverlayOpen) return;
+
+            const frame = window.requestAnimationFrame(() => {
+                requestUserInputRef.current?.focus();
+                requestUserInputRef.current?.select();
+            });
+
+            return () => window.cancelAnimationFrame(frame);
+        }, [isRequestOverlayOpen]);
 
         const resolveUserNameFromStorage = (inputName) => {
             const target = (inputName || '').trim();
@@ -583,6 +595,7 @@ export function Trades({ userName }) {
                     </div>
                     <div className="pexels-actions">
                         <input
+                            ref={requestUserInputRef}
                             type="text"
                             className="pexels-query"
                             placeholder="Input username"
