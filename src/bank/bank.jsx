@@ -16,6 +16,7 @@ export function Bank({ userName }) {
   const [isSellOverlayOpen, setIsSellOverlayOpen] = React.useState(false);
   const [isSellMode, setIsSellMode] = React.useState(false);
   const [selectedSellCards, setSelectedSellCards] = React.useState([]);
+  const [sellSuccessMessage, setSellSuccessMessage] = React.useState('');
   const [sortBy, setSortBy] = React.useState(() => {
     const saved = localStorage.getItem(sortByStorageKey);
     return sortOptions.includes(saved) ? saved : 'Rarity';
@@ -163,6 +164,9 @@ export function Bank({ userName }) {
   const handleSellCards = () => {
     if (!userName || selectedSellCards.length === 0) return;
 
+    const soldCount = selectedSellCards.length;
+    const payoutAmount = selectedSellPayoutValue;
+
     const selectedCounts = new Map();
     for (const card of selectedSellCards) {
       if (!card?.name) continue;
@@ -291,6 +295,7 @@ export function Bank({ userName }) {
     setOwnedDeckCards(buildOwnedDeckCards());
     setSelectedSellCards([]);
     setIsSellOverlayOpen(false);
+    setSellSuccessMessage(`Sold ${soldCount} card${soldCount === 1 ? '' : 's'} for $${payoutAmount.toFixed(2)}.`);
   };
 
   const buildOwnedDeckCards = React.useCallback(() => {
@@ -384,11 +389,13 @@ export function Bank({ userName }) {
   React.useEffect(() => {
     if (isSellMode) return;
     setSelectedSellCards([]);
+    setSellSuccessMessage('');
   }, [isSellMode]);
 
   React.useEffect(() => {
     setSelectedSellCards([]);
     setIsSellOverlayOpen(false);
+    setSellSuccessMessage('');
   }, [userName]);
 
   return (
@@ -494,6 +501,7 @@ export function Bank({ userName }) {
           <button className="picker" onClick={handleSellCards} disabled={!selectedSellCards.length}>Sell</button>
           <h3 className="value">Value: ${selectedSellValue.toFixed(2)}</h3>
           <h3 className="value">Payout (85%): ${selectedSellPayoutValue.toFixed(2)}</h3>
+          {sellSuccessMessage && <div className="trade-success-message">{sellSuccessMessage}</div>}
           <section className="yoUser">
             <div className="container-fluid">
               <div className="row deck-row">
