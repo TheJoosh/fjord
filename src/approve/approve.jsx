@@ -1,10 +1,19 @@
 import React from 'react';
 import { Card } from '../data/card';
+import { pendingApproval } from '../data/cards';
 
 export function Approve({ userName }) {
   const title = "Approve Cards";
   const cardsPerPage = 40;
-  const renderedCards = [];
+  const renderedCards = Object.entries(pendingApproval)
+    .map(([name, card]) => ({
+      name,
+      card: {
+        ...card,
+        name,
+      },
+    }))
+    .sort((a, b) => a.name.localeCompare(b.name));
   const [currentPage, setCurrentPage] = React.useState(1);
   const totalRenderedCards = renderedCards.length;
   const totalPages = Math.max(1, Math.ceil(totalRenderedCards / cardsPerPage));
@@ -62,35 +71,19 @@ export function Approve({ userName }) {
 
       <div className="container-fluid">
         <div className="row deck-row">
-          {paginatedCards.map(({ entry, card, qty, copyIndex, showStack }) => (
-              <div className="col deck-col" key={`${entry.name}-${copyIndex}`}>
-                <div className={showStack ? 'card-stack' : ''}>
-                  {showStack && (
-                    <div className="card-stack-ghost" aria-hidden="true">
-                      <Card
-                        image={card.image}
-                        name={card.name}
-                        cost={card.cost}
-                        rarity={card.rarity}
-                        cardType={card.cardType}
-                        description={card.description}
-                        strength={card.strength}
-                        endurance={card.endurance}
-                      />
-                    </div>
-                  )}
-                  <div className="card-stack-main">
-                    <Card
-                      image={card.image}
-                      name={card.name}
-                      cost={card.cost}
-                      rarity={card.rarity}
-                      cardType={card.cardType}
-                      description={card.description}
-                      strength={card.strength}
-                      endurance={card.endurance}
-                    />
-                  </div>
+          {paginatedCards.map(({ name, card }) => (
+              <div className="col deck-col" key={name}>
+                <div>
+                  <Card
+                    image={card.image}
+                    name={card.name}
+                    cost={card.cost}
+                    rarity={card.rarity}
+                    cardType={card.cardType}
+                    description={card.description}
+                    strength={card.strength}
+                    endurance={card.endurance}
+                  />
                 </div>
                 <div className="card-value mt-1">
                   <small>Author: {card.author || 'Unknown'}</small>
