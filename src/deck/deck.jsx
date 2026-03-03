@@ -2,10 +2,10 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
 import { getUser, normalizeWalletValue } from '../data/users';
+import { storageService } from '../services/storageService';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
-  const ownedCardsStorageKey = userName ? `ownedCards:${userName}` : null;
   const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
@@ -13,7 +13,7 @@ export function Deck({ userName }) {
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState(() => {
-    const saved = localStorage.getItem(sortByStorageKey);
+    const saved = storageService.getString(sortByStorageKey, 'Rarity');
     return sortOptions.includes(saved) ? saved : 'Rarity';
   });
   
@@ -21,13 +21,8 @@ export function Deck({ userName }) {
 
   let selectedTradeCards = [];
   if (tradeSelectionStorageKey) {
-    try {
-      const raw = localStorage.getItem(tradeSelectionStorageKey);
-      const parsed = raw ? JSON.parse(raw) : [];
-      selectedTradeCards = Array.isArray(parsed) ? parsed : [];
-    } catch {
-      selectedTradeCards = [];
-    }
+    const parsed = storageService.getJson(tradeSelectionStorageKey, []);
+    selectedTradeCards = Array.isArray(parsed) ? parsed : [];
   }
 
   const effectiveCards = { ...(user?.cards || {}) };
@@ -124,16 +119,16 @@ export function Deck({ userName }) {
   };
 
   React.useEffect(() => {
-    if (!ownedCardsStorageKey) return;
-    localStorage.setItem(ownedCardsStorageKey, JSON.stringify(ownedFromUser));
-  }, [ownedCardsStorageKey, ownedFromUser]);
+    if (!userName) return;
+    storageService.setOwnedCards(userName, ownedFromUser);
+  }, [userName, ownedFromUser]);
 
   React.useEffect(() => {
-    localStorage.setItem(sortByStorageKey, sortBy);
+    storageService.setString(sortByStorageKey, sortBy);
   }, [sortByStorageKey, sortBy]);
 
   React.useEffect(() => {
-    const saved = localStorage.getItem(sortByStorageKey);
+    const saved = storageService.getString(sortByStorageKey, 'Rarity');
     setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
   }, [sortByStorageKey]);
 
