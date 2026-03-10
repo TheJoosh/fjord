@@ -1,17 +1,25 @@
 const express = require('express');
 const app = express();
 const cookieParser = require('cookie-parser');
-const uuid = require('uuid');
+const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 
 app.use(express.json());
 app.use(cookieParser());
 
 app.post('/api/auth', async (req, res) => {
-  if (await getUser('username', req.body.username)) {
+  const username = sanitizeUsername(req.body?.username);
+  const password = req.body?.password;
+
+  if (!username || !password) {
+    res.status(400).send({ msg: 'Username and password are required' });
+    return;
+  }
+
+  if (await getUser('username', username)) {
     res.status(409).send({ msg: 'Existing user' });
   } else {
-    const user = await createUser(req.body.username, req.body.password);
+    const user = await createUser(username, password);
     setAuthCookie(res, user);
 
     res.send({ username: user.username });
@@ -19,8 +27,16 @@ app.post('/api/auth', async (req, res) => {
 });
 
 app.put('/api/auth', async (req, res) => {
-  const user = await getUser('username', req.body.username);
-  if (user && (await bcrypt.compare(req.body.password, user.password))) {
+  const username = sanitizeUsername(req.body?.username);
+  const password = req.body?.password;
+
+  if (!username || !password) {
+    res.status(400).send({ msg: 'Username and password are required' });
+    return;
+  }
+
+  const user = await getUser('username', username);
+  if (user && (await bcrypt.compare(password, user.password))) {
     setAuthCookie(res, user);
 
     res.send({ username: user.username });
@@ -71,11 +87,19 @@ async function getUser(field, value) {
   return null;
 }
 
+function sanitizeUsername(username) {
+  if (!username) {
+    return '';
+  }
+
+  return String(username).trim();
+}
+
 function setAuthCookie(res, user) {
-  user.token = uuid.v4();
+  user.token = crypto.randomUUID();
 
   res.cookie('token', user.token, {
-    secure: true,
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'strict',
   });
