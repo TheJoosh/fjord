@@ -1,6 +1,5 @@
 import React from 'react';
-import { getUser, users } from '../data/users';
-import { storageService } from '../../services/storageService';
+import { loginAuth, registerAuth } from './authService';
 
 // component used when the user is not signed in
 export function Unauthenticated({ userName, onLogin }) {
@@ -8,19 +7,19 @@ export function Unauthenticated({ userName, onLogin }) {
   const [password, setPassword] = React.useState('');
   const [message, setMessage] = React.useState('');
 
-  // when checking credentials, consult the mock user database
   const handleSubmit = async e => {
     e.preventDefault();
-    if (!username || !password) {
+    const loginName = username.trim();
+
+    if (!loginName || !password) {
       setMessage('Please enter both username and password.');
       return;
     }
-    const user = getUser(username);
-    if (user && user.password === password) {
+
+    const user = await loginAuth(loginName, password);
+    if (user?.username) {
       setMessage('');
-      // Keep existing behavior: local login remains authoritative.
-      void createAuth('PUT', username, password);
-      onLogin(username);
+      onLogin(user.username);
     } else {
       setMessage('Invalid credentials');
     }
@@ -33,61 +32,15 @@ export function Unauthenticated({ userName, onLogin }) {
       return;
     }
 
-    if (getUser(loginName)) {
-      setMessage('Username already exists.');
+    const user = await registerAuth(loginName, password);
+    if (user?.username) {
+      setMessage('Account created. Logging in...');
+      onLogin(user.username);
       return;
     }
 
-    const newUser = {
-      password,
-      wallet: 0,
-      admin: false,
-      cards: {},
-      packs: {
-        'Default Pack': 1,
-        'Saga Pack': 0,
-        'Heroic Pack': 0,
-        'Mythbound Pack': 0,
-      },
-      designed: 0,
-    };
-
-    users[loginName] = newUser;
-
-    const usersMap = await storageService.getUsersMap();
-    usersMap[loginName] = newUser;
-    await storageService.setUsersMap(usersMap);
-
-    const packsMap = await storageService.getUsersPacksMap();
-    packsMap[loginName] = { ...newUser.packs };
-    await storageService.setUsersPacksMap(packsMap);
-
-    // Keep existing behavior: local account creation remains authoritative.
-    void createAuth('POST', loginName, password);
-    setMessage('Account created. Logging in...');
-    onLogin(loginName);
+    setMessage('Unable to create account. Username may already exist.');
   };
-
-  async function createAuth(method, loginName, loginPassword) {
-    try {
-      const res = await fetch('/api/auth', {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        username: loginName,
-        email: loginName,
-        password: loginPassword,
-      }),
-    });
-
-      // Consume response when present so callers can extend this later.
-      await res.json().catch(() => null);
-      return res.ok;
-    } catch {
-      return false;
-    }
-  }
 
   return (
     <main>
