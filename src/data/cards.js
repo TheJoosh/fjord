@@ -1,4 +1,4 @@
-import { storageService } from '../services/storageService';
+import { storageService } from '../../services/storageService';
 
 export const cardsByRarity = {
   Placeholder: {

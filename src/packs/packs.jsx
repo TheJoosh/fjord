@@ -9,7 +9,7 @@ import {
     recalcCardValues,
     syncCardPopulationsFromOwnedCards,
 } from '../data/cards';
-import { storageService } from '../services/storageService';
+import { storageService } from '../../services/storageService';
 import { Card } from '../data/card';
 
 export function Packs({ userName }) {

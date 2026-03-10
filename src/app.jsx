@@ -13,7 +13,7 @@ import { Bank } from './bank/bank';
 import { Approve } from './approve/approve';
 import { getUser, users } from './data/users';
 import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
-import { storageService } from './services/storageService';
+import { storageService } from '../services/storageService';
 
 export default function App() {
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { getUser, users } from '../data/users';
-import { storageService } from '../services/storageService';
+import { storageService } from '../../services/storageService';
 
 // component used when the user is not signed in
 export function Unauthenticated({ userName, onLogin }) {

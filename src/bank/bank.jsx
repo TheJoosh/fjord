@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore, recalcCardValues, syncCardPopulationsFromOwnedCards } from '../data/cards';
 import { getUser, normalizeWalletValue, users } from '../data/users';
-import { storageService } from '../services/storageService';
+import { storageService } from '../../services/storageService';
 
 export function Bank({ userName }) {
   const bankCardsStorageKey = 'bankCards';

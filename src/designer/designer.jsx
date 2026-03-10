@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
 import { addCardToPendingApproval, addCardToRarity, cardNameExists } from '../data/cards';
 import { getUser, users } from '../data/users';
-import { storageService } from '../services/storageService';
+import { storageService } from '../../services/storageService';
 
 export function Designer({ userName }) { 
     const imageInputRef = useRef(null);

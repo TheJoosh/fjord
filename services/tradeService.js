@@ -1,5 +1,5 @@
-import { getCardByName } from '../data/cards';
-import { getUser, users } from '../data/users';
+import { getCardByName } from '../src/data/cards';
+import { getUser, users } from '../src/data/users';
 import { storageService } from './storageService';
 
 function normalizeQty(value) {
