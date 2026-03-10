@@ -14,6 +14,7 @@ import { Approve } from './approve/approve';
 import { getUser, users } from './data/users';
 import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 import { storageService } from '../services/storageService';
+import { getMe, logoutAuth } from './login/authService';
 
 export default function App() {
 
@@ -22,9 +23,8 @@ export default function App() {
         recalcCardValues();
     }, []);
 
-    const [userName, setUserName] = React.useState('');
-  const currentAuthState = userName ? AuthState.Authenticated : AuthState.Unauthenticated;
-  const [authState, setAuthState] = React.useState(currentAuthState);
+        const [userName, setUserName] = React.useState('');
+    const [authState, setAuthState] = React.useState(AuthState.Unknown);
     const activeUser = getUser(userName);
     const isAdminUser = Boolean(activeUser?.admin);
   const navigate = useNavigate();
@@ -70,18 +70,18 @@ export default function App() {
 
     const logout = async () => {
         const logoutUserName = userName;
-                await restoreTradedCardsOnLogout(logoutUserName);
+        await restoreTradedCardsOnLogout(logoutUserName);
+        await logoutAuth();
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
-                await storageService.setCurrentUserName('');
     navigate('/');
   };
 
     React.useEffect(() => {
         (async () => {
-            const savedUserName = await storageService.getCurrentUserName();
-            setUserName(savedUserName || '');
-            setAuthState(savedUserName ? AuthState.Authenticated : AuthState.Unauthenticated);
+            const user = await getMe();
+            setUserName(user?.username || '');
+            setAuthState(user?.username ? AuthState.Authenticated : AuthState.Unauthenticated);
         })();
     }, []);
 
@@ -130,13 +130,6 @@ export default function App() {
                     onAuthChange={async (userName, authState) => {
                     setAuthState(authState);
                     setUserName(userName);
-
-                                        if (authState === AuthState.Authenticated && userName) {
-                                            await storageService.setCurrentUserName(userName);
-                                        } else {
-                                            await storageService.setCurrentUserName('');
-                                        }
-
                     }}
 
                 />} exact />
