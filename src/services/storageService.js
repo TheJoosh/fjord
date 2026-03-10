@@ -1,3 +1,12 @@
+const config = require('../DBConfig.json');
+
+const url = `mongodb+srv://${config.userName}:${config.password}@${config.hostname}/?appName=Fjord`;
+
+const client = new MongoClient(url);
+const db = client.db('Fjord');
+const cards = db.collection('cards');
+const users = db.collection('users');
+
 function canUseLocalStorage() {
   return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
 }
