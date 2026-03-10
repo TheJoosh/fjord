@@ -4,28 +4,30 @@ import { storageService } from '../../services/storageService';
 
 // component used when the user is not signed in
 export function Unauthenticated({ userName, onLogin }) {
-  const [email, setEmail] = React.useState('');
+  const [username, setUsername] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [message, setMessage] = React.useState('');
 
   // when checking credentials, consult the mock user database
-  const handleSubmit = e => {
+  const handleSubmit = async e => {
     e.preventDefault();
-    if (!email || !password) {
+    if (!username || !password) {
       setMessage('Please enter both username and password.');
       return;
     }
-    const user = getUser(email);
+    const user = getUser(username);
     if (user && user.password === password) {
       setMessage('');
-      onLogin(email);
+      // Keep existing behavior: local login remains authoritative.
+      void createAuth('PUT', username, password);
+      onLogin(username);
     } else {
       setMessage('Invalid credentials');
     }
   };
 
   const handleCreateAccount = async () => {
-    const loginName = email.trim();
+    const loginName = username.trim();
     if (!loginName || !password) {
       setMessage('Please enter both username and password.');
       return;
@@ -60,9 +62,32 @@ export function Unauthenticated({ userName, onLogin }) {
     packsMap[loginName] = { ...newUser.packs };
     await storageService.setUsersPacksMap(packsMap);
 
+    // Keep existing behavior: local account creation remains authoritative.
+    void createAuth('POST', loginName, password);
     setMessage('Account created. Logging in...');
     onLogin(loginName);
   };
+
+  async function createAuth(method, loginName, loginPassword) {
+    try {
+      const res = await fetch('/api/auth', {
+      method,
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({
+        username: loginName,
+        email: loginName,
+        password: loginPassword,
+      }),
+    });
+
+      // Consume response when present so callers can extend this later.
+      await res.json().catch(() => null);
+      return res.ok;
+    } catch {
+      return false;
+    }
+  }
 
   return (
     <main>
@@ -72,8 +97,8 @@ export function Unauthenticated({ userName, onLogin }) {
           <div>
             <input
               type="text"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
+              value={username}
+              onChange={e => setUsername(e.target.value)}
               placeholder="username"
               id="username"
               autoComplete="username"
