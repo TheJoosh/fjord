@@ -72,6 +72,7 @@ const bankInventory = {};
 const bankWalletByUser = new Map();
 const userPacksByUser = new Map();
 const designedCountByUser = new Map();
+const pendingApprovalByName = new Map();
 
 app.post('/api/trades/bootstrap', async (req, res) => {
   const authUser = await getAuthUser(req);
@@ -599,6 +600,120 @@ app.post('/api/designer/submit', async (req, res) => {
   });
 });
 
+app.get('/api/approvals/pending', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const pendingCards = Array.from(pendingApprovalByName.entries())
+    .map(([name, card]) => ({ name, card: { ...card } }))
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  res.send({ pendingCards });
+});
+
+app.post('/api/approvals/pending', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const name = sanitizeCardName(req.body?.name);
+  const card = normalizePendingCard(req.body?.card);
+
+  if (!name || !card) {
+    res.send({ ok: false, error: 'Card name and card data are required' });
+    return;
+  }
+
+  if (pendingApprovalByName.has(name)) {
+    res.send({ ok: false, error: 'A pending card with that name already exists' });
+    return;
+  }
+
+  pendingApprovalByName.set(name, card);
+  res.send({ ok: true });
+});
+
+app.put('/api/approvals/pending', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const originalName = sanitizeCardName(req.body?.originalName);
+  const nextName = sanitizeCardName(req.body?.nextName);
+  const nextCard = normalizePendingCard(req.body?.card);
+
+  if (!originalName || !nextName || !nextCard) {
+    res.send({ ok: false, error: 'Invalid pending card edit request' });
+    return;
+  }
+
+  if (!pendingApprovalByName.has(originalName)) {
+    res.send({ ok: false, error: 'Pending card not found' });
+    return;
+  }
+
+  if (originalName !== nextName && pendingApprovalByName.has(nextName)) {
+    res.send({ ok: false, error: 'Another pending card already uses that name' });
+    return;
+  }
+
+  if (originalName !== nextName) {
+    pendingApprovalByName.delete(originalName);
+  }
+  pendingApprovalByName.set(nextName, nextCard);
+
+  res.send({ ok: true });
+});
+
+app.delete('/api/approvals/pending', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const name = sanitizeCardName(req.query?.name);
+  if (!name) {
+    res.send({ ok: false });
+    return;
+  }
+
+  pendingApprovalByName.delete(name);
+  res.send({ ok: true });
+});
+
+app.post('/api/approvals/approve', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const name = sanitizeCardName(req.body?.name);
+  if (!name || !pendingApprovalByName.has(name)) {
+    res.send({ ok: false, error: 'Pending card not found' });
+    return;
+  }
+
+  const card = pendingApprovalByName.get(name);
+  pendingApprovalByName.delete(name);
+
+  res.send({
+    ok: true,
+    approvedCard: {
+      name,
+      card: { ...card },
+    },
+  });
+});
+
 const users = [];
 
 async function createUser(username, password) {
@@ -632,6 +747,26 @@ function sanitizeUsername(username) {
   }
 
   return String(username).trim();
+}
+
+function sanitizeCardName(name) {
+  if (!name) return '';
+  return String(name).trim();
+}
+
+function normalizePendingCard(card) {
+  if (!card || typeof card !== 'object') return null;
+  return {
+    image: card.image || 'Default.png',
+    cost: card.cost != null ? card.cost : '-',
+    rarity: card.rarity || 'Common',
+    cardType: card.cardType || 'Type',
+    description: card.description || '',
+    strength: card.strength != null ? card.strength : '-',
+    endurance: card.endurance != null ? card.endurance : '-',
+    author: card.author || 'Unknown',
+    value: Number.isFinite(Number(card.value)) ? Number(card.value) : 0,
+  };
 }
 
 function normalizeQty(value) {
