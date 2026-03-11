@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore, recalcCardValues, syncCardPopulationsFromOwnedCards } from '../data/cards';
 import { getUser, normalizeWalletValue, users } from '../data/users';
-import { tradeService } from '../../services/tradeService';
+import { gameApiClient } from '../../services/gameApiClient';
 
 export function Bank({ userName }) {
   const sortOptions = ['Value', 'Rarity', 'Name'];
@@ -17,7 +17,7 @@ export function Bank({ userName }) {
   const walletValue = normalizeWalletValue(walletBalance);
 
   const loadBankCards = React.useCallback(async () => {
-    return await tradeService.loadBankInventory([]);
+    return await gameApiClient.loadBankInventory([]);
   }, []);
 
   const sortedOwned = [...bankCards].sort((a, b) => {
@@ -99,7 +99,7 @@ export function Bank({ userName }) {
     const bankQty = Math.max(0, parseInt(bankEntry?.qty, 10) || 0);
     if (bankQty <= 0) return;
 
-    const response = await tradeService.buyBankCard(
+    const response = await gameApiClient.buyBankCard(
       userName,
       cardName,
       buyPrice,
@@ -144,7 +144,7 @@ export function Bank({ userName }) {
     if (!userObj) return;
 
     const currentWallet = normalizeWalletValue(userObj?.wallet);
-    const response = await tradeService.sellBankCard(
+    const response = await gameApiClient.sellBankCard(
       userName,
       cardName,
       payoutAmount,
@@ -179,7 +179,7 @@ export function Bank({ userName }) {
   };
 
   const buildOwnedDeckCards = React.useCallback(async () => {
-    return await tradeService.buildOwnedDeckCards(userName, user?.cards || {});
+    return await gameApiClient.buildOwnedDeckCards(userName, user?.cards || {});
   }, [user, userName]);
 
   React.useEffect(() => {
