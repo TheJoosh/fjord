@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "dev:api": "node services/loginService.js",
+    "dev:all": "concurrently \"npm:dev:api\" \"npm:dev\"",
     "build": "vite build",
     "preview": "vite preview",
     "optimize:images": "node scripts/optimize-card-images.mjs"
@@ -23,6 +24,7 @@
   },
   "homepage": "https://github.com/TheJoosh/fjord#readme",
   "devDependencies": {
+    "concurrently": "^9.2.1",
     "sharp": "^0.34.5",
     "vite": "^7.3.1"
   },
