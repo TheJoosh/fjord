@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore, recalcCardValues, syncCardPopulationsFromOwnedCards } from '../data/cards';
 import { getUser, normalizeWalletValue, users } from '../data/users';
-import { gameApiClient } from '../../services/gameApiClient';
+import { gameApiClient } from '../../service/gameApiClient';
 
 export function Bank({ userName }) {
   const sortOptions = ['Value', 'Rarity', 'Name'];

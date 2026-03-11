@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
 import { addCardToRarity, cardNameExists } from '../data/cards';
 import { getUser, users } from '../data/users';
-import { gameApiClient } from '../../services/gameApiClient';
+import { gameApiClient } from '../../service/gameApiClient';
 
 export function Designer({ userName }) { 
     const imageInputRef = useRef(null);

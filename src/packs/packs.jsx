@@ -9,7 +9,7 @@ import {
     recalcCardValues,
     syncCardPopulationsFromOwnedCards,
 } from '../data/cards';
-import { gameApiClient } from '../../services/gameApiClient';
+import { gameApiClient } from '../../service/gameApiClient';
 import { Card } from '../data/card';
 
 export function Packs({ userName }) {

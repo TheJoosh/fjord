@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { addCardToRarity } from '../data/cards';
-import { gameApiClient } from '../../services/gameApiClient';
+import { gameApiClient } from '../../service/gameApiClient';
 
 export function Approve({ userName }) {
   const title = "Approve Cards";

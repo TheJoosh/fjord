@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { getUser } from '../data/users';
-import { gameApiClient } from '../../services/gameApiClient';
+import { gameApiClient } from '../../service/gameApiClient';
 
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';

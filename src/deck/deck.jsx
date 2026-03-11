@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
 import { getUser, normalizeWalletValue } from '../data/users';
-import { gameApiClient } from '../../services/gameApiClient';
+import { gameApiClient } from '../../service/gameApiClient';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";

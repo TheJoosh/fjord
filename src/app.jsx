@@ -14,7 +14,7 @@ import { Approve } from './approve/approve';
 import { getUser, users } from './data/users';
 import { recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 import { getMe, logoutAuth } from './login/authService';
-import { gameApiClient } from '../services/gameApiClient';
+import { gameApiClient } from '../service/gameApiClient';
 
 export default function App() {
 
