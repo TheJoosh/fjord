@@ -73,6 +73,7 @@ const bankWalletByUser = new Map();
 const userPacksByUser = new Map();
 const designedCountByUser = new Map();
 const pendingApprovalByName = new Map();
+const deckSortPreferenceByUser = new Map();
 
 app.post('/api/trades/bootstrap', async (req, res) => {
   const authUser = await getAuthUser(req);
@@ -714,6 +715,32 @@ app.post('/api/approvals/approve', async (req, res) => {
   });
 });
 
+app.get('/api/preferences/deck-sort', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.query?.userName);
+  const fallbackSort = normalizeDeckSort(req.query?.fallback);
+  const current = ensureDeckSortPreference(userName, fallbackSort);
+  res.send({ sortBy: current });
+});
+
+app.put('/api/preferences/deck-sort', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const sortBy = normalizeDeckSort(req.body?.sortBy);
+  const current = ensureDeckSortPreference(userName, sortBy);
+  res.send({ ok: true, sortBy: current });
+});
+
 const users = [];
 
 async function createUser(username, password) {
@@ -851,6 +878,28 @@ function ensureDesignedCount(userName, fallbackDesigned) {
     designedCountByUser.set(userName, normalizeQty(fallbackDesigned));
   }
   return normalizeQty(designedCountByUser.get(userName));
+}
+
+function normalizeDeckSort(value) {
+  const next = String(value || 'Rarity');
+  if (next === 'Value' || next === 'Name' || next === 'Rarity') {
+    return next;
+  }
+  return 'Rarity';
+}
+
+function ensureDeckSortPreference(userName, fallbackSort) {
+  if (!userName) {
+    return normalizeDeckSort(fallbackSort);
+  }
+
+  if (!deckSortPreferenceByUser.has(userName)) {
+    deckSortPreferenceByUser.set(userName, normalizeDeckSort(fallbackSort));
+  }
+
+  const current = normalizeDeckSort(deckSortPreferenceByUser.get(userName));
+  deckSortPreferenceByUser.set(userName, current);
+  return current;
 }
 
 function getRewardPackKeyForDesignCount(designCount) {
