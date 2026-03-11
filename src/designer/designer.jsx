@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
 import { addCardToPendingApproval, addCardToRarity, cardNameExists } from '../data/cards';
 import { getUser, users } from '../data/users';
-import { storageService } from '../../services/storageService';
+import { gameApiClient } from '../../services/gameApiClient';
 
 export function Designer({ userName }) { 
     const imageInputRef = useRef(null);
@@ -490,8 +490,7 @@ export function Designer({ userName }) {
             typeof previewImage === 'string' && previewImage.startsWith('data:')
                 ? 'Default.png'
                 : (previewImage || "Default.png");
-        const savedUserName = await storageService.getCurrentUserName();
-        const activeUserName = (userName || savedUserName || '').trim();
+        const activeUserName = (userName || '').trim();
         const activeUser = getUser(activeUserName);
         const isAdminUser = Boolean(activeUser?.admin);
 
@@ -515,39 +514,24 @@ export function Designer({ userName }) {
             }
 
             if (activeUserName) {
-                const designedMapKey = 'usersDesigned';
-                let designedMap = await storageService.getDesignedMap();
-
                 const fallbackDesigned = parseInt(users?.[activeUserName]?.designed, 10) || 0;
-                const currentDesigned = parseInt(designedMap?.[activeUserName], 10);
-                const safeCurrentDesigned = Number.isNaN(currentDesigned) ? fallbackDesigned : currentDesigned;
-                const nextDesigned = safeCurrentDesigned + 1;
+                const fallbackPacks = users?.[activeUserName]?.packs || {};
 
-                designedMap[activeUserName] = nextDesigned;
-                await storageService.setDesignedMap(designedMap);
-                await storageService.setDesignedCount(activeUserName, nextDesigned);
+                const progress = await gameApiClient.submitDesignerProgress(
+                    activeUserName,
+                    fallbackDesigned,
+                    fallbackPacks
+                );
 
-                if (users?.[activeUserName]) {
-                    users[activeUserName].designed = nextDesigned;
-                    users[activeUserName].packs = users[activeUserName].packs || {};
-
-                    const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
-
-                    users[activeUserName].packs[rewardPackKey] =
-                        (parseInt(users[activeUserName].packs[rewardPackKey], 10) || 0) + 1;
-
-                    const rewardMessageName = rewardPackKey === 'Default Pack' ? 'Normal Pack' : rewardPackKey;
-                    setSubmitMessage(`You earned a ${rewardMessageName}`);
-
-                    const userPacksStorageKey = 'usersPacks';
-                    let packsMap = await storageService.getUsersPacksMap();
-
-                    packsMap[activeUserName] = {
-                        ...(packsMap[activeUserName] || {}),
-                        ...users[activeUserName].packs,
-                    };
-                    await storageService.setUsersPacksMap(packsMap);
+                if (progress.ok && users?.[activeUserName]) {
+                    users[activeUserName].designed = progress.nextDesigned;
+                    users[activeUserName].packs = progress.packs;
                 }
+
+                const rewardMessageName = progress.rewardPackKey === 'Default Pack'
+                    ? 'Normal Pack'
+                    : progress.rewardPackKey;
+                setSubmitMessage(`You earned a ${rewardMessageName}`);
             }
         } catch (error) {
             console.error('Unable to save designed card', error);
