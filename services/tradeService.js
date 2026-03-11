@@ -83,12 +83,14 @@ let hasBootstrappedProfiles = false;
 async function ensureBootstrap() {
   if (hasBootstrappedProfiles) return;
 
-  await requestTradeApi('/api/trades/bootstrap', {
+  const response = await requestTradeApi('/api/trades/bootstrap', {
     method: 'POST',
     body: JSON.stringify({ usersMap: toUserSnapshot() }),
   });
 
-  hasBootstrappedProfiles = true;
+  if (response && response.ok) {
+    hasBootstrappedProfiles = true;
+  }
 }
 
 export const tradeService = {
@@ -110,9 +112,17 @@ export const tradeService = {
       body: JSON.stringify({ userName, fallbackCards }),
     });
 
-    const sourceEntries = Array.isArray(response?.ownedEntries)
-      ? response.ownedEntries
-      : Object.entries(fallbackCards || {}).map(([name, qty]) => ({ name, qty }));
+    let sourceEntries;
+    if (Array.isArray(response?.ownedEntries)) {
+      sourceEntries = response.ownedEntries;
+    } else {
+      const cachedOwned = await storageService.getOwnedCards(userName);
+      if (Array.isArray(cachedOwned) && cachedOwned.length > 0) {
+        sourceEntries = cachedOwned;
+      } else {
+        sourceEntries = Object.entries(fallbackCards || {}).map(([name, qty]) => ({ name, qty }));
+      }
+    }
 
     await applyOwnedEntriesToActiveUser(userName, fallbackCards, sourceEntries);
 
@@ -314,6 +324,90 @@ export const tradeService = {
     return {
       nextActiveOwned: hydrateCards(nextActiveOwned),
       nextTargetOwned: hydrateCards(nextTargetOwned),
+    };
+  },
+
+  async loadBankInventory(fallbackEntries = []) {
+    const response = await requestTradeApi('/api/bank/inventory', {
+      method: 'POST',
+      body: JSON.stringify({
+        fallbackEntries: Array.isArray(fallbackEntries) ? fallbackEntries : [],
+      }),
+    });
+
+    const bankEntries = Array.isArray(response?.bankEntries) ? response.bankEntries : [];
+    return bankEntries
+      .map(({ name, qty }) => {
+        const card = getCardByName(name);
+        const normalizedQty = normalizeQty(qty);
+        if (!card || normalizedQty <= 0) return null;
+        return { name, qty: normalizedQty, card };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  async buyBankCard(userName, cardName, buyPrice, fallbackCards = {}, fallbackWallet = 0) {
+    if (!userName || !cardName) {
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+    }
+
+    await ensureBootstrap();
+
+    const response = await requestTradeApi('/api/bank/buy', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        cardName,
+        buyPrice,
+        fallbackCards,
+        fallbackWallet,
+      }),
+    });
+
+    if (!response) {
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+    }
+
+    await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
+
+    return {
+      ok: Boolean(response.ok),
+      bankEntries: Array.isArray(response.bankEntries) ? response.bankEntries : [],
+      ownedEntries: Array.isArray(response.ownedEntries) ? response.ownedEntries : [],
+      wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : fallbackWallet,
+    };
+  },
+
+  async sellBankCard(userName, cardName, payoutAmount, fallbackCards = {}, fallbackWallet = 0) {
+    if (!userName || !cardName) {
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+    }
+
+    await ensureBootstrap();
+
+    const response = await requestTradeApi('/api/bank/sell', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        cardName,
+        payoutAmount,
+        fallbackCards,
+        fallbackWallet,
+      }),
+    });
+
+    if (!response) {
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+    }
+
+    await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
+
+    return {
+      ok: Boolean(response.ok),
+      bankEntries: Array.isArray(response.bankEntries) ? response.bankEntries : [],
+      ownedEntries: Array.isArray(response.ownedEntries) ? response.ownedEntries : [],
+      wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : fallbackWallet,
     };
   },
 };
