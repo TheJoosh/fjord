@@ -625,4 +625,24 @@ export const gameApiClient = {
       approvedCard: response?.approvedCard || null,
     };
   },
+
+  async loadDeckSortPreference(userName, fallbackSort = 'Rarity') {
+    if (!userName) return fallbackSort;
+
+    const response = await requestTradeApi(
+      `/api/preferences/deck-sort?userName=${encodeURIComponent(userName)}&fallback=${encodeURIComponent(fallbackSort)}`,
+      { method: 'GET' }
+    );
+
+    const sortBy = String(response?.sortBy || fallbackSort);
+    return sortBy === 'Value' || sortBy === 'Name' || sortBy === 'Rarity' ? sortBy : 'Rarity';
+  },
+
+  async saveDeckSortPreference(userName, sortBy) {
+    if (!userName) return;
+    await requestTradeApi('/api/preferences/deck-sort', {
+      method: 'PUT',
+      body: JSON.stringify({ userName, sortBy }),
+    });
+  },
 };
