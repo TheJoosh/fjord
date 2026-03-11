@@ -2,12 +2,10 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
 import { getUser, normalizeWalletValue } from '../data/users';
-import { storageService } from '../../services/storageService';
 import { gameApiClient } from '../../services/gameApiClient';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
-  const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
@@ -125,16 +123,21 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     (async () => {
-      await storageService.setString(sortByStorageKey, sortBy);
+      if (!userName) return;
+      await gameApiClient.saveDeckSortPreference(userName, sortBy);
     })();
-  }, [sortByStorageKey, sortBy]);
+  }, [userName, sortBy]);
 
   React.useEffect(() => {
     (async () => {
-      const saved = await storageService.getString(sortByStorageKey, 'Rarity');
+      if (!userName) {
+        setSortBy('Rarity');
+        return;
+      }
+      const saved = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
       setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
     })();
-  }, [sortByStorageKey]);
+  }, [userName]);
 
   React.useEffect(() => {
     if (!userName) {
