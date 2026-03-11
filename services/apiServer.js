@@ -71,6 +71,7 @@ const selectedTradeCardsByUser = new Map();
 const bankInventory = {};
 const bankWalletByUser = new Map();
 const userPacksByUser = new Map();
+const designedCountByUser = new Map();
 
 app.post('/api/trades/bootstrap', async (req, res) => {
   const authUser = await getAuthUser(req);
@@ -565,6 +566,39 @@ app.post('/api/packs/claim', async (req, res) => {
   res.send({ ok: true, ownedEntries: toOwnedEntries(profile.cards) });
 });
 
+app.post('/api/designer/submit', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const fallbackDesigned = normalizeQty(req.body?.fallbackDesigned);
+  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
+
+  if (!userName) {
+    res.send({ ok: false, nextDesigned: 0, rewardPackKey: 'Default Pack', packs: normalizePacksMap({}) });
+    return;
+  }
+
+  const currentDesigned = ensureDesignedCount(userName, fallbackDesigned);
+  const nextDesigned = currentDesigned + 1;
+  designedCountByUser.set(userName, nextDesigned);
+
+  const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
+  const packs = ensureUserPacks(userName, fallbackPacks);
+  packs[rewardPackKey] = normalizeQty(packs[rewardPackKey]) + 1;
+  userPacksByUser.set(userName, normalizePacksMap(packs));
+
+  res.send({
+    ok: true,
+    nextDesigned,
+    rewardPackKey,
+    packs: normalizePacksMap(packs),
+  });
+});
+
 const users = [];
 
 async function createUser(username, password) {
@@ -674,6 +708,61 @@ function ensureUserPacks(userName, fallbackPacks) {
   const current = normalizePacksMap(userPacksByUser.get(userName));
   userPacksByUser.set(userName, current);
   return current;
+}
+
+function ensureDesignedCount(userName, fallbackDesigned) {
+  if (!userName) return 0;
+  if (!designedCountByUser.has(userName)) {
+    designedCountByUser.set(userName, normalizeQty(fallbackDesigned));
+  }
+  return normalizeQty(designedCountByUser.get(userName));
+}
+
+function getRewardPackKeyForDesignCount(designCount) {
+  const safeCount = Math.max(1, normalizeQty(designCount));
+  const cyclePosition = ((safeCount - 1) % 100) + 1;
+
+  const targets = [
+    { pack: 'Default Pack', count: 40 },
+    { pack: 'Saga Pack', count: 30 },
+    { pack: 'Heroic Pack', count: 18 },
+    { pack: 'Mythbound Pack', count: 12 },
+  ];
+
+  const assigned = {
+    'Default Pack': 0,
+    'Saga Pack': 0,
+    'Heroic Pack': 0,
+    'Mythbound Pack': 0,
+  };
+
+  let selectedPack = 'Default Pack';
+
+  for (let position = 1; position <= cyclePosition; position += 1) {
+    let bestPack = null;
+    let bestDeficit = Number.NEGATIVE_INFINITY;
+
+    for (const target of targets) {
+      if (assigned[target.pack] >= target.count) continue;
+
+      const expectedByNow = (position * target.count) / 100;
+      const deficit = expectedByNow - assigned[target.pack];
+
+      if (deficit > bestDeficit) {
+        bestDeficit = deficit;
+        bestPack = target.pack;
+      }
+    }
+
+    if (!bestPack) break;
+
+    assigned[bestPack] += 1;
+    if (position === cyclePosition) {
+      selectedPack = bestPack;
+    }
+  }
+
+  return selectedPack;
 }
 
 function isKnownPackName(packName) {
