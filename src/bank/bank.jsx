@@ -2,11 +2,9 @@ import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore, recalcCardValues, syncCardPopulationsFromOwnedCards } from '../data/cards';
 import { getUser, normalizeWalletValue, users } from '../data/users';
-import { storageService } from '../../services/storageService';
+import { tradeService } from '../../services/tradeService';
 
 export function Bank({ userName }) {
-  const bankCardsStorageKey = 'bankCards';
-  const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -14,25 +12,12 @@ export function Bank({ userName }) {
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [isSellMode, setIsSellMode] = React.useState(false);
   const [sortBy, setSortBy] = React.useState('Rarity');
+  const [walletBalance, setWalletBalance] = React.useState(0);
   const user = getUser(userName);
-  const walletValue = normalizeWalletValue(user?.wallet);
+  const walletValue = normalizeWalletValue(walletBalance);
 
   const loadBankCards = React.useCallback(async () => {
-    const parsed = await storageService.getJson(bankCardsStorageKey, []);
-    const sourceEntries = Array.isArray(parsed) ? parsed : [];
-
-    return sourceEntries
-      .map((entry) => {
-        if (!entry?.name) return null;
-        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        if (qty <= 0) return null;
-
-        const card = getCardByName(entry.name);
-        if (!card) return null;
-
-        return { name: entry.name, qty, card };
-      })
-      .filter(Boolean);
+    return await tradeService.loadBankInventory([]);
   }, []);
 
   const sortedOwned = [...bankCards].sort((a, b) => {
@@ -114,97 +99,33 @@ export function Bank({ userName }) {
     const bankQty = Math.max(0, parseInt(bankEntry?.qty, 10) || 0);
     if (bankQty <= 0) return;
 
-    const nextWallet = normalizeWalletValue(currentWallet - buyPrice);
+    const response = await tradeService.buyBankCard(
+      userName,
+      cardName,
+      buyPrice,
+      userObj?.cards || {},
+      currentWallet
+    );
+    if (!response.ok) return;
+
+    const nextWallet = normalizeWalletValue(response.wallet);
     userObj.wallet = nextWallet;
     if (users[userName] && typeof users[userName] === 'object') {
       users[userName].wallet = nextWallet;
     }
+    setWalletBalance(nextWallet);
 
-    const usersMap = await storageService.getUsersMap();
-    const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
-      ? userName
-      : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
-
-    if (storageUserKey) {
-      const existingStoredUser = usersMap[storageUserKey];
-      if (existingStoredUser && typeof existingStoredUser === 'object') {
-        usersMap[storageUserKey] = {
-          ...existingStoredUser,
-          wallet: nextWallet,
-        };
-      } else {
-        usersMap[storageUserKey] = {
-          wallet: nextWallet,
-        };
-      }
-    } else {
-      usersMap[userName] = {
-        ...(userObj || {}),
-        wallet: nextWallet,
-      };
-    }
-
-    await storageService.setUsersMap(usersMap);
-
-    const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
-
-    const nextOwnedByName = new Map();
-    if (sourceEntries.length > 0) {
-      for (const entry of sourceEntries) {
-        if (!entry?.name) continue;
+    const nextBankCards = (response.bankEntries || [])
+      .map((entry) => {
+        if (!entry?.name) return null;
         const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        nextOwnedByName.set(entry.name, (nextOwnedByName.get(entry.name) || 0) + qty);
-      }
-    } else {
-      for (const [name, qty] of Object.entries(userObj?.cards || {})) {
-        nextOwnedByName.set(name, Math.max(0, parseInt(qty, 10) || 0));
-      }
-    }
-    nextOwnedByName.set(cardName, (nextOwnedByName.get(cardName) || 0) + 1);
-
-    if (userObj && typeof userObj === 'object') {
-      const nextCardsObject = {};
-      for (const [name, qty] of nextOwnedByName.entries()) {
-        if (qty > 0) {
-          nextCardsObject[name] = qty;
-        }
-      }
-      userObj.cards = nextCardsObject;
-    }
-
-    if (userName) {
-      const nextOwned = Array.from(nextOwnedByName.entries()).map(([name, qty]) => ({
-        name,
-        qty,
-      }));
-      await storageService.setOwnedCards(userName, nextOwned);
-    }
-
-    setBankCards((prev) => {
-      const nextByName = new Map();
-
-      for (const entry of prev) {
-        if (!entry?.name) continue;
-        const currentQty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        nextByName.set(entry.name, currentQty);
-      }
-
-      const currentQty = nextByName.get(cardName) || 0;
-      const nextQty = Math.max(0, currentQty - 1);
-      if (nextQty > 0) {
-        nextByName.set(cardName, nextQty);
-      } else {
-        nextByName.delete(cardName);
-      }
-
-      return Array.from(nextByName.entries())
-        .map(([name, qty]) => {
-          const card = getCardByName(name);
-          if (!card || qty <= 0) return null;
-          return { name, qty, card };
-        })
-        .filter(Boolean);
-    });
+        if (qty <= 0) return null;
+        const card = getCardByName(entry.name);
+        if (!card) return null;
+        return { name: entry.name, qty, card };
+      })
+      .filter(Boolean);
+    setBankCards(nextBankCards);
 
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
@@ -222,100 +143,34 @@ export function Bank({ userName }) {
     const userObj = getUser(userName);
     if (!userObj) return;
 
-    const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
+    const currentWallet = normalizeWalletValue(userObj?.wallet);
+    const response = await tradeService.sellBankCard(
+      userName,
+      cardName,
+      payoutAmount,
+      userObj?.cards || {},
+      currentWallet
+    );
+    if (!response.ok) return;
 
-    const nextOwnedByName = new Map();
-    if (sourceEntries.length > 0) {
-      for (const entry of sourceEntries) {
-        if (!entry?.name) continue;
+    const nextWallet = normalizeWalletValue(response.wallet);
+    userObj.wallet = nextWallet;
+    if (users[userName] && typeof users[userName] === 'object') {
+      users[userName].wallet = nextWallet;
+    }
+    setWalletBalance(nextWallet);
+
+    const nextBankCards = (response.bankEntries || [])
+      .map((entry) => {
+        if (!entry?.name) return null;
         const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        nextOwnedByName.set(entry.name, (nextOwnedByName.get(entry.name) || 0) + qty);
-      }
-    } else {
-      for (const [name, qty] of Object.entries(userObj?.cards || {})) {
-        nextOwnedByName.set(name, Math.max(0, parseInt(qty, 10) || 0));
-      }
-    }
-
-    const currentQty = nextOwnedByName.get(cardName) || 0;
-    if (currentQty <= 0) return;
-
-    const nextQty = Math.max(0, currentQty - 1);
-    if (nextQty > 0) {
-      nextOwnedByName.set(cardName, nextQty);
-    } else {
-      nextOwnedByName.delete(cardName);
-    }
-
-    if (userObj && typeof userObj === 'object') {
-      const nextCardsObject = {};
-      for (const [name, qty] of nextOwnedByName.entries()) {
-        if (qty > 0) {
-          nextCardsObject[name] = qty;
-        }
-      }
-      userObj.cards = nextCardsObject;
-
-      const nextWallet = normalizeWalletValue((userObj.wallet || 0) + payoutAmount);
-      userObj.wallet = nextWallet;
-      if (users[userName] && typeof users[userName] === 'object') {
-        users[userName].wallet = nextWallet;
-      }
-
-      const usersMap = await storageService.getUsersMap();
-      const storageUserKey = Object.prototype.hasOwnProperty.call(usersMap, userName)
-        ? userName
-        : Object.keys(usersMap).find((name) => name.toLowerCase() === userName.toLowerCase());
-
-      if (storageUserKey) {
-        const existingStoredUser = usersMap[storageUserKey];
-        if (existingStoredUser && typeof existingStoredUser === 'object') {
-          usersMap[storageUserKey] = {
-            ...existingStoredUser,
-            wallet: nextWallet,
-          };
-        } else {
-          usersMap[storageUserKey] = {
-            wallet: nextWallet,
-          };
-        }
-      } else {
-        usersMap[userName] = {
-          ...(userObj || {}),
-          wallet: nextWallet,
-        };
-      }
-
-      await storageService.setUsersMap(usersMap);
-    }
-
-    if (userName) {
-      const nextOwned = Array.from(nextOwnedByName.entries()).map(([name, qty]) => ({
-        name,
-        qty,
-      }));
-      await storageService.setOwnedCards(userName, nextOwned);
-    }
-
-    setBankCards((prev) => {
-      const nextByName = new Map();
-
-      for (const entry of prev) {
-        if (!entry?.name) continue;
-        const currentQty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        nextByName.set(entry.name, currentQty);
-      }
-
-      nextByName.set(cardName, (nextByName.get(cardName) || 0) + 1);
-
-      return Array.from(nextByName.entries())
-        .map(([name, qty]) => {
-          const card = getCardByName(name);
-          if (!card || qty <= 0) return null;
-          return { name, qty, card };
-        })
-        .filter(Boolean);
-    });
+        if (qty <= 0) return null;
+        const card = getCardByName(entry.name);
+        if (!card) return null;
+        return { name: entry.name, qty, card };
+      })
+      .filter(Boolean);
+    setBankCards(nextBankCards);
 
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
@@ -324,31 +179,7 @@ export function Bank({ userName }) {
   };
 
   const buildOwnedDeckCards = React.useCallback(async () => {
-    const fallbackCards = user?.cards || {};
-    const sourceEntries = userName ? await storageService.getOwnedCards(userName) : [];
-
-    const byName = new Map();
-
-    if (sourceEntries.length > 0) {
-      for (const entry of sourceEntries) {
-        if (!entry?.name) continue;
-        const currentQty = byName.get(entry.name) || 0;
-        byName.set(entry.name, currentQty + Math.max(0, parseInt(entry.qty, 10) || 0));
-      }
-    } else {
-      for (const [name, qty] of Object.entries(fallbackCards)) {
-        byName.set(name, Math.max(0, parseInt(qty, 10) || 0));
-      }
-    }
-
-    return Array.from(byName.entries())
-      .map(([name, qty]) => {
-        const card = getCardByName(name);
-        if (!card || qty <= 0) return null;
-        return { ...card, qty };
-      })
-      .filter(Boolean)
-      .sort((a, b) => a.name.localeCompare(b.name));
+    return await tradeService.buildOwnedDeckCards(userName, user?.cards || {});
   }, [user, userName]);
 
   React.useEffect(() => {
@@ -358,30 +189,8 @@ export function Bank({ userName }) {
   }, [loadBankCards]);
 
   React.useEffect(() => {
-    const persistable = bankCards
-      .map((entry) => ({
-        name: entry.name,
-        qty: Math.max(0, parseInt(entry.qty, 10) || 0),
-      }))
-      .filter((entry) => entry.qty > 0);
-
-    (async () => {
-      await storageService.setJson(bankCardsStorageKey, persistable);
-    })();
-  }, [bankCards]);
-
-  React.useEffect(() => {
-    (async () => {
-      await storageService.setString(sortByStorageKey, sortBy);
-    })();
-  }, [sortByStorageKey, sortBy]);
-
-  React.useEffect(() => {
-    (async () => {
-      const saved = await storageService.getString(sortByStorageKey, 'Rarity');
-      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
-    })();
-  }, [sortByStorageKey]);
+    setWalletBalance(normalizeWalletValue(user?.wallet));
+  }, [userName, user]);
 
   React.useEffect(() => {
     setCurrentPage(1);
