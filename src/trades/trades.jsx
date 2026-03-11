@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { getUser } from '../data/users';
-import { tradeService } from '../../services/tradeService';
+import { gameApiClient } from '../../services/gameApiClient';
 
 export function Trades({ userName }) {
         const currentUserLabel = userName || 'User';
@@ -21,11 +21,11 @@ export function Trades({ userName }) {
         const activeUser = getUser(userName);
 
         const getCurrentCardValue = React.useCallback((cardLike) => {
-            return tradeService.getCurrentCardValue(cardLike);
+            return gameApiClient.getCurrentCardValue(cardLike);
         }, []);
 
         const buildOwnedDeckCards = React.useCallback(async () => {
-            return await tradeService.buildOwnedDeckCards(userName, activeUser?.cards || {});
+            return await gameApiClient.buildOwnedDeckCards(userName, activeUser?.cards || {});
         }, [activeUser, userName]);
 
         React.useEffect(() => {
@@ -37,7 +37,7 @@ export function Trades({ userName }) {
 
         React.useEffect(() => {
             (async () => {
-                const initialPendingTrade = await tradeService.loadPendingTrade(userName);
+                const initialPendingTrade = await gameApiClient.loadPendingTrade(userName);
                 setOtherUserLabel(initialPendingTrade.otherUserLabel);
                 setOtherUserName(initialPendingTrade.otherUserName);
                 setOtherTradeCards(initialPendingTrade.otherTradeCards);
@@ -46,20 +46,20 @@ export function Trades({ userName }) {
 
         React.useEffect(() => {
             (async () => {
-                const parsed = await tradeService.loadSelectedTradeCards(userName);
+                const parsed = await gameApiClient.loadSelectedTradeCards(userName);
                 setSelectedTradeCards(parsed);
             })();
         }, [userName]);
 
         React.useEffect(() => {
             (async () => {
-                await tradeService.saveSelectedTradeCards(userName, selectedTradeCards);
+                await gameApiClient.saveSelectedTradeCards(userName, selectedTradeCards);
             })();
         }, [userName, selectedTradeCards]);
 
         React.useEffect(() => {
             (async () => {
-                await tradeService.savePendingTrade(userName, {
+                await gameApiClient.savePendingTrade(userName, {
                     otherUserName,
                     otherUserLabel,
                     otherTradeCards,
@@ -92,7 +92,7 @@ export function Trades({ userName }) {
         }, [isRequestOverlayOpen]);
 
         const handleRequestTradeUser = async () => {
-            const response = await tradeService.requestTradeUser(userName, requestUserInput);
+            const response = await gameApiClient.requestTradeUser(userName, requestUserInput);
             if (response.error) {
                 setRequestUserError(response.error);
                 return;
@@ -110,7 +110,7 @@ export function Trades({ userName }) {
             const cardName = clickedCard?.name;
             if (!userName || !cardName) return;
 
-            await tradeService.transferCardFromOwnedToTrade(userName, cardName, activeUser?.cards);
+            await gameApiClient.transferCardFromOwnedToTrade(userName, cardName, activeUser?.cards);
             setOwnedDeckCards(await buildOwnedDeckCards());
 
             setSelectedTradeCards((prev) => ([
@@ -126,7 +126,7 @@ export function Trades({ userName }) {
             const tradeCard = selectedTradeCards.find((card) => card.tradeEntryId === tradeEntryId);
             if (!tradeCard?.name || !userName) return;
 
-            await tradeService.returnCardFromTradeSelection(userName, tradeCard.name, activeUser?.cards);
+            await gameApiClient.returnCardFromTradeSelection(userName, tradeCard.name, activeUser?.cards);
             setOwnedDeckCards(await buildOwnedDeckCards());
             setSelectedTradeCards((prev) => prev.filter((card) => card.tradeEntryId !== tradeEntryId));
         };
@@ -140,7 +140,7 @@ export function Trades({ userName }) {
         }, 0);
 
         const handleCancelTrade = async () => {
-            await tradeService.cancelTrade(userName, selectedTradeCards, activeUser?.cards);
+            await gameApiClient.cancelTrade(userName, selectedTradeCards, activeUser?.cards);
 
             setSelectedTradeCards([]);
             setOtherTradeCards([]);
@@ -156,7 +156,7 @@ export function Trades({ userName }) {
             if (!selectedTradeCards.length && !otherTradeCards.length) return;
 
             if (!userName || !otherUserName) return;
-            await tradeService.acceptTrade(userName, otherUserName, selectedTradeCards, otherTradeCards);
+            await gameApiClient.acceptTrade(userName, otherUserName, selectedTradeCards, otherTradeCards);
 
             setSelectedTradeCards([]);
             setOtherTradeCards([]);
