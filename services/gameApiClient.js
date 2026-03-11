@@ -6,6 +6,22 @@ function normalizeQty(value) {
   return Math.max(0, parseInt(value, 10) || 0);
 }
 
+function normalizeWalletValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Number(parsed.toFixed(2)));
+}
+
+function normalizePacksMap(packs) {
+  const source = packs && typeof packs === 'object' ? packs : {};
+  return {
+    'Default Pack': normalizeQty(source['Default Pack']),
+    'Saga Pack': normalizeQty(source['Saga Pack']),
+    'Heroic Pack': normalizeQty(source['Heroic Pack']),
+    'Mythbound Pack': normalizeQty(source['Mythbound Pack']),
+  };
+}
+
 function toUserSnapshot() {
   const snapshot = {};
   for (const [name, profile] of Object.entries(users || {})) {
@@ -409,5 +425,105 @@ export const gameApiClient = {
       ownedEntries: Array.isArray(response.ownedEntries) ? response.ownedEntries : [],
       wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : fallbackWallet,
     };
+  },
+
+  async loadPackState(userName, fallbackPacks = {}, fallbackWallet = 0) {
+    if (!userName) {
+      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+    }
+
+    const response = await requestTradeApi('/api/packs/state', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        fallbackPacks,
+        fallbackWallet,
+      }),
+    });
+
+    if (!response) {
+      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+    }
+
+    return {
+      ok: Boolean(response.ok),
+      packs: normalizePacksMap(response.packs || fallbackPacks),
+      wallet: normalizeWalletValue(response.wallet),
+    };
+  },
+
+  async buyPack(userName, packName, packPrice, fallbackPacks = {}, fallbackWallet = 0) {
+    if (!userName || !packName) {
+      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+    }
+
+    const response = await requestTradeApi('/api/packs/buy', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        packName,
+        packPrice,
+        fallbackPacks,
+        fallbackWallet,
+      }),
+    });
+
+    if (!response) {
+      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+    }
+
+    return {
+      ok: Boolean(response.ok),
+      packs: normalizePacksMap(response.packs || fallbackPacks),
+      wallet: normalizeWalletValue(response.wallet),
+    };
+  },
+
+  async openPack(userName, packName, fallbackPacks = {}) {
+    if (!userName || !packName) {
+      return { ok: false, packs: normalizePacksMap(fallbackPacks) };
+    }
+
+    const response = await requestTradeApi('/api/packs/open', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        packName,
+        fallbackPacks,
+      }),
+    });
+
+    if (!response) {
+      return { ok: false, packs: normalizePacksMap(fallbackPacks) };
+    }
+
+    return {
+      ok: Boolean(response.ok),
+      packs: normalizePacksMap(response.packs || fallbackPacks),
+    };
+  },
+
+  async claimOpenedPackCards(userName, openedCards, fallbackCards = {}) {
+    if (!userName) {
+      return { ok: false };
+    }
+
+    await ensureBootstrap();
+
+    const response = await requestTradeApi('/api/packs/claim', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        openedCards: Array.isArray(openedCards) ? openedCards : [],
+        fallbackCards,
+      }),
+    });
+
+    if (!response) {
+      return { ok: false };
+    }
+
+    await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
+    return { ok: Boolean(response.ok) };
   },
 };
