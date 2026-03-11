@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
-import { addCardToPendingApproval, addCardToRarity, cardNameExists } from '../data/cards';
+import { addCardToRarity, cardNameExists } from '../data/cards';
 import { getUser, users } from '../data/users';
 import { gameApiClient } from '../../services/gameApiClient';
 
@@ -510,7 +510,11 @@ export function Designer({ userName }) {
             if (isAdminUser) {
                 addCardToRarity(calculatedRarity, cardName, cardPayload);
             } else {
-                addCardToPendingApproval(cardName, cardPayload);
+                const pendingSubmit = await gameApiClient.submitPendingApprovalCard(cardName, cardPayload);
+                if (!pendingSubmit.ok) {
+                    setSubmitMessage(pendingSubmit.error || 'Error: Unable to submit card for approval.');
+                    return;
+                }
             }
 
             if (activeUserName) {
