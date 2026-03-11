@@ -3,10 +3,10 @@ import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
 import { getUser, normalizeWalletValue } from '../data/users';
 import { storageService } from '../../services/storageService';
+import { tradeService } from '../../services/tradeService';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
-  const tradeSelectionStorageKey = userName ? `tradeSelection:${userName}` : null;
   const sortByStorageKey = userName ? `deckSortBy:${userName}` : 'deckSortBy';
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
@@ -14,10 +14,11 @@ export function Deck({ userName }) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState('Rarity');
   const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
+  const [ownedCardsMap, setOwnedCardsMap] = React.useState({});
   
   const user = getUser(userName);
 
-  const effectiveCards = { ...(user?.cards || {}) };
+  const effectiveCards = { ...(ownedCardsMap || {}) };
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
     effectiveCards[card.name] = (parseInt(effectiveCards[card.name], 10) || 0) + 1;
@@ -36,21 +37,11 @@ export function Deck({ userName }) {
   }
 
   // build list of owned cards with quantities
-  const owned = user
-    ? Object.keys(effectiveCards || {}).map(name => ({
-        name,
-        qty: Math.max(0, parseInt(effectiveCards[name], 10) || 0),
-        card: getCardByName(name),
-      })).filter(x => x.qty > 0)
-    : [];
-
-  const ownedFromUser = user
-    ? Object.keys(user.cards || {}).map(name => ({
-        name,
-        qty: Math.max(0, parseInt(user.cards[name], 10) || 0),
-        card: getCardByName(name),
-      })).filter(x => x.qty > 0)
-    : [];
+  const owned = Object.keys(effectiveCards || {}).map(name => ({
+      name,
+      qty: Math.max(0, parseInt(effectiveCards[name], 10) || 0),
+      card: getCardByName(name),
+    })).filter(x => x.qty > 0);
 
   const sortedOwned = [...owned].sort((a, b) => {
     const aCard = a.card;
@@ -110,12 +101,24 @@ export function Deck({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const fallbackCards = user?.cards || {};
+
   React.useEffect(() => {
-    if (!userName) return;
+    if (!userName) {
+      setOwnedCardsMap({});
+      return;
+    }
+
     (async () => {
-      await storageService.setOwnedCards(userName, ownedFromUser);
+      const ownedDeckCards = await tradeService.buildOwnedDeckCards(userName, fallbackCards);
+      const nextOwnedCardsMap = {};
+      for (const entry of ownedDeckCards) {
+        if (!entry?.name) continue;
+        nextOwnedCardsMap[entry.name] = Math.max(0, parseInt(entry.qty, 10) || 0);
+      }
+      setOwnedCardsMap(nextOwnedCardsMap);
     })();
-  }, [userName, ownedFromUser]);
+  }, [userName, fallbackCards]);
 
   React.useEffect(() => {
     (async () => {
@@ -131,16 +134,16 @@ export function Deck({ userName }) {
   }, [sortByStorageKey]);
 
   React.useEffect(() => {
-    if (!tradeSelectionStorageKey) {
+    if (!userName) {
       setSelectedTradeCards([]);
       return;
     }
 
     (async () => {
-      const parsed = await storageService.getJson(tradeSelectionStorageKey, []);
+      const parsed = await tradeService.loadSelectedTradeCards(userName);
       setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
     })();
-  }, [tradeSelectionStorageKey]);
+  }, [userName]);
 
   React.useEffect(() => {
     setCurrentPage(1);
