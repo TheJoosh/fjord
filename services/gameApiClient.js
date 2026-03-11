@@ -93,7 +93,7 @@ async function ensureBootstrap() {
   }
 }
 
-export const tradeService = {
+export const gameApiClient = {
   getCurrentCardValue(cardLike) {
     if (!cardLike?.name) return 0;
     const latest = getCardByName(cardLike.name);
