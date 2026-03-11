@@ -526,4 +526,40 @@ export const gameApiClient = {
     await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
     return { ok: Boolean(response.ok) };
   },
+
+  async submitDesignerProgress(userName, fallbackDesigned = 0, fallbackPacks = {}) {
+    if (!userName) {
+      return {
+        ok: false,
+        nextDesigned: normalizeQty(fallbackDesigned),
+        rewardPackKey: 'Default Pack',
+        packs: normalizePacksMap(fallbackPacks),
+      };
+    }
+
+    const response = await requestTradeApi('/api/designer/submit', {
+      method: 'POST',
+      body: JSON.stringify({
+        userName,
+        fallbackDesigned,
+        fallbackPacks,
+      }),
+    });
+
+    if (!response) {
+      return {
+        ok: false,
+        nextDesigned: normalizeQty(fallbackDesigned),
+        rewardPackKey: 'Default Pack',
+        packs: normalizePacksMap(fallbackPacks),
+      };
+    }
+
+    return {
+      ok: Boolean(response.ok),
+      nextDesigned: normalizeQty(response.nextDesigned),
+      rewardPackKey: response.rewardPackKey || 'Default Pack',
+      packs: normalizePacksMap(response.packs || fallbackPacks),
+    };
+  },
 };
