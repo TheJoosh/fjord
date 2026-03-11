@@ -1,6 +1,7 @@
 const express = require('express');
 const app = express();
 const path = require('path');
+const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -988,7 +989,17 @@ function clearAuthCookie(res, user) {
   res.clearCookie('token');
 }
 
-const distPath = path.join(__dirname, '..', 'dist');
+const staticCandidates = [
+  path.join(__dirname, 'public'),
+  path.join(__dirname, 'dist'),
+  path.join(__dirname, '..', 'dist'),
+];
+const distPath = staticCandidates.find((candidate) => fs.existsSync(path.join(candidate, 'index.html')));
+
+if (!distPath) {
+  throw new Error(`Unable to find frontend build output. Checked: ${staticCandidates.join(', ')}`);
+}
+
 app.use(express.static(distPath));
 
 app.get(/^(?!\/api).*/, (req, res) => {

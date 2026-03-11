@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite",
-    "dev:api": "node services/apiServer.js",
+    "dev:api": "node service/index.js",
     "dev:all": "concurrently \"npm:dev:api\" \"npm:dev\"",
     "build": "vite build",
     "preview": "vite preview",
