@@ -3,7 +3,7 @@ import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
 import { getUser, normalizeWalletValue } from '../data/users';
 import { storageService } from '../../services/storageService';
-import { tradeService } from '../../services/tradeService';
+import { gameApiClient } from '../../services/gameApiClient';
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
@@ -110,7 +110,7 @@ export function Deck({ userName }) {
     }
 
     (async () => {
-      const ownedDeckCards = await tradeService.buildOwnedDeckCards(userName, fallbackCards);
+      const ownedDeckCards = await gameApiClient.buildOwnedDeckCards(userName, fallbackCards);
       const nextOwnedCardsMap = {};
       for (const entry of ownedDeckCards) {
         if (!entry?.name) continue;
@@ -140,7 +140,7 @@ export function Deck({ userName }) {
     }
 
     (async () => {
-      const parsed = await tradeService.loadSelectedTradeCards(userName);
+      const parsed = await gameApiClient.loadSelectedTradeCards(userName);
       setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
     })();
   }, [userName]);
