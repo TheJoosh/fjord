@@ -68,6 +68,8 @@ app.get('/api/user/me', async (req, res) => {
 const tradeProfiles = new Map();
 const pendingTrades = new Map();
 const selectedTradeCardsByUser = new Map();
+const bankInventory = {};
+const bankWalletByUser = new Map();
 
 app.post('/api/trades/bootstrap', async (req, res) => {
   const authUser = await getAuthUser(req);
@@ -335,6 +337,124 @@ app.post('/api/trades/accept', async (req, res) => {
   });
 });
 
+app.post('/api/bank/inventory', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const fallbackEntries = Array.isArray(req.body?.fallbackEntries)
+    ? req.body.fallbackEntries
+    : [];
+
+  if (Object.keys(bankInventory).length === 0 && fallbackEntries.length > 0) {
+    for (const entry of fallbackEntries) {
+      if (!entry?.name) continue;
+      const qty = normalizeQty(entry.qty);
+      if (qty > 0) {
+        bankInventory[entry.name] = qty;
+      }
+    }
+  }
+
+  res.send({ bankEntries: toOwnedEntries(bankInventory) });
+});
+
+app.post('/api/bank/buy', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const cardName = req.body?.cardName;
+  const buyPrice = normalizeWalletValue(req.body?.buyPrice);
+  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
+  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
+
+  const profile = ensureTradeProfile(userName, fallbackCards);
+  const currentWallet = ensureBankWallet(userName, fallbackWallet);
+  const availableQty = normalizeQty(bankInventory[cardName]);
+
+  if (!userName || !cardName || availableQty <= 0 || currentWallet < buyPrice) {
+    res.send({
+      ok: false,
+      bankEntries: toOwnedEntries(bankInventory),
+      ownedEntries: toOwnedEntries(profile.cards),
+      wallet: currentWallet,
+    });
+    return;
+  }
+
+  const nextWallet = normalizeWalletValue(currentWallet - buyPrice);
+  bankWalletByUser.set(userName, nextWallet);
+
+  const nextQty = Math.max(0, availableQty - 1);
+  if (nextQty > 0) {
+    bankInventory[cardName] = nextQty;
+  } else {
+    delete bankInventory[cardName];
+  }
+
+  profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
+
+  res.send({
+    ok: true,
+    bankEntries: toOwnedEntries(bankInventory),
+    ownedEntries: toOwnedEntries(profile.cards),
+    wallet: nextWallet,
+  });
+});
+
+app.post('/api/bank/sell', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const cardName = req.body?.cardName;
+  const payoutAmount = normalizeWalletValue(req.body?.payoutAmount);
+  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
+  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
+
+  const profile = ensureTradeProfile(userName, fallbackCards);
+  const currentWallet = ensureBankWallet(userName, fallbackWallet);
+  const ownedQty = normalizeQty(profile.cards[cardName]);
+
+  if (!userName || !cardName || ownedQty <= 0) {
+    res.send({
+      ok: false,
+      bankEntries: toOwnedEntries(bankInventory),
+      ownedEntries: toOwnedEntries(profile.cards),
+      wallet: currentWallet,
+    });
+    return;
+  }
+
+  const nextOwnedQty = Math.max(0, ownedQty - 1);
+  if (nextOwnedQty > 0) {
+    profile.cards[cardName] = nextOwnedQty;
+  } else {
+    delete profile.cards[cardName];
+  }
+
+  bankInventory[cardName] = normalizeQty(bankInventory[cardName]) + 1;
+
+  const nextWallet = normalizeWalletValue(currentWallet + payoutAmount);
+  bankWalletByUser.set(userName, nextWallet);
+
+  res.send({
+    ok: true,
+    bankEntries: toOwnedEntries(bankInventory),
+    ownedEntries: toOwnedEntries(profile.cards),
+    wallet: nextWallet,
+  });
+});
+
 const users = [];
 
 async function createUser(username, password) {
@@ -374,6 +494,12 @@ function normalizeQty(value) {
   return Math.max(0, parseInt(value, 10) || 0);
 }
 
+function normalizeWalletValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Number(parsed.toFixed(2)));
+}
+
 function normalizeCardMap(cards) {
   const result = {};
   for (const [name, qty] of Object.entries(cards || {})) {
@@ -406,6 +532,14 @@ function ensureTradeProfile(userName, fallbackCards) {
   }
 
   return profile;
+}
+
+function ensureBankWallet(userName, fallbackWallet) {
+  if (!userName) return 0;
+  if (!bankWalletByUser.has(userName)) {
+    bankWalletByUser.set(userName, normalizeWalletValue(fallbackWallet));
+  }
+  return normalizeWalletValue(bankWalletByUser.get(userName));
 }
 
 function resolveTradeUserName(rawName) {
