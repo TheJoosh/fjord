@@ -20,6 +20,19 @@ export function Bank({ userName }) {
     return await gameApiClient.loadBankInventory([]);
   }, []);
 
+  const mapBankEntriesToCards = React.useCallback((entries) => {
+    return (entries || [])
+      .map((entry) => {
+        if (!entry?.name) return null;
+        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
+        if (qty <= 0) return null;
+        const card = getCardByName(entry.name);
+        if (!card) return null;
+        return { name: entry.name, qty, card };
+      })
+      .filter(Boolean);
+  }, []);
+
   const sortedOwned = [...bankCards].sort((a, b) => {
     const aCard = a.card;
     const bCard = b.card;
@@ -94,6 +107,9 @@ export function Bank({ userName }) {
     const userObj = getUser(userName);
     const currentWallet = normalizeWalletValue(userObj?.wallet);
     if (!userObj || currentWallet < buyPrice) return;
+    if (!userObj.cards || typeof userObj.cards !== 'object') {
+      userObj.cards = {};
+    }
 
     const bankEntry = bankCards.find((entry) => entry.name === cardName);
     const bankQty = Math.max(0, parseInt(bankEntry?.qty, 10) || 0);
@@ -103,7 +119,7 @@ export function Bank({ userName }) {
       userName,
       cardName,
       buyPrice,
-      userObj?.cards || {},
+      userObj.cards,
       currentWallet
     );
     if (!response.ok) return;
@@ -115,20 +131,11 @@ export function Bank({ userName }) {
     }
     setWalletBalance(nextWallet);
 
-    const nextBankCards = (response.bankEntries || [])
-      .map((entry) => {
-        if (!entry?.name) return null;
-        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        if (qty <= 0) return null;
-        const card = getCardByName(entry.name);
-        if (!card) return null;
-        return { name: entry.name, qty, card };
-      })
-      .filter(Boolean);
-    setBankCards(nextBankCards);
+    setBankCards(mapBankEntriesToCards(response.bankEntries));
 
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
+    setBankCards(await loadBankCards());
     setOwnedDeckCards(await buildOwnedDeckCards());
   };
 
@@ -142,13 +149,16 @@ export function Bank({ userName }) {
     const payoutAmount = normalizeWalletValue(sellValue * 0.85);
     const userObj = getUser(userName);
     if (!userObj) return;
+    if (!userObj.cards || typeof userObj.cards !== 'object') {
+      userObj.cards = {};
+    }
 
     const currentWallet = normalizeWalletValue(userObj?.wallet);
     const response = await gameApiClient.sellBankCard(
       userName,
       cardName,
       payoutAmount,
-      userObj?.cards || {},
+      userObj.cards,
       currentWallet
     );
     if (!response.ok) return;
@@ -160,26 +170,22 @@ export function Bank({ userName }) {
     }
     setWalletBalance(nextWallet);
 
-    const nextBankCards = (response.bankEntries || [])
-      .map((entry) => {
-        if (!entry?.name) return null;
-        const qty = Math.max(0, parseInt(entry.qty, 10) || 0);
-        if (qty <= 0) return null;
-        const card = getCardByName(entry.name);
-        if (!card) return null;
-        return { name: entry.name, qty, card };
-      })
-      .filter(Boolean);
-    setBankCards(nextBankCards);
+    setBankCards(mapBankEntriesToCards(response.bankEntries));
 
     syncCardPopulationsFromOwnedCards(users);
     recalcCardValues();
+    setBankCards(await loadBankCards());
 
     setOwnedDeckCards(await buildOwnedDeckCards());
   };
 
   const buildOwnedDeckCards = React.useCallback(async () => {
-    return await gameApiClient.buildOwnedDeckCards(userName, user?.cards || {});
+    const activeUser = getUser(userName);
+    if (!activeUser) return [];
+    if (!activeUser.cards || typeof activeUser.cards !== 'object') {
+      activeUser.cards = {};
+    }
+    return await gameApiClient.buildOwnedDeckCards(userName, activeUser.cards);
   }, [user, userName]);
 
   React.useEffect(() => {
