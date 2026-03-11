@@ -12,9 +12,9 @@ import { Trades } from './trades/trades';
 import { Bank } from './bank/bank';
 import { Approve } from './approve/approve';
 import { getUser, users } from './data/users';
-import { getCardByName, recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
-import { storageService } from '../services/storageService';
+import { recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 import { getMe, logoutAuth } from './login/authService';
+import { gameApiClient } from '../services/gameApiClient';
 
 export default function App() {
 
@@ -32,40 +32,17 @@ export default function App() {
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
 
-        const tradeSelectionStorageKey = `tradeSelection:${activeUserName}`;
-        let selectedTradeCards = await storageService.getJson(tradeSelectionStorageKey, []);
-        selectedTradeCards = Array.isArray(selectedTradeCards) ? selectedTradeCards : [];
+        const activeUser = getUser(activeUserName);
+        if (activeUser && (!activeUser.cards || typeof activeUser.cards !== 'object')) {
+            activeUser.cards = {};
+        }
 
-        if (!selectedTradeCards.length) {
-            await storageService.remove(tradeSelectionStorageKey);
+        const selectedTradeCards = await gameApiClient.loadSelectedTradeCards(activeUserName);
+        if (!Array.isArray(selectedTradeCards) || selectedTradeCards.length === 0) {
             return;
         }
 
-        const restoreCounts = new Map();
-        for (const card of selectedTradeCards) {
-            if (!card?.name) continue;
-            restoreCounts.set(card.name, (restoreCounts.get(card.name) || 0) + 1);
-        }
-
-        const user = getUser(activeUserName);
-        if (user) {
-            user.cards = user.cards || {};
-            for (const [name, qty] of restoreCounts.entries()) {
-                user.cards[name] = (parseInt(user.cards[name], 10) || 0) + qty;
-            }
-
-            const nextOwned = Object.entries(user.cards)
-                .map(([name, qty]) => ({
-                    name,
-                    qty: Math.max(0, parseInt(qty, 10) || 0),
-                    card: getCardByName(name),
-                }))
-                .filter(entry => entry.qty > 0);
-
-                        await storageService.setOwnedCards(activeUserName, nextOwned);
-        }
-
-                await storageService.remove(tradeSelectionStorageKey);
+        await gameApiClient.cancelTrade(activeUserName, selectedTradeCards, activeUser?.cards || {});
     };
 
     const logout = async () => {
