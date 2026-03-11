@@ -17,6 +17,9 @@ export function Deck({ userName }) {
   const [ownedCardsMap, setOwnedCardsMap] = React.useState({});
   
   const user = getUser(userName);
+  if (user && (!user.cards || typeof user.cards !== 'object')) {
+    user.cards = {};
+  }
 
   const effectiveCards = { ...(ownedCardsMap || {}) };
   for (const card of selectedTradeCards) {

@@ -14,6 +14,9 @@ import { Card } from '../data/card';
 
 export function Packs({ userName }) {
     const user = getUser(userName);
+    if (user && (!user.cards || typeof user.cards !== 'object')) {
+        user.cards = {};
+    }
     const normalPackPrice = 3.5;
     const sagaPackPrice = 4.5;
     const heroicPackPrice = 8;

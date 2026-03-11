@@ -19,6 +19,9 @@ export function Trades({ userName }) {
         const hasValidTradePartner = Boolean(otherUserName);
 
         const activeUser = getUser(userName);
+        if (activeUser && (!activeUser.cards || typeof activeUser.cards !== 'object')) {
+            activeUser.cards = {};
+        }
 
         const getCurrentCardValue = React.useCallback((cardLike) => {
             return gameApiClient.getCurrentCardValue(cardLike);
