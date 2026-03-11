@@ -1,5 +1,6 @@
 const express = require('express');
 const app = express();
+const path = require('path');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
@@ -986,6 +987,13 @@ function clearAuthCookie(res, user) {
   delete user.token;
   res.clearCookie('token');
 }
+
+const distPath = path.join(__dirname, '..', 'dist');
+app.use(express.static(distPath));
+
+app.get(/^(?!\/api).*/, (req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
+});
 
 const port = 4000;
 app.listen(port, function () {
