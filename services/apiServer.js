@@ -70,6 +70,7 @@ const pendingTrades = new Map();
 const selectedTradeCardsByUser = new Map();
 const bankInventory = {};
 const bankWalletByUser = new Map();
+const userPacksByUser = new Map();
 
 app.post('/api/trades/bootstrap', async (req, res) => {
   const authUser = await getAuthUser(req);
@@ -455,6 +456,115 @@ app.post('/api/bank/sell', async (req, res) => {
   });
 });
 
+app.post('/api/packs/state', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
+  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
+
+  if (!userName) {
+    res.send({ ok: false, packs: normalizePacksMap({}), wallet: 0 });
+    return;
+  }
+
+  const packs = ensureUserPacks(userName, fallbackPacks);
+  const wallet = ensureBankWallet(userName, fallbackWallet);
+
+  res.send({ ok: true, packs, wallet });
+});
+
+app.post('/api/packs/buy', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const packName = req.body?.packName;
+  const packPrice = normalizeWalletValue(req.body?.packPrice);
+  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
+  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
+
+  if (!userName || !isKnownPackName(packName)) {
+    res.send({ ok: false, packs: normalizePacksMap({}), wallet: 0 });
+    return;
+  }
+
+  const packs = ensureUserPacks(userName, fallbackPacks);
+  const currentWallet = ensureBankWallet(userName, fallbackWallet);
+  if (currentWallet < packPrice) {
+    res.send({ ok: false, packs, wallet: currentWallet });
+    return;
+  }
+
+  const nextWallet = normalizeWalletValue(currentWallet - packPrice);
+  bankWalletByUser.set(userName, nextWallet);
+
+  packs[packName] = normalizeQty(packs[packName]) + 1;
+  userPacksByUser.set(userName, normalizePacksMap(packs));
+
+  res.send({ ok: true, packs: normalizePacksMap(packs), wallet: nextWallet });
+});
+
+app.post('/api/packs/open', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const packName = req.body?.packName;
+  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
+
+  if (!userName || !isKnownPackName(packName)) {
+    res.send({ ok: false, packs: normalizePacksMap({}) });
+    return;
+  }
+
+  const packs = ensureUserPacks(userName, fallbackPacks);
+  const currentCount = normalizeQty(packs[packName]);
+  if (currentCount <= 0) {
+    res.send({ ok: false, packs: normalizePacksMap(packs) });
+    return;
+  }
+
+  packs[packName] = Math.max(0, currentCount - 1);
+  userPacksByUser.set(userName, normalizePacksMap(packs));
+  res.send({ ok: true, packs: normalizePacksMap(packs) });
+});
+
+app.post('/api/packs/claim', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const openedCards = Array.isArray(req.body?.openedCards) ? req.body.openedCards : [];
+  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
+
+  if (!userName) {
+    res.send({ ok: false, ownedEntries: [] });
+    return;
+  }
+
+  const profile = ensureTradeProfile(userName, fallbackCards);
+  for (const card of openedCards) {
+    if (!card?.name) continue;
+    profile.cards[card.name] = normalizeQty(profile.cards[card.name]) + 1;
+  }
+
+  res.send({ ok: true, ownedEntries: toOwnedEntries(profile.cards) });
+});
+
 const users = [];
 
 async function createUser(username, password) {
@@ -511,6 +621,16 @@ function normalizeCardMap(cards) {
   return result;
 }
 
+function normalizePacksMap(packs) {
+  const source = packs && typeof packs === 'object' ? packs : {};
+  return {
+    'Default Pack': normalizeQty(source['Default Pack']),
+    'Saga Pack': normalizeQty(source['Saga Pack']),
+    'Heroic Pack': normalizeQty(source['Heroic Pack']),
+    'Mythbound Pack': normalizeQty(source['Mythbound Pack']),
+  };
+}
+
 function toOwnedEntries(cards) {
   return Object.entries(cards || {})
     .map(([name, qty]) => ({ name, qty: normalizeQty(qty) }))
@@ -540,6 +660,29 @@ function ensureBankWallet(userName, fallbackWallet) {
     bankWalletByUser.set(userName, normalizeWalletValue(fallbackWallet));
   }
   return normalizeWalletValue(bankWalletByUser.get(userName));
+}
+
+function ensureUserPacks(userName, fallbackPacks) {
+  if (!userName) {
+    return normalizePacksMap({});
+  }
+
+  if (!userPacksByUser.has(userName)) {
+    userPacksByUser.set(userName, normalizePacksMap(fallbackPacks || {}));
+  }
+
+  const current = normalizePacksMap(userPacksByUser.get(userName));
+  userPacksByUser.set(userName, current);
+  return current;
+}
+
+function isKnownPackName(packName) {
+  return (
+    packName === 'Default Pack' ||
+    packName === 'Saga Pack' ||
+    packName === 'Heroic Pack' ||
+    packName === 'Mythbound Pack'
+  );
 }
 
 function resolveTradeUserName(rawName) {
