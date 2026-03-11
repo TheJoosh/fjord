@@ -1,11 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
-import {
-  addCardToRarity,
-  pendingApproval,
-  removeCardFromPendingApproval,
-  updatePendingApprovalCard,
-} from '../data/cards';
+import { addCardToRarity } from '../data/cards';
+import { gameApiClient } from '../../services/gameApiClient';
 
 export function Approve({ userName }) {
   const title = "Approve Cards";
@@ -15,15 +11,11 @@ export function Approve({ userName }) {
   const [editingOriginalName, setEditingOriginalName] = React.useState('');
   const [editingDraft, setEditingDraft] = React.useState(null);
   const [editError, setEditError] = React.useState('');
-  const renderedCards = Object.entries(pendingApproval)
-    .map(([name, card]) => ({
-      name,
-      card: {
-        ...card,
-        name,
-      },
-    }))
-    .sort((a, b) => a.name.localeCompare(b.name));
+  const [pendingCards, setPendingCards] = React.useState([]);
+  const renderedCards = React.useMemo(
+    () => [...pendingCards].sort((a, b) => a.name.localeCompare(b.name)),
+    [pendingCards]
+  );
   const [currentPage, setCurrentPage] = React.useState(1);
   const totalRenderedCards = renderedCards.length;
   const totalPages = Math.max(1, Math.ceil(totalRenderedCards / cardsPerPage));
@@ -42,25 +34,37 @@ export function Approve({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
-  const handleApprove = (name, card) => {
+  const loadPendingCards = React.useCallback(async () => {
+    setPendingCards(await gameApiClient.loadPendingApprovals());
+  }, []);
+
+  const handleApprove = async (name, card) => {
     if (!name || !card) return;
     const confirmed = window.confirm(`Are you sure you want to approve "${name}"?`);
     if (!confirmed) return;
-    const rarity = card.rarity || 'Common';
+    const response = await gameApiClient.approvePendingApprovalCard(name);
+    if (!response.ok) return;
 
-    addCardToRarity(rarity, name, {
-      ...card,
+    const approvedName = response.approvedCard?.name || name;
+    const approvedCard = response.approvedCard?.card || card;
+    const rarity = approvedCard.rarity || 'Common';
+
+    addCardToRarity(rarity, approvedName, {
+      ...approvedCard,
       rarity,
     });
-    removeCardFromPendingApproval(name);
+
+    setPendingCards((previous) => previous.filter((entry) => entry.name !== name));
     setPendingVersion((value) => value + 1);
   };
 
-  const handleDiscard = (name) => {
+  const handleDiscard = async (name) => {
     if (!name) return;
     const confirmed = window.confirm(`Are you sure you want to discard "${name}"?`);
     if (!confirmed) return;
-    removeCardFromPendingApproval(name);
+    const response = await gameApiClient.discardPendingApprovalCard(name);
+    if (!response.ok) return;
+    setPendingCards((previous) => previous.filter((entry) => entry.name !== name));
     setPendingVersion((value) => value + 1);
   };
 
@@ -102,7 +106,7 @@ export function Approve({ userName }) {
     return Number.isNaN(parsed) ? '-' : parsed;
   };
 
-  const handleSaveEdit = () => {
+  const handleSaveEdit = async () => {
     if (!editingDraft || !editingOriginalName) return;
 
     const nextName = (editingDraft.name || '').trim();
@@ -123,15 +127,26 @@ export function Approve({ userName }) {
       value: 0,
     };
 
-    const success = updatePendingApprovalCard(editingOriginalName, nextName, updatedCard);
-    if (!success) {
-      setEditError('Unable to save changes. Another pending card may already use that name.');
+    const response = await gameApiClient.updatePendingApprovalCard(
+      editingOriginalName,
+      nextName,
+      updatedCard
+    );
+    if (!response.ok) {
+      setEditError(response.error || 'Unable to save changes. Another pending card may already use that name.');
       return;
     }
 
+    await loadPendingCards();
     closeEditOverlay();
     setPendingVersion((value) => value + 1);
   };
+
+  React.useEffect(() => {
+    (async () => {
+      await loadPendingCards();
+    })();
+  }, [loadPendingCards]);
 
   React.useEffect(() => {
     setCurrentPage(1);
