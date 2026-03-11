@@ -1,5 +1,6 @@
 import { getCardByName } from '../src/data/cards';
 import { getUser, users } from '../src/data/users';
+import { storageService } from './storageService';
 
 function normalizeQty(value) {
   return Math.max(0, parseInt(value, 10) || 0);
@@ -24,6 +25,35 @@ function hydrateCard(cardLike) {
 
 function hydrateCards(cards) {
   return (cards || []).map((card) => hydrateCard(card));
+}
+
+async function applyOwnedEntriesToActiveUser(userName, activeUserCards, ownedEntries) {
+  if (!Array.isArray(ownedEntries)) return;
+
+  const normalizedMap = {};
+  for (const entry of ownedEntries) {
+    if (!entry?.name) continue;
+    const qty = normalizeQty(entry.qty);
+    if (qty > 0) {
+      normalizedMap[entry.name] = qty;
+    }
+  }
+
+  if (activeUserCards && typeof activeUserCards === 'object') {
+    for (const key of Object.keys(activeUserCards)) {
+      delete activeUserCards[key];
+    }
+    Object.assign(activeUserCards, normalizedMap);
+  }
+
+  if (userName) {
+    const persistableEntries = Object.entries(normalizedMap).map(([name, qty]) => ({
+      name,
+      qty,
+      card: getCardByName(name),
+    }));
+    await storageService.setOwnedCards(userName, persistableEntries);
+  }
 }
 
 async function requestTradeApi(path, options = {}) {
@@ -83,6 +113,8 @@ export const tradeService = {
     const sourceEntries = Array.isArray(response?.ownedEntries)
       ? response.ownedEntries
       : Object.entries(fallbackCards || {}).map(([name, qty]) => ({ name, qty }));
+
+    await applyOwnedEntriesToActiveUser(userName, fallbackCards, sourceEntries);
 
     return sourceEntries
       .map(({ name, qty }) => {
@@ -158,13 +190,6 @@ export const tradeService = {
     const target = (inputName || '').trim();
     if (!target) return null;
 
-    const parsedUsers = await storageService.getUsersMap();
-    const keys = Object.keys(parsedUsers);
-    const exact = keys.find((name) => name === target);
-    if (exact) return exact;
-    const insensitive = keys.find((name) => name.toLowerCase() === target.toLowerCase());
-    if (insensitive) return insensitive;
-
     const fallbackKeys = Object.keys(users || {});
     const exactFallback = fallbackKeys.find((name) => name === target);
     if (exactFallback) return exactFallback;
@@ -210,15 +235,7 @@ export const tradeService = {
     });
 
     if (!response) return;
-
-    if (activeUserCards) {
-      const currentQty = normalizeQty(activeUserCards?.[cardName]);
-      if (currentQty <= 1) {
-        delete activeUserCards[cardName];
-      } else {
-        activeUserCards[cardName] = currentQty - 1;
-      }
-    }
+    await applyOwnedEntriesToActiveUser(userName, activeUserCards, response.ownedEntries);
   },
 
   async returnCardFromTradeSelection(userName, cardName, activeUserCards) {
@@ -234,16 +251,13 @@ export const tradeService = {
     });
 
     if (!response) return;
-
-    if (activeUserCards) {
-      activeUserCards[cardName] = normalizeQty(activeUserCards[cardName]) + 1;
-    }
+    await applyOwnedEntriesToActiveUser(userName, activeUserCards, response.ownedEntries);
   },
 
   async cancelTrade(userName, selectedTradeCards, activeUserCards) {
     if (!userName) return;
 
-    await requestTradeApi('/api/trades/cancel', {
+    const response = await requestTradeApi('/api/trades/cancel', {
       method: 'POST',
       body: JSON.stringify({
         userName,
@@ -252,12 +266,8 @@ export const tradeService = {
       }),
     });
 
-    if (activeUserCards) {
-      for (const card of selectedTradeCards || []) {
-        if (!card?.name) continue;
-        activeUserCards[card.name] = normalizeQty(activeUserCards[card.name]) + 1;
-      }
-    }
+    if (!response) return;
+    await applyOwnedEntriesToActiveUser(userName, activeUserCards, response.ownedEntries);
   },
 
   async acceptTrade(activeUserName, otherUserName, selectedTradeCards, otherTradeCards) {
@@ -280,6 +290,10 @@ export const tradeService = {
       }),
     });
 
+    if (!response) {
+      return { nextActiveOwned: [], nextTargetOwned: [] };
+    }
+
     const nextActiveOwned = Array.isArray(response?.nextActiveOwned) ? response.nextActiveOwned : [];
     const nextTargetOwned = Array.isArray(response?.nextTargetOwned) ? response.nextTargetOwned : [];
 
@@ -288,6 +302,8 @@ export const tradeService = {
         nextActiveOwned.map((entry) => [entry.name, normalizeQty(entry.qty)])
       );
     }
+
+    await applyOwnedEntriesToActiveUser(activeUserName, activeUser?.cards, nextActiveOwned);
 
     if (targetUser) {
       targetUser.cards = Object.fromEntries(
