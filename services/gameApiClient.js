@@ -562,4 +562,67 @@ export const gameApiClient = {
       packs: normalizePacksMap(response.packs || fallbackPacks),
     };
   },
+
+  async loadPendingApprovals() {
+    const response = await requestTradeApi('/api/approvals/pending', { method: 'GET' });
+    const pendingCards = Array.isArray(response?.pendingCards) ? response.pendingCards : [];
+    return pendingCards
+      .map((entry) => {
+        if (!entry?.name || !entry?.card) return null;
+        return {
+          name: entry.name,
+          card: {
+            ...entry.card,
+            name: entry.name,
+          },
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  async submitPendingApprovalCard(name, card) {
+    const response = await requestTradeApi('/api/approvals/pending', {
+      method: 'POST',
+      body: JSON.stringify({ name, card }),
+    });
+
+    return {
+      ok: Boolean(response?.ok),
+      error: response?.error || '',
+    };
+  },
+
+  async updatePendingApprovalCard(originalName, nextName, card) {
+    const response = await requestTradeApi('/api/approvals/pending', {
+      method: 'PUT',
+      body: JSON.stringify({ originalName, nextName, card }),
+    });
+
+    return {
+      ok: Boolean(response?.ok),
+      error: response?.error || '',
+    };
+  },
+
+  async discardPendingApprovalCard(name) {
+    const response = await requestTradeApi(`/api/approvals/pending?name=${encodeURIComponent(name || '')}`, {
+      method: 'DELETE',
+    });
+
+    return { ok: Boolean(response?.ok) };
+  },
+
+  async approvePendingApprovalCard(name) {
+    const response = await requestTradeApi('/api/approvals/approve', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    });
+
+    return {
+      ok: Boolean(response?.ok),
+      error: response?.error || '',
+      approvedCard: response?.approvedCard || null,
+    };
+  },
 };
