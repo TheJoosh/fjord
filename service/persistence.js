@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 const { MongoClient } = require('mongodb');
 
-const DEFAULT_DB_NAME = 'fjord';
+const DEFAULT_DB_NAME = 'Fjord';
 const GLOBAL_BANK_INVENTORY_ID = 'global';
 
 let clientPromise;
