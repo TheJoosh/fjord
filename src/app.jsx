@@ -11,17 +11,10 @@ import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
 import { Bank } from './bank/bank';
 import { Approve } from './approve/approve';
-import { users } from './data/users';
-import { recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
 import { getMe, getProfile, logoutAuth } from './login/authService';
 import { gameApiClient } from '../service/gameApiClient';
 
 export default function App() {
-
-    React.useEffect(() => {
-        syncCardPopulationsFromOwnedCards(users);
-        recalcCardValues();
-    }, []);
 
         const [userName, setUserName] = React.useState('');
     const [authState, setAuthState] = React.useState(AuthState.Unknown);
