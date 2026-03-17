@@ -1,8 +1,13 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { getCardByName, getCardScarcityScore } from '../data/cards';
-import { getUser, normalizeWalletValue } from '../data/users';
 import { gameApiClient } from '../../service/gameApiClient';
+
+function normalizeWalletValue(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return 0;
+  return Math.max(0, Number(parsed.toFixed(2)));
+}
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
@@ -13,11 +18,7 @@ export function Deck({ userName }) {
   const [sortBy, setSortBy] = React.useState('Rarity');
   const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
   const [ownedCardsMap, setOwnedCardsMap] = React.useState({});
-  
-  const user = getUser(userName);
-  if (user && (!user.cards || typeof user.cards !== 'object')) {
-    user.cards = {};
-  }
+  const [walletBalance, setWalletBalance] = React.useState(0);
 
   const effectiveCards = { ...(ownedCardsMap || {}) };
   for (const card of selectedTradeCards) {
@@ -27,13 +28,11 @@ export function Deck({ userName }) {
 
   // calculate total deck value
   let deckValue = 0;
-  const walletValue = normalizeWalletValue(user?.wallet);
-  if (user) {
-    for (const [name, qty] of Object.entries(effectiveCards)) {
-      const card = getCardByName(name);
-      if (card && typeof card.value === 'number') {
-        deckValue += card.value * (parseInt(qty, 10) || 0);
-      }
+  const walletValue = normalizeWalletValue(walletBalance);
+  for (const [name, qty] of Object.entries(effectiveCards)) {
+    const card = getCardByName(name);
+    if (card && typeof card.value === 'number') {
+      deckValue += card.value * (parseInt(qty, 10) || 0);
     }
   }
 
@@ -102,8 +101,6 @@ export function Deck({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
-  const fallbackCards = user?.cards || {};
-
   React.useEffect(() => {
     if (!userName) {
       setOwnedCardsMap({});
@@ -111,7 +108,7 @@ export function Deck({ userName }) {
     }
 
     (async () => {
-      const ownedDeckCards = await gameApiClient.buildOwnedDeckCards(userName, fallbackCards);
+      const ownedDeckCards = await gameApiClient.buildOwnedDeckCards(userName);
       const nextOwnedCardsMap = {};
       for (const entry of ownedDeckCards) {
         if (!entry?.name) continue;
@@ -119,7 +116,18 @@ export function Deck({ userName }) {
       }
       setOwnedCardsMap(nextOwnedCardsMap);
     })();
-  }, [userName, fallbackCards]);
+  }, [userName]);
+
+  React.useEffect(() => {
+    (async () => {
+      if (!userName) {
+        setWalletBalance(0);
+        return;
+      }
+      const profile = await gameApiClient.loadUserProfile();
+      setWalletBalance(normalizeWalletValue(profile.wallet));
+    })();
+  }, [userName]);
 
   React.useEffect(() => {
     (async () => {
