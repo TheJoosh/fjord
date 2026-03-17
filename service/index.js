@@ -126,7 +126,26 @@ app.post('/api/trades/owned', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const profile = await ensureTradeProfile(userName, {});
-  res.send({ ownedEntries: toOwnedEntries(profile.cards) });
+  const ownedEntries = toOwnedEntries(profile.cards);
+  const detailsByName = await persistence.getCardDetailsByNames(ownedEntries.map((entry) => entry.name));
+  const ownedCards = ownedEntries.map((entry) => ({
+    ...(detailsByName[entry.name] || {
+      name: entry.name,
+      image: 'Default.png',
+      cost: '-',
+      rarity: 'Common',
+      cardType: 'Type',
+      description: '',
+      strength: '-',
+      endurance: '-',
+      author: 'Unknown',
+      value: 0,
+      population: 0,
+    }),
+    qty: normalizeQty(entry.qty),
+  }));
+
+  res.send({ ownedEntries, ownedCards });
 });
 
 app.get('/api/trades/pending', async (req, res) => {
@@ -562,11 +581,33 @@ app.post('/api/packs/open', async (req, res) => {
   await persistence.setTradeProfileCards(userName, profile.cards);
   await persistence.incrementCardsPopulation(generatedCards);
   const nextState = await recalculateCardValuesInDb();
+  const detailsByName = await persistence.getCardDetailsByNames(generatedCardNames);
+
+  const openedCards = generatedCards.map((entry) => {
+    const details = detailsByName[entry.name] || {};
+    const liveState = nextState.valuesByName?.[entry.name] || {};
+    return {
+      name: entry.name,
+      image: details.image || 'Default.png',
+      cost: details.cost != null ? details.cost : '-',
+      rarity: normalizeRarity(details.rarity || entry.rarity),
+      cardType: details.cardType || 'Type',
+      description: details.description || '',
+      strength: details.strength != null ? details.strength : '-',
+      endurance: details.endurance != null ? details.endurance : '-',
+      author: details.author || 'Unknown',
+      value: Number.isFinite(Number(liveState.value)) ? Number(liveState.value) : Number(details.value || 0),
+      scarcity: Number.isFinite(Number(liveState.scarcity)) ? Number(liveState.scarcity) : 0,
+      population: Number.isFinite(Number(liveState.population))
+        ? Math.max(0, parseInt(liveState.population, 10) || 0)
+        : Math.max(0, parseInt(details.population, 10) || 0),
+    };
+  });
 
   res.send({
     ok: true,
     packs: normalizePacksMap(packs),
-    openedCards: generatedCardNames.map((name) => ({ name })),
+    openedCards,
     valuesByName: nextState.valuesByName,
     totalPopulation: nextState.totalPopulation,
   });

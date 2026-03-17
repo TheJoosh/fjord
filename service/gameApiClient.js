@@ -192,6 +192,39 @@ export const gameApiClient = {
       body: JSON.stringify({ userName }),
     });
 
+    const sourceCards = Array.isArray(response?.ownedCards) ? response.ownedCards : [];
+    if (sourceCards.length > 0) {
+      return sourceCards
+        .map((cardLike) => {
+          const hydrated = hydrateCard(cardLike);
+          if (!hydrated?.name) return null;
+
+          const normalizedQty = normalizeQty(hydrated.qty);
+          if (normalizedQty <= 0) return null;
+
+          const liveState = liveCardValuesByName?.[hydrated.name] || {};
+          const liveValue = Number(liveState.value);
+          const liveScarcity = Number(liveState.scarcity);
+          const livePopulation = Number(liveState.population);
+
+          return {
+            ...hydrated,
+            qty: normalizedQty,
+            value: Number.isFinite(liveValue)
+              ? liveValue
+              : (typeof hydrated.value === 'number' ? hydrated.value : 0),
+            scarcity: Number.isFinite(liveScarcity)
+              ? liveScarcity
+              : (typeof hydrated.scarcity === 'number' ? hydrated.scarcity : 0),
+            population: Number.isFinite(livePopulation)
+              ? Math.max(0, parseInt(livePopulation, 10) || 0)
+              : Math.max(0, parseInt(hydrated.population, 10) || 0),
+          };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.name.localeCompare(b.name));
+    }
+
     const sourceEntries = Array.isArray(response?.ownedEntries) ? response.ownedEntries : [];
 
     return sourceEntries

@@ -605,6 +605,67 @@ async function upsertApprovedCardToCards(name, card) {
   );
 }
 
+async function getCardDetailsByNames(cardNames) {
+  const names = Array.isArray(cardNames)
+    ? Array.from(new Set(cardNames.map((name) => String(name || '').trim()).filter(Boolean)))
+    : [];
+
+  if (names.length === 0) return {};
+
+  const db = await getDb();
+  const cardsCollection = db.collection('cards');
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsRootDoc = await cardsCollection.findOne(cardsRootFilter, {
+    projection: {
+      Common: 1,
+      Uncommon: 1,
+      Rare: 1,
+      Loric: 1,
+      Mythical: 1,
+      Legendary: 1,
+    },
+  });
+
+  const byName = {};
+  if (!cardsRootDoc) return byName;
+
+  for (const name of names) {
+    const safeName = name.replace(/\./g, '\uFF0E').replace(/\$/g, '\uFF04');
+
+    for (const rarity of Object.keys(RARITY_SCORES)) {
+      const bucket = cardsRootDoc[rarity];
+      if (!bucket || typeof bucket !== 'object') continue;
+
+      const card = bucket[name] || bucket[safeName];
+      if (!card || typeof card !== 'object') continue;
+
+      byName[name] = {
+        name,
+        image: card.image || 'Default.png',
+        cost: card.cost != null ? card.cost : '-',
+        rarity: normalizeRarity(card.rarity || rarity),
+        cardType: card.cardType || 'Type',
+        description: card.description || '',
+        strength: card.strength != null ? card.strength : '-',
+        endurance: card.endurance != null ? card.endurance : '-',
+        author: card.author || 'Unknown',
+        value: Number.isFinite(Number(card.value)) ? Number(card.value) : 0,
+        population: normalizeQty(card.population),
+      };
+      break;
+    }
+  }
+
+  return byName;
+}
+
 async function recalculateAndStoreCardValues() {
   const db = await getDb();
   const tradeProfiles = await db
@@ -862,6 +923,7 @@ module.exports = {
   getCardValuesMap,
   getCardsPoolByRarity,
   upsertApprovedCardToCards,
+  getCardDetailsByNames,
   recalculateAndStoreCardValues,
   incrementCardsPopulation,
 };
