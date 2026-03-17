@@ -86,6 +86,37 @@ app.get('/api/user/profile', async (req, res) => {
   });
 });
 
+app.post('/api/cards/catalog', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const entries = Array.isArray(req.body?.entries) ? req.body.entries : [];
+  await persistence.upsertCardCatalogEntries(entries);
+  const nextState = await recalculateCardValuesInDb();
+  res.send({
+    ok: true,
+    valuesByName: nextState.valuesByName,
+    totalPopulation: nextState.totalPopulation,
+  });
+});
+
+app.get('/api/cards/values', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const cardState = await persistence.getCardValuesMap();
+  res.send({
+    valuesByName: cardState.valuesByName,
+    totalPopulation: cardState.totalPopulation,
+  });
+});
+
 app.post('/api/trades/owned', async (req, res) => {
   const authUser = await getAuthUser(req);
   if (!authUser) {
@@ -241,6 +272,7 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
   }
 
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await recalculateCardValuesInDb();
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -258,6 +290,7 @@ app.post('/api/trades/owned/increment', async (req, res) => {
 
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await recalculateCardValuesInDb();
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -282,6 +315,7 @@ app.post('/api/trades/cancel', async (req, res) => {
   await persistence.setSelectedTradeCards(userName, []);
   await persistence.deletePendingTrade(userName);
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await recalculateCardValuesInDb();
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -326,6 +360,7 @@ app.post('/api/trades/accept', async (req, res) => {
   await persistence.deletePendingTrade(activeUserName);
   await persistence.setTradeProfileCards(activeUserName, activeProfile.cards);
   await persistence.setTradeProfileCards(otherUserName, otherProfile.cards);
+  await recalculateCardValuesInDb();
 
   res.send({
     nextActiveOwned: toOwnedEntries(activeProfile.cards),
@@ -383,6 +418,7 @@ app.post('/api/bank/buy', async (req, res) => {
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
   await persistence.setBankInventory(bankInventory);
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await recalculateCardValuesInDb();
 
   res.send({
     ok: true,
@@ -430,6 +466,7 @@ app.post('/api/bank/sell', async (req, res) => {
   await persistence.setBankWallet(userName, nextWallet);
   await persistence.setBankInventory(bankInventory);
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await recalculateCardValuesInDb();
 
   res.send({
     ok: true,
@@ -536,6 +573,7 @@ app.post('/api/packs/claim', async (req, res) => {
   }
 
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await recalculateCardValuesInDb();
 
   res.send({ ok: true, ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -829,6 +867,10 @@ async function ensureDeckSortPreference(userName, fallbackSort) {
   return await persistence.ensureDeckSortPreference(userName, fallbackSort);
 }
 
+async function recalculateCardValuesInDb() {
+  return await persistence.recalculateAndStoreCardValues();
+}
+
 function getRewardPackKeyForDesignCount(designCount) {
   const safeCount = Math.max(1, normalizeQty(designCount));
   const cyclePosition = ((safeCount - 1) % 100) + 1;
@@ -938,6 +980,7 @@ const port = 4000;
 
 (async () => {
   await persistence.initPersistence();
+  await recalculateCardValuesInDb();
 
   app.listen(port, function () {
     console.log(`Listening on port ${port}`);
