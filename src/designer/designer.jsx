@@ -1,7 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
 import { addCardToRarity, cardNameExists } from '../data/cards';
-import { getUser, users } from '../data/users';
 import { gameApiClient } from '../../service/gameApiClient';
 
 export function Designer({ userName }) { 
@@ -491,8 +490,8 @@ export function Designer({ userName }) {
                 ? 'Default.png'
                 : (previewImage || "Default.png");
         const activeUserName = (userName || '').trim();
-        const activeUser = getUser(activeUserName);
-        const isAdminUser = Boolean(activeUser?.admin);
+        const profile = await gameApiClient.loadUserProfile();
+        const isAdminUser = Boolean(profile?.ok && profile.admin);
 
         try {
             const cardPayload = {
@@ -518,19 +517,7 @@ export function Designer({ userName }) {
             }
 
             if (activeUserName) {
-                const fallbackDesigned = parseInt(users?.[activeUserName]?.designed, 10) || 0;
-                const fallbackPacks = users?.[activeUserName]?.packs || {};
-
-                const progress = await gameApiClient.submitDesignerProgress(
-                    activeUserName,
-                    fallbackDesigned,
-                    fallbackPacks
-                );
-
-                if (progress.ok && users?.[activeUserName]) {
-                    users[activeUserName].designed = progress.nextDesigned;
-                    users[activeUserName].packs = progress.packs;
-                }
+                const progress = await gameApiClient.submitDesignerProgress(activeUserName);
 
                 const rewardMessageName = progress.rewardPackKey === 'Default Pack'
                     ? 'Normal Pack'
