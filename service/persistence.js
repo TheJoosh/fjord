@@ -4,6 +4,19 @@ const { MongoClient } = require('mongodb');
 
 const DEFAULT_DB_NAME = 'Fjord';
 const GLOBAL_BANK_INVENTORY_ID = 'global';
+const STATE_CARDS_META_ID = '__meta__';
+
+const RARITY_SCORES = {
+  Common: 2,
+  Uncommon: 4,
+  Rare: 6,
+  Loric: 8,
+  Mythical: 10,
+  Legendary: 12,
+};
+
+const BASE_VALUE_SCALE = 0.0165;
+const RARITY_SPREAD_EXPONENT = 1.16;
 
 let clientPromise;
 
@@ -85,6 +98,24 @@ function normalizeDeckSort(value) {
     return next;
   }
   return 'Rarity';
+}
+
+function normalizeRarity(value) {
+  const rarity = String(value || '').trim();
+  if (Object.prototype.hasOwnProperty.call(RARITY_SCORES, rarity)) {
+    return rarity;
+  }
+  return 'Common';
+}
+
+function computeCardValue(rarity, totalOwned, totalPopulation) {
+  const R = RARITY_SCORES[normalizeRarity(rarity)] || 0;
+  const T = normalizeQty(totalOwned);
+  const N = normalizeQty(totalPopulation);
+  const logTerm = Math.log(1 + N / (T + 3));
+  const rarityFactor = Math.pow(1 + (R * R) / 10, RARITY_SPREAD_EXPONENT);
+  const raw = BASE_VALUE_SCALE * rarityFactor * Math.pow(logTerm, 1.5);
+  return Number(raw.toFixed(2));
 }
 
 async function initPersistence() {
@@ -412,6 +443,154 @@ async function setDeckSortPreference(userName, sortBy) {
   );
 }
 
+async function upsertCardCatalogEntries(entries) {
+  const normalizedEntries = Array.isArray(entries)
+    ? entries
+        .map((entry) => ({
+          name: String(entry?.name || '').trim(),
+          rarity: normalizeRarity(entry?.rarity),
+        }))
+        .filter((entry) => entry.name)
+    : [];
+
+  if (!normalizedEntries.length) return;
+
+  const db = await getDb();
+  const catalog = db.collection('card_catalog');
+
+  const operations = normalizedEntries.map((entry) => ({
+    updateOne: {
+      filter: { _id: entry.name },
+      update: { $set: { rarity: entry.rarity } },
+      upsert: true,
+    },
+  }));
+
+  await catalog.bulkWrite(operations, { ordered: false });
+}
+
+async function getCardValuesMap() {
+  const db = await getDb();
+  const docs = await db
+    .collection('state_cards')
+    .find({}, { projection: { _id: 1, value: 1, rarity: 1, population: 1, scarcity: 1, totalPopulation: 1 } })
+    .toArray();
+
+  const map = {};
+  let totalPopulation = 0;
+  for (const doc of docs) {
+    if (!doc?._id) continue;
+    if (doc._id === STATE_CARDS_META_ID) {
+      totalPopulation = normalizeQty(doc.totalPopulation);
+      continue;
+    }
+
+    map[doc._id] = {
+      value: Number.isFinite(Number(doc.value)) ? Number(doc.value) : 0,
+      rarity: normalizeRarity(doc.rarity),
+      population: normalizeQty(doc.population),
+      scarcity: Number.isFinite(Number(doc.scarcity)) ? Number(doc.scarcity) : 0,
+    };
+  }
+
+  return {
+    valuesByName: map,
+    totalPopulation,
+  };
+}
+
+async function recalculateAndStoreCardValues() {
+  const db = await getDb();
+  const tradeProfiles = await db
+    .collection('trade_profiles')
+    .find({}, { projection: { cards: 1 } })
+    .toArray();
+  const catalogDocs = await db
+    .collection('card_catalog')
+    .find({}, { projection: { _id: 1, rarity: 1 } })
+    .toArray();
+
+  const ownedTotalsByName = {};
+  for (const profile of tradeProfiles) {
+    for (const [name, qty] of Object.entries(profile?.cards || {})) {
+      const normalizedName = String(name || '').trim();
+      if (!normalizedName) continue;
+      ownedTotalsByName[normalizedName] =
+        normalizeQty(ownedTotalsByName[normalizedName]) + normalizeQty(qty);
+    }
+  }
+
+  const rarityByName = {};
+  for (const doc of catalogDocs) {
+    if (!doc?._id) continue;
+    rarityByName[String(doc._id)] = normalizeRarity(doc.rarity);
+  }
+
+  const allNames = new Set([
+    ...Object.keys(ownedTotalsByName),
+    ...Object.keys(rarityByName),
+  ]);
+
+  const totalPopulation = Object.values(ownedTotalsByName).reduce(
+    (sum, qty) => sum + normalizeQty(qty),
+    0
+  );
+
+  const operations = [];
+  const valuesMap = {};
+
+  for (const name of allNames) {
+    const population = normalizeQty(ownedTotalsByName[name]);
+    const rarity = normalizeRarity(rarityByName[name]);
+    const scarcity = totalPopulation / (population + 3);
+    const value = computeCardValue(rarity, population, totalPopulation);
+
+    valuesMap[name] = {
+      value,
+      rarity,
+      population,
+      scarcity,
+    };
+
+    operations.push({
+      updateOne: {
+        filter: { _id: name },
+        update: {
+          $set: {
+            value,
+            rarity,
+            population,
+            scarcity,
+            totalPopulation,
+            updatedAt: new Date(),
+          },
+        },
+        upsert: true,
+      },
+    });
+  }
+
+  operations.push({
+    updateOne: {
+      filter: { _id: STATE_CARDS_META_ID },
+      update: {
+        $set: {
+          totalPopulation,
+          updatedAt: new Date(),
+        },
+      },
+      upsert: true,
+    },
+  });
+
+  await db.collection('state_cards').bulkWrite(operations, { ordered: false });
+
+  return {
+    valuesByName: valuesMap,
+    totalPopulation,
+  };
+}
+
 module.exports = {
   initPersistence,
   createUser,
@@ -442,4 +621,7 @@ module.exports = {
   renamePendingApproval,
   ensureDeckSortPreference,
   setDeckSortPreference,
+  upsertCardCatalogEntries,
+  getCardValuesMap,
+  recalculateAndStoreCardValues,
 };
