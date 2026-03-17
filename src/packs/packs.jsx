@@ -1,33 +1,27 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import '../app.css';
-import { getUser, normalizeWalletValue, users } from '../data/users';
-import {
-    drawWeightedCards,
-    getCardByName,
-    incrementCardPopulations,
-    recalcCardValues,
-    syncCardPopulationsFromOwnedCards,
-} from '../data/cards';
+import { drawWeightedCards, getCardByName } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 import { Card } from '../data/card';
 
+function normalizeWalletValue(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return 0;
+    return Math.max(0, Number(parsed.toFixed(2)));
+}
+
 export function Packs({ userName }) {
-    const user = getUser(userName);
-    if (user && (!user.cards || typeof user.cards !== 'object')) {
-        user.cards = {};
-    }
     const normalPackPrice = 3.5;
     const sagaPackPrice = 4.5;
     const heroicPackPrice = 8;
     const mythboundPackPrice = 11.5;
-    const packs = user?.packs || {};
 
-    const [defaultPackCount, setDefaultPackCount] = React.useState(packs['Default Pack'] ?? 0);
-    const [sagaPackCount, setSagaPackCount] = React.useState(packs['Saga Pack'] ?? 0);
-    const [heroicPackCount, setHeroicPackCount] = React.useState(packs['Heroic Pack'] ?? 0);
-    const [mythboundPackCount, setMythboundPackCount] = React.useState(packs['Mythbound Pack'] ?? 0);
-    const [walletBalance, setWalletBalance] = React.useState(user?.wallet ?? 0);
+    const [defaultPackCount, setDefaultPackCount] = React.useState(0);
+    const [sagaPackCount, setSagaPackCount] = React.useState(0);
+    const [heroicPackCount, setHeroicPackCount] = React.useState(0);
+    const [mythboundPackCount, setMythboundPackCount] = React.useState(0);
+    const [walletBalance, setWalletBalance] = React.useState(0);
     const [openedCards, setOpenedCards] = React.useState([]);
     const [isPackOverlayOpen, setIsPackOverlayOpen] = React.useState(false);
     const walletValue = normalizeWalletValue(walletBalance);
@@ -36,13 +30,6 @@ export function Packs({ userName }) {
         const value = card && typeof card.value === 'number' ? card.value : 0;
         return sum + value;
     }, 0);
-
-    const currentPacksState = React.useMemo(() => ({
-        'Default Pack': defaultPackCount,
-        'Saga Pack': sagaPackCount,
-        'Heroic Pack': heroicPackCount,
-        'Mythbound Pack': mythboundPackCount,
-    }), [defaultPackCount, sagaPackCount, heroicPackCount, mythboundPackCount]);
 
     const applyPackState = React.useCallback((nextPacks, nextWallet) => {
         const normalizedPacks = {
@@ -59,24 +46,14 @@ export function Packs({ userName }) {
 
         const normalizedWallet = normalizeWalletValue(nextWallet);
         setWalletBalance(normalizedWallet);
-
-        if (user) {
-            user.packs = normalizedPacks;
-            user.wallet = normalizedWallet;
-        }
-
-        if (userName && users?.[userName]) {
-            users[userName].packs = normalizedPacks;
-            users[userName].wallet = normalizedWallet;
-        }
-    }, [user, userName]);
+    }, []);
 
     React.useEffect(() => {
         (async () => {
-            const response = await gameApiClient.loadPackState(userName, packs, user?.wallet || 0);
+            const response = await gameApiClient.loadPackState(userName);
             applyPackState(response.packs, response.wallet);
         })();
-    }, [applyPackState, packs, user, userName]);
+    }, [applyPackState, userName]);
 
     const showOpenedCards = (cards) => {
         setOpenedCards(cards || []);
@@ -84,10 +61,6 @@ export function Packs({ userName }) {
     };
 
     const applyGeneratedCardsToValueCalculation = (generatedCards) => {
-        syncCardPopulationsFromOwnedCards(users);
-        incrementCardPopulations(generatedCards);
-        recalcCardValues();
-
         return generatedCards.map((card) => {
             if (!card?.name) return card;
             const updatedCard = getCardByName(card.name);
@@ -101,7 +74,7 @@ export function Packs({ userName }) {
             return;
         }
 
-        await gameApiClient.claimOpenedPackCards(userName, openedCards, user?.cards || {});
+        await gameApiClient.claimOpenedPackCards(userName, openedCards);
 
         setOpenedCards([]);
         setIsPackOverlayOpen(false);
@@ -124,7 +97,7 @@ export function Packs({ userName }) {
     const openPack = async (packName, cardGenerator) => {
         if (!userName) return;
 
-        const response = await gameApiClient.openPack(userName, packName, currentPacksState);
+        const response = await gameApiClient.openPack(userName, packName);
         if (!response.ok) return;
 
         applyPackState(response.packs, walletValue);
@@ -154,17 +127,15 @@ export function Packs({ userName }) {
     };
 
     const buyPack = async (packName, packPrice) => {
-        if (!userName || !user || !packName) return;
+        if (!userName || !packName) return;
 
-        const currentWallet = normalizeWalletValue(user.wallet);
+        const currentWallet = normalizeWalletValue(walletValue);
         if (currentWallet < packPrice) return;
 
         const response = await gameApiClient.buyPack(
             userName,
             packName,
-            packPrice,
-            currentPacksState,
-            currentWallet
+            packPrice
         );
         if (!response.ok) return;
 
