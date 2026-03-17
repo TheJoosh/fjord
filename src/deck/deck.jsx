@@ -1,6 +1,6 @@
 import React from 'react';
 import { Card } from '../data/card';
-import { getCardByName, getCardScarcityScore } from '../data/cards';
+import { getCardByName } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 
 function normalizeWalletValue(value) {
@@ -59,8 +59,8 @@ export function Deck({ userName }) {
       return a.name.localeCompare(b.name);
     }
 
-    const aScarcity = getCardScarcityScore(a.name);
-    const bScarcity = getCardScarcityScore(b.name);
+    const aScarcity = gameApiClient.getCurrentCardScarcity({ name: a.name });
+    const bScarcity = gameApiClient.getCurrentCardScarcity({ name: b.name });
     const scarcityDiff = bScarcity - aScarcity;
     if (scarcityDiff !== 0) return scarcityDiff;
 
