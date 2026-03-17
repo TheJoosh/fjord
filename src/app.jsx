@@ -77,6 +77,8 @@ export default function App() {
 
         (async () => {
             await refreshProfile();
+            await gameApiClient.syncCardCatalog();
+            await gameApiClient.loadCardValues();
         })();
     }, [authState, userName, refreshProfile]);
 
