@@ -11,9 +11,9 @@ import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
 import { Bank } from './bank/bank';
 import { Approve } from './approve/approve';
-import { getUser, users } from './data/users';
+import { users } from './data/users';
 import { recalcCardValues, syncCardPopulationsFromOwnedCards } from './data/cards';
-import { getMe, logoutAuth } from './login/authService';
+import { getMe, getProfile, logoutAuth } from './login/authService';
 import { gameApiClient } from '../service/gameApiClient';
 
 export default function App() {
@@ -25,24 +25,21 @@ export default function App() {
 
         const [userName, setUserName] = React.useState('');
     const [authState, setAuthState] = React.useState(AuthState.Unknown);
-    const activeUser = getUser(userName);
-    const isAdminUser = Boolean(activeUser?.admin);
+    const [profile, setProfile] = React.useState({ username: '', admin: false, wallet: 0 });
+    const isAdminUser = Boolean(profile?.admin);
   const navigate = useNavigate();
 
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
 
-        const activeUser = getUser(activeUserName);
-        if (activeUser && (!activeUser.cards || typeof activeUser.cards !== 'object')) {
-            activeUser.cards = {};
-        }
+        const activeUserCards = {};
 
         const selectedTradeCards = await gameApiClient.loadSelectedTradeCards(activeUserName);
         if (!Array.isArray(selectedTradeCards) || selectedTradeCards.length === 0) {
             return;
         }
 
-        await gameApiClient.cancelTrade(activeUserName, selectedTradeCards, activeUser?.cards || {});
+        await gameApiClient.cancelTrade(activeUserName, selectedTradeCards, activeUserCards);
     };
 
     const logout = async () => {
@@ -51,8 +48,28 @@ export default function App() {
         await logoutAuth();
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
+    setProfile({ username: '', admin: false, wallet: 0 });
     navigate('/');
   };
+
+    const refreshProfile = React.useCallback(async () => {
+        if (!userName) {
+            setProfile({ username: '', admin: false, wallet: 0 });
+            return;
+        }
+
+        const nextProfile = await getProfile();
+        if (!nextProfile) {
+            setProfile({ username: userName, admin: false, wallet: 0 });
+            return;
+        }
+
+        setProfile({
+            username: nextProfile.username || userName,
+            admin: Boolean(nextProfile.admin),
+            wallet: Number.isFinite(Number(nextProfile.wallet)) ? Number(nextProfile.wallet) : 0,
+        });
+    }, [userName]);
 
     React.useEffect(() => {
         (async () => {
@@ -61,6 +78,16 @@ export default function App() {
             setAuthState(user?.username ? AuthState.Authenticated : AuthState.Unauthenticated);
         })();
     }, []);
+
+    React.useEffect(() => {
+        if (authState !== AuthState.Authenticated || !userName) {
+            return;
+        }
+
+        (async () => {
+            await refreshProfile();
+        })();
+    }, [authState, userName, refreshProfile]);
 
   return (
     <div className="body bg-dark text-light">
