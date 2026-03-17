@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
-import { addCardToRarity, cardNameExists } from '../data/cards';
+import { cardNameExists } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 
 export function Designer({ userName }) { 
@@ -490,8 +490,6 @@ export function Designer({ userName }) {
                 ? 'Default.png'
                 : (previewImage || "Default.png");
         const activeUserName = (userName || '').trim();
-        const profile = await gameApiClient.loadUserProfile();
-        const isAdminUser = Boolean(profile?.ok && profile.admin);
 
         try {
             const cardPayload = {
@@ -506,14 +504,10 @@ export function Designer({ userName }) {
                 rarity: calculatedRarity,
             };
 
-            if (isAdminUser) {
-                addCardToRarity(calculatedRarity, cardName, cardPayload);
-            } else {
-                const pendingSubmit = await gameApiClient.submitPendingApprovalCard(cardName, cardPayload);
-                if (!pendingSubmit.ok) {
-                    setSubmitMessage(pendingSubmit.error || 'Error: Unable to submit card for approval.');
-                    return;
-                }
+            const pendingSubmit = await gameApiClient.submitPendingApprovalCard(cardName, cardPayload);
+            if (!pendingSubmit.ok) {
+                setSubmitMessage(pendingSubmit.error || 'Error: Unable to submit card for approval.');
+                return;
             }
 
             if (activeUserName) {
