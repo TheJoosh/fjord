@@ -500,6 +500,111 @@ async function getCardValuesMap() {
   };
 }
 
+async function getCardsPoolByRarity() {
+  const db = await getDb();
+  const cardsCollection = db.collection('cards');
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsRootDoc = await cardsCollection.findOne(cardsRootFilter, {
+    projection: {
+      Common: 1,
+      Uncommon: 1,
+      Rare: 1,
+      Loric: 1,
+      Mythical: 1,
+      Legendary: 1,
+    },
+  });
+
+  const pool = {
+    Common: [],
+    Uncommon: [],
+    Rare: [],
+    Loric: [],
+    Mythical: [],
+    Legendary: [],
+  };
+
+  if (!cardsRootDoc) {
+    return pool;
+  }
+
+  for (const rarity of Object.keys(pool)) {
+    const bucket = cardsRootDoc[rarity];
+    if (!bucket || typeof bucket !== 'object') continue;
+
+    pool[rarity] = Object.entries(bucket)
+      .filter(([name, card]) => {
+        if (!name || name === 'totalPopulation') return false;
+        return card && typeof card === 'object';
+      })
+      .map(([name]) => name);
+  }
+
+  return pool;
+}
+
+async function upsertApprovedCardToCards(name, card) {
+  const cardName = String(name || '').trim();
+  if (!cardName || !card || typeof card !== 'object') return;
+
+  const rarity = normalizeRarity(card.rarity);
+  const safeName = cardName.replace(/\./g, '\uFF0E').replace(/\$/g, '\uFF04');
+
+  const db = await getDb();
+  const cardsCollection = db.collection('cards');
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const projection = {
+    [`${rarity}.${safeName}.population`]: 1,
+  };
+  const existing = await cardsCollection.findOne(cardsRootFilter, { projection });
+  const currentPopulation = normalizeQty(existing?.[rarity]?.[safeName]?.population);
+
+  const cardDoc = {
+    image: card.image || 'Default.png',
+    cost: card.cost != null ? card.cost : '-',
+    rarity,
+    cardType: card.cardType || 'Type',
+    description: card.description || '',
+    strength: card.strength != null ? card.strength : '-',
+    endurance: card.endurance != null ? card.endurance : '-',
+    author: card.author || 'Unknown',
+    value: Number.isFinite(Number(card.value)) ? Number(card.value) : 0,
+    population: currentPopulation,
+  };
+
+  const unset = {};
+  for (const bucket of Object.keys(RARITY_SCORES)) {
+    if (bucket === rarity) continue;
+    unset[`${bucket}.${safeName}`] = '';
+  }
+
+  await cardsCollection.updateOne(
+    cardsRootFilter,
+    {
+      $set: {
+        [`${rarity}.${safeName}`]: cardDoc,
+        updatedAt: new Date(),
+      },
+      $unset: unset,
+    },
+    { upsert: true }
+  );
+}
+
 async function recalculateAndStoreCardValues() {
   const db = await getDb();
   const tradeProfiles = await db
@@ -755,6 +860,8 @@ module.exports = {
   setDeckSortPreference,
   upsertCardCatalogEntries,
   getCardValuesMap,
+  getCardsPoolByRarity,
+  upsertApprovedCardToCards,
   recalculateAndStoreCardValues,
   incrementCardsPopulation,
 };
