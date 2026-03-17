@@ -5,6 +5,7 @@ const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
+const persistence = require('./persistence');
 
 app.use(express.json());
 app.use(cookieParser());
@@ -22,7 +23,7 @@ app.post('/api/auth', async (req, res) => {
     res.status(409).send({ msg: 'Existing user' });
   } else {
     const user = await createUser(username, password);
-    setAuthCookie(res, user);
+    await setAuthCookie(res, user);
 
     res.send({ username: user.username });
   }
@@ -39,7 +40,7 @@ app.put('/api/auth', async (req, res) => {
 
   const user = await getUser('username', username);
   if (user && (await bcrypt.compare(password, user.password))) {
-    setAuthCookie(res, user);
+    await setAuthCookie(res, user);
 
     res.send({ username: user.username });
   } else {
@@ -51,7 +52,7 @@ app.delete('/api/auth', async (req, res) => {
   const token = req.cookies['token'];
   const user = await getUser('token', token);
   if (user) {
-    clearAuthCookie(res, user);
+    await clearAuthCookie(res, user);
   }
 
   res.send({});
@@ -66,16 +67,6 @@ app.get('/api/user/me', async (req, res) => {
     res.status(401).send({ msg: 'Unauthorized' });
   }
 });
-
-const tradeProfiles = new Map();
-const pendingTrades = new Map();
-const selectedTradeCardsByUser = new Map();
-const bankInventory = {};
-const bankWalletByUser = new Map();
-const userPacksByUser = new Map();
-const designedCountByUser = new Map();
-const pendingApprovalByName = new Map();
-const deckSortPreferenceByUser = new Map();
 
 app.post('/api/trades/bootstrap', async (req, res) => {
   const authUser = await getAuthUser(req);
@@ -93,13 +84,8 @@ app.post('/api/trades/bootstrap', async (req, res) => {
   for (const [name, profile] of Object.entries(usersMap)) {
     if (!name) continue;
     const normalized = normalizeCardMap(profile?.cards || {});
-    if (!tradeProfiles.has(name)) {
-      tradeProfiles.set(name, { cards: normalized });
-      continue;
-    }
-
-    const existing = tradeProfiles.get(name) || { cards: {} };
-    tradeProfiles.set(name, { cards: { ...normalized, ...existing.cards } });
+    const existing = await persistence.ensureTradeProfile(name, {});
+    await persistence.setTradeProfileCards(name, { ...normalized, ...existing.cards });
   }
 
   res.send({ ok: true });
@@ -114,7 +100,7 @@ app.post('/api/trades/owned', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -126,8 +112,17 @@ app.get('/api/trades/pending', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.query?.userName);
+  const pendingTrade = await persistence.getPendingTrade(userName);
   res.send({
-    pendingTrade: pendingTrades.get(userName) || {
+    pendingTrade: pendingTrade
+      ? {
+          otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName || 'Other User',
+          otherUserName: pendingTrade.otherUserName || '',
+          otherTradeCards: Array.isArray(pendingTrade.otherTradeCards)
+            ? pendingTrade.otherTradeCards
+            : [],
+        }
+      : {
       otherUserLabel: 'Other User',
       otherUserName: '',
       otherTradeCards: [],
@@ -146,12 +141,12 @@ app.put('/api/trades/pending', async (req, res) => {
   const pendingTrade = req.body?.pendingTrade;
 
   if (!userName || !pendingTrade || !pendingTrade.otherUserName) {
-    pendingTrades.delete(userName);
+    await persistence.deletePendingTrade(userName);
     res.send({ ok: true });
     return;
   }
 
-  pendingTrades.set(userName, {
+  await persistence.setPendingTrade(userName, {
     otherUserName: sanitizeUsername(pendingTrade.otherUserName),
     otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName,
     otherTradeCards: Array.isArray(pendingTrade.otherTradeCards) ? pendingTrade.otherTradeCards : [],
@@ -168,7 +163,8 @@ app.get('/api/trades/selection', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.query?.userName);
-  res.send({ selectedTradeCards: selectedTradeCardsByUser.get(userName) || [] });
+  const selectedTradeCards = await persistence.getSelectedTradeCards(userName);
+  res.send({ selectedTradeCards });
 });
 
 app.put('/api/trades/selection', async (req, res) => {
@@ -183,7 +179,7 @@ app.put('/api/trades/selection', async (req, res) => {
     ? req.body.selectedTradeCards
     : [];
 
-  selectedTradeCardsByUser.set(userName, selectedTradeCards);
+  await persistence.setSelectedTradeCards(userName, selectedTradeCards);
   res.send({ ok: true });
 });
 
@@ -196,7 +192,7 @@ app.post('/api/trades/request-user', async (req, res) => {
 
   const currentUserName = sanitizeUsername(req.body?.currentUserName);
   const target = sanitizeUsername(req.body?.requestUserInput);
-  const matchedUserName = resolveTradeUserName(target);
+  const matchedUserName = await resolveTradeUserName(target);
 
   if (!matchedUserName) {
     res.send({ error: 'User not found' });
@@ -208,7 +204,7 @@ app.post('/api/trades/request-user', async (req, res) => {
     return;
   }
 
-  const profile = ensureTradeProfile(matchedUserName, {});
+  const profile = await ensureTradeProfile(matchedUserName, {});
   const pool = [];
   for (const [name, qty] of Object.entries(profile.cards || {})) {
     const count = normalizeQty(qty);
@@ -242,7 +238,7 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
   const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
   const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
 
   const currentQty = normalizeQty(profile.cards[cardName]);
   if (currentQty <= 1) {
@@ -250,6 +246,8 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
   } else {
     profile.cards[cardName] = currentQty - 1;
   }
+
+  await persistence.setTradeProfileCards(userName, profile.cards);
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -264,9 +262,10 @@ app.post('/api/trades/owned/increment', async (req, res) => {
   const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
   const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
 
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
+  await persistence.setTradeProfileCards(userName, profile.cards);
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -282,15 +281,16 @@ app.post('/api/trades/cancel', async (req, res) => {
     ? req.body.selectedTradeCards
     : [];
   const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
 
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
     profile.cards[card.name] = normalizeQty(profile.cards[card.name]) + 1;
   }
 
-  selectedTradeCardsByUser.set(userName, []);
-  pendingTrades.delete(userName);
+  await persistence.setSelectedTradeCards(userName, []);
+  await persistence.deletePendingTrade(userName);
+  await persistence.setTradeProfileCards(userName, profile.cards);
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -313,8 +313,8 @@ app.post('/api/trades/accept', async (req, res) => {
   const activeFallbackCards = normalizeCardMap(req.body?.activeFallbackCards || {});
   const otherFallbackCards = normalizeCardMap(req.body?.otherFallbackCards || {});
 
-  const activeProfile = ensureTradeProfile(activeUserName, activeFallbackCards);
-  const otherProfile = ensureTradeProfile(otherUserName, otherFallbackCards);
+  const activeProfile = await ensureTradeProfile(activeUserName, activeFallbackCards);
+  const otherProfile = await ensureTradeProfile(otherUserName, otherFallbackCards);
 
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
@@ -334,8 +334,10 @@ app.post('/api/trades/accept', async (req, res) => {
     activeProfile.cards[card.name] = normalizeQty(activeProfile.cards[card.name]) + 1;
   }
 
-  selectedTradeCardsByUser.set(activeUserName, []);
-  pendingTrades.delete(activeUserName);
+  await persistence.setSelectedTradeCards(activeUserName, []);
+  await persistence.deletePendingTrade(activeUserName);
+  await persistence.setTradeProfileCards(activeUserName, activeProfile.cards);
+  await persistence.setTradeProfileCards(otherUserName, otherProfile.cards);
 
   res.send({
     nextActiveOwned: toOwnedEntries(activeProfile.cards),
@@ -353,6 +355,7 @@ app.post('/api/bank/inventory', async (req, res) => {
   const fallbackEntries = Array.isArray(req.body?.fallbackEntries)
     ? req.body.fallbackEntries
     : [];
+  const bankInventory = await persistence.getBankInventory();
 
   if (Object.keys(bankInventory).length === 0 && fallbackEntries.length > 0) {
     for (const entry of fallbackEntries) {
@@ -362,6 +365,7 @@ app.post('/api/bank/inventory', async (req, res) => {
         bankInventory[entry.name] = qty;
       }
     }
+    await persistence.setBankInventory(bankInventory);
   }
 
   res.send({ bankEntries: toOwnedEntries(bankInventory) });
@@ -380,8 +384,9 @@ app.post('/api/bank/buy', async (req, res) => {
   const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
   const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
 
-  const profile = ensureTradeProfile(userName, fallbackCards);
-  const currentWallet = ensureBankWallet(userName, fallbackWallet);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const currentWallet = await ensureBankWallet(userName, fallbackWallet);
+  const bankInventory = await persistence.getBankInventory();
   const availableQty = normalizeQty(bankInventory[cardName]);
 
   if (!userName || !cardName || availableQty <= 0 || currentWallet < buyPrice) {
@@ -395,7 +400,7 @@ app.post('/api/bank/buy', async (req, res) => {
   }
 
   const nextWallet = normalizeWalletValue(currentWallet - buyPrice);
-  bankWalletByUser.set(userName, nextWallet);
+  await persistence.setBankWallet(userName, nextWallet);
 
   const nextQty = Math.max(0, availableQty - 1);
   if (nextQty > 0) {
@@ -405,6 +410,8 @@ app.post('/api/bank/buy', async (req, res) => {
   }
 
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
+  await persistence.setBankInventory(bankInventory);
+  await persistence.setTradeProfileCards(userName, profile.cards);
 
   res.send({
     ok: true,
@@ -427,8 +434,9 @@ app.post('/api/bank/sell', async (req, res) => {
   const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
   const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
 
-  const profile = ensureTradeProfile(userName, fallbackCards);
-  const currentWallet = ensureBankWallet(userName, fallbackWallet);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const currentWallet = await ensureBankWallet(userName, fallbackWallet);
+  const bankInventory = await persistence.getBankInventory();
   const ownedQty = normalizeQty(profile.cards[cardName]);
 
   if (!userName || !cardName || ownedQty <= 0) {
@@ -451,7 +459,9 @@ app.post('/api/bank/sell', async (req, res) => {
   bankInventory[cardName] = normalizeQty(bankInventory[cardName]) + 1;
 
   const nextWallet = normalizeWalletValue(currentWallet + payoutAmount);
-  bankWalletByUser.set(userName, nextWallet);
+  await persistence.setBankWallet(userName, nextWallet);
+  await persistence.setBankInventory(bankInventory);
+  await persistence.setTradeProfileCards(userName, profile.cards);
 
   res.send({
     ok: true,
@@ -477,8 +487,8 @@ app.post('/api/packs/state', async (req, res) => {
     return;
   }
 
-  const packs = ensureUserPacks(userName, fallbackPacks);
-  const wallet = ensureBankWallet(userName, fallbackWallet);
+  const packs = await ensureUserPacks(userName, fallbackPacks);
+  const wallet = await ensureBankWallet(userName, fallbackWallet);
 
   res.send({ ok: true, packs, wallet });
 });
@@ -501,18 +511,18 @@ app.post('/api/packs/buy', async (req, res) => {
     return;
   }
 
-  const packs = ensureUserPacks(userName, fallbackPacks);
-  const currentWallet = ensureBankWallet(userName, fallbackWallet);
+  const packs = await ensureUserPacks(userName, fallbackPacks);
+  const currentWallet = await ensureBankWallet(userName, fallbackWallet);
   if (currentWallet < packPrice) {
     res.send({ ok: false, packs, wallet: currentWallet });
     return;
   }
 
   const nextWallet = normalizeWalletValue(currentWallet - packPrice);
-  bankWalletByUser.set(userName, nextWallet);
+  await persistence.setBankWallet(userName, nextWallet);
 
   packs[packName] = normalizeQty(packs[packName]) + 1;
-  userPacksByUser.set(userName, normalizePacksMap(packs));
+  await persistence.setUserPacks(userName, packs);
 
   res.send({ ok: true, packs: normalizePacksMap(packs), wallet: nextWallet });
 });
@@ -533,7 +543,7 @@ app.post('/api/packs/open', async (req, res) => {
     return;
   }
 
-  const packs = ensureUserPacks(userName, fallbackPacks);
+  const packs = await ensureUserPacks(userName, fallbackPacks);
   const currentCount = normalizeQty(packs[packName]);
   if (currentCount <= 0) {
     res.send({ ok: false, packs: normalizePacksMap(packs) });
@@ -541,7 +551,7 @@ app.post('/api/packs/open', async (req, res) => {
   }
 
   packs[packName] = Math.max(0, currentCount - 1);
-  userPacksByUser.set(userName, normalizePacksMap(packs));
+  await persistence.setUserPacks(userName, packs);
   res.send({ ok: true, packs: normalizePacksMap(packs) });
 });
 
@@ -561,11 +571,13 @@ app.post('/api/packs/claim', async (req, res) => {
     return;
   }
 
-  const profile = ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, fallbackCards);
   for (const card of openedCards) {
     if (!card?.name) continue;
     profile.cards[card.name] = normalizeQty(profile.cards[card.name]) + 1;
   }
+
+  await persistence.setTradeProfileCards(userName, profile.cards);
 
   res.send({ ok: true, ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -586,14 +598,14 @@ app.post('/api/designer/submit', async (req, res) => {
     return;
   }
 
-  const currentDesigned = ensureDesignedCount(userName, fallbackDesigned);
+  const currentDesigned = await ensureDesignedCount(userName, fallbackDesigned);
   const nextDesigned = currentDesigned + 1;
-  designedCountByUser.set(userName, nextDesigned);
+  await persistence.setDesignedCount(userName, nextDesigned);
 
   const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
-  const packs = ensureUserPacks(userName, fallbackPacks);
+  const packs = await ensureUserPacks(userName, fallbackPacks);
   packs[rewardPackKey] = normalizeQty(packs[rewardPackKey]) + 1;
-  userPacksByUser.set(userName, normalizePacksMap(packs));
+  await persistence.setUserPacks(userName, packs);
 
   res.send({
     ok: true,
@@ -610,8 +622,8 @@ app.get('/api/approvals/pending', async (req, res) => {
     return;
   }
 
-  const pendingCards = Array.from(pendingApprovalByName.entries())
-    .map(([name, card]) => ({ name, card: { ...card } }))
+  const pendingCards = (await persistence.listPendingApprovals())
+    .map((entry) => ({ name: entry._id, card: { ...(entry.card || {}) } }))
     .sort((a, b) => a.name.localeCompare(b.name));
 
   res.send({ pendingCards });
@@ -632,12 +644,12 @@ app.post('/api/approvals/pending', async (req, res) => {
     return;
   }
 
-  if (pendingApprovalByName.has(name)) {
+  if (await persistence.getPendingApproval(name)) {
     res.send({ ok: false, error: 'A pending card with that name already exists' });
     return;
   }
 
-  pendingApprovalByName.set(name, card);
+  await persistence.setPendingApproval(name, card);
   res.send({ ok: true });
 });
 
@@ -657,20 +669,17 @@ app.put('/api/approvals/pending', async (req, res) => {
     return;
   }
 
-  if (!pendingApprovalByName.has(originalName)) {
+  if (!(await persistence.getPendingApproval(originalName))) {
     res.send({ ok: false, error: 'Pending card not found' });
     return;
   }
 
-  if (originalName !== nextName && pendingApprovalByName.has(nextName)) {
+  if (originalName !== nextName && (await persistence.getPendingApproval(nextName))) {
     res.send({ ok: false, error: 'Another pending card already uses that name' });
     return;
   }
 
-  if (originalName !== nextName) {
-    pendingApprovalByName.delete(originalName);
-  }
-  pendingApprovalByName.set(nextName, nextCard);
+  await persistence.renamePendingApproval(originalName, nextName, nextCard);
 
   res.send({ ok: true });
 });
@@ -688,7 +697,7 @@ app.delete('/api/approvals/pending', async (req, res) => {
     return;
   }
 
-  pendingApprovalByName.delete(name);
+  await persistence.deletePendingApproval(name);
   res.send({ ok: true });
 });
 
@@ -700,13 +709,14 @@ app.post('/api/approvals/approve', async (req, res) => {
   }
 
   const name = sanitizeCardName(req.body?.name);
-  if (!name || !pendingApprovalByName.has(name)) {
+  const pending = await persistence.getPendingApproval(name);
+  if (!name || !pending) {
     res.send({ ok: false, error: 'Pending card not found' });
     return;
   }
 
-  const card = pendingApprovalByName.get(name);
-  pendingApprovalByName.delete(name);
+  const card = pending.card;
+  await persistence.deletePendingApproval(name);
 
   res.send({
     ok: true,
@@ -726,7 +736,7 @@ app.get('/api/preferences/deck-sort', async (req, res) => {
 
   const userName = sanitizeUsername(req.query?.userName);
   const fallbackSort = normalizeDeckSort(req.query?.fallback);
-  const current = ensureDeckSortPreference(userName, fallbackSort);
+  const current = await ensureDeckSortPreference(userName, fallbackSort);
   res.send({ sortBy: current });
 });
 
@@ -739,30 +749,18 @@ app.put('/api/preferences/deck-sort', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const sortBy = normalizeDeckSort(req.body?.sortBy);
-  const current = ensureDeckSortPreference(userName, sortBy);
+  await persistence.setDeckSortPreference(userName, sortBy);
+  const current = await ensureDeckSortPreference(userName, sortBy);
   res.send({ ok: true, sortBy: current });
 });
 
-const users = [];
-
 async function createUser(username, password) {
   const passwordHash = await bcrypt.hash(password, 10);
-
-  const user = {
-    username: username,
-    password: passwordHash,
-  };
-
-  users.push(user);
-
-  return user;
+  return await persistence.createUser(username, passwordHash);
 }
 
 async function getUser(field, value) {
-  if (value) {
-    return users.find((user) => user[field] === value);
-  }
-  return null;
+  return await persistence.getUserByField(field, value);
 }
 
 async function getAuthUser(req) {
@@ -835,51 +833,30 @@ function toOwnedEntries(cards) {
     .filter((entry) => entry.qty > 0);
 }
 
-function ensureTradeProfile(userName, fallbackCards) {
+async function ensureTradeProfile(userName, fallbackCards) {
   if (!userName) {
     return { cards: {} };
   }
 
-  if (!tradeProfiles.has(userName)) {
-    tradeProfiles.set(userName, { cards: normalizeCardMap(fallbackCards) });
-  }
-
-  const profile = tradeProfiles.get(userName);
-  if (!profile.cards || typeof profile.cards !== 'object') {
-    profile.cards = {};
-  }
-
-  return profile;
+  return await persistence.ensureTradeProfile(userName, fallbackCards);
 }
 
-function ensureBankWallet(userName, fallbackWallet) {
+async function ensureBankWallet(userName, fallbackWallet) {
   if (!userName) return 0;
-  if (!bankWalletByUser.has(userName)) {
-    bankWalletByUser.set(userName, normalizeWalletValue(fallbackWallet));
-  }
-  return normalizeWalletValue(bankWalletByUser.get(userName));
+  return await persistence.ensureBankWallet(userName, fallbackWallet);
 }
 
-function ensureUserPacks(userName, fallbackPacks) {
+async function ensureUserPacks(userName, fallbackPacks) {
   if (!userName) {
     return normalizePacksMap({});
   }
 
-  if (!userPacksByUser.has(userName)) {
-    userPacksByUser.set(userName, normalizePacksMap(fallbackPacks || {}));
-  }
-
-  const current = normalizePacksMap(userPacksByUser.get(userName));
-  userPacksByUser.set(userName, current);
-  return current;
+  return await persistence.ensureUserPacks(userName, fallbackPacks);
 }
 
-function ensureDesignedCount(userName, fallbackDesigned) {
+async function ensureDesignedCount(userName, fallbackDesigned) {
   if (!userName) return 0;
-  if (!designedCountByUser.has(userName)) {
-    designedCountByUser.set(userName, normalizeQty(fallbackDesigned));
-  }
-  return normalizeQty(designedCountByUser.get(userName));
+  return await persistence.ensureDesignedCount(userName, fallbackDesigned);
 }
 
 function normalizeDeckSort(value) {
@@ -890,18 +867,12 @@ function normalizeDeckSort(value) {
   return 'Rarity';
 }
 
-function ensureDeckSortPreference(userName, fallbackSort) {
+async function ensureDeckSortPreference(userName, fallbackSort) {
   if (!userName) {
     return normalizeDeckSort(fallbackSort);
   }
 
-  if (!deckSortPreferenceByUser.has(userName)) {
-    deckSortPreferenceByUser.set(userName, normalizeDeckSort(fallbackSort));
-  }
-
-  const current = normalizeDeckSort(deckSortPreferenceByUser.get(userName));
-  deckSortPreferenceByUser.set(userName, current);
-  return current;
+  return await persistence.ensureDeckSortPreference(userName, fallbackSort);
 }
 
 function getRewardPackKeyForDesignCount(designCount) {
@@ -960,11 +931,11 @@ function isKnownPackName(packName) {
   );
 }
 
-function resolveTradeUserName(rawName) {
+async function resolveTradeUserName(rawName) {
   const target = sanitizeUsername(rawName);
   if (!target) return null;
 
-  const names = Array.from(tradeProfiles.keys());
+  const names = await persistence.listTradeProfileNames();
   const exact = names.find((name) => name === target);
   if (exact) return exact;
 
@@ -974,18 +945,19 @@ function resolveTradeUserName(rawName) {
   return null;
 }
 
-function setAuthCookie(res, user) {
-  user.token = crypto.randomUUID();
+async function setAuthCookie(res, user) {
+  const nextToken = crypto.randomUUID();
+  await persistence.setUserToken(user.username, nextToken);
 
-  res.cookie('token', user.token, {
+  res.cookie('token', nextToken, {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'strict',
   });
 }
 
-function clearAuthCookie(res, user) {
-  delete user.token;
+async function clearAuthCookie(res, user) {
+  await persistence.clearUserToken(user.username);
   res.clearCookie('token');
 }
 
@@ -1007,6 +979,14 @@ app.get(/^(?!\/api).*/, (req, res) => {
 });
 
 const port = 4000;
-app.listen(port, function () {
-  console.log(`Listening on port ${port}`);
+
+(async () => {
+  await persistence.initPersistence();
+
+  app.listen(port, function () {
+    console.log(`Listening on port ${port}`);
+  });
+})().catch((error) => {
+  console.error('Failed to initialize backend persistence', error);
+  process.exit(1);
 });
