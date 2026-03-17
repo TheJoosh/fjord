@@ -19,6 +19,7 @@ export function Deck({ userName }) {
   const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
   const [ownedCardsMap, setOwnedCardsMap] = React.useState({});
   const [walletBalance, setWalletBalance] = React.useState(0);
+  const [totalPopulation, setTotalPopulation] = React.useState(0);
 
   const effectiveCards = { ...(ownedCardsMap || {}) };
   for (const card of selectedTradeCards) {
@@ -30,17 +31,24 @@ export function Deck({ userName }) {
   let deckValue = 0;
   const walletValue = normalizeWalletValue(walletBalance);
   for (const [name, qty] of Object.entries(effectiveCards)) {
-    const card = getCardByName(name);
-    if (card && typeof card.value === 'number') {
-      deckValue += card.value * (parseInt(qty, 10) || 0);
-    }
+    const cardValue = gameApiClient.getCurrentCardValue({ name });
+    deckValue += cardValue * (parseInt(qty, 10) || 0);
   }
 
   // build list of owned cards with quantities
   const owned = Object.keys(effectiveCards || {}).map(name => ({
       name,
       qty: Math.max(0, parseInt(effectiveCards[name], 10) || 0),
-      card: getCardByName(name),
+      card: (() => {
+        const base = getCardByName(name);
+        if (!base) return null;
+        return {
+          ...base,
+          value: gameApiClient.getCurrentCardValue({ name }),
+          scarcity: gameApiClient.getCurrentCardScarcity({ name }),
+          population: gameApiClient.getCurrentCardPopulation({ name }),
+        };
+      })(),
     })).filter(x => x.qty > 0);
 
   const sortedOwned = [...owned].sort((a, b) => {
@@ -115,6 +123,18 @@ export function Deck({ userName }) {
         nextOwnedCardsMap[entry.name] = Math.max(0, parseInt(entry.qty, 10) || 0);
       }
       setOwnedCardsMap(nextOwnedCardsMap);
+      setTotalPopulation(gameApiClient.getTotalCardPopulation());
+    })();
+  }, [userName]);
+
+  React.useEffect(() => {
+    (async () => {
+      if (!userName) {
+        setTotalPopulation(0);
+        return;
+      }
+      await gameApiClient.loadCardValues();
+      setTotalPopulation(gameApiClient.getTotalCardPopulation());
     })();
   }, [userName]);
 
