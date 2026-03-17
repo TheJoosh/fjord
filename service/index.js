@@ -922,15 +922,17 @@ const staticCandidates = [
 ];
 const distPath = staticCandidates.find((candidate) => fs.existsSync(path.join(candidate, 'index.html')));
 
-if (!distPath) {
-  throw new Error(`Unable to find frontend build output. Checked: ${staticCandidates.join(', ')}`);
+if (distPath) {
+  app.use(express.static(distPath));
+
+  app.get(/^(?!\/api).*/, (req, res) => {
+    res.sendFile(path.join(distPath, 'index.html'));
+  });
+} else {
+  console.warn(
+    `Frontend build output not found. API routes will still run. Checked: ${staticCandidates.join(', ')}`
+  );
 }
-
-app.use(express.static(distPath));
-
-app.get(/^(?!\/api).*/, (req, res) => {
-  res.sendFile(path.join(distPath, 'index.html'));
-});
 
 const port = 4000;
 
