@@ -1,5 +1,3 @@
-import { storageService } from '../../service/storageService';
-
 export const cardsByRarity = {
   Placeholder: {
     "Placeholder": {
@@ -411,8 +409,6 @@ export const cardsByRarity = {
   },
 };
 
-const CARDS_STORAGE_KEY = 'cardsByRarity';
-const PENDING_APPROVAL_STORAGE_KEY = 'pendingApproval';
 export const pendingApproval = {};
 let cardScarcityByName = {};
 
@@ -448,135 +444,12 @@ function ensurePopulationFields(source) {
   }
 }
 
-function canUseLocalStorage() {
-  return typeof window !== 'undefined' && typeof window.localStorage !== 'undefined';
-}
-
-function toPersistableCardsByRarity(source) {
-  const result = {};
-
-  for (const [rarity, group] of Object.entries(source || {})) {
-    if (!group || typeof group !== 'object') continue;
-
-    result[rarity] = {};
-    for (const [name, card] of Object.entries(group)) {
-      if (!card || typeof card !== 'object') continue;
-
-      const persistableCard = { ...card };
-      if (typeof persistableCard.image === 'string' && persistableCard.image.startsWith('data:')) {
-        persistableCard.image = 'Default.png';
-      }
-      persistableCard.population = normalizePopulationValue(persistableCard.population);
-
-      result[rarity][name] = persistableCard;
-    }
-  }
-
-  return result;
-}
-
-function toPersistablePendingApproval(source) {
-  const result = {};
-
-  for (const [name, card] of Object.entries(source || {})) {
-    if (!card || typeof card !== 'object') continue;
-
-    const persistableCard = { ...card };
-    if (typeof persistableCard.image === 'string' && persistableCard.image.startsWith('data:')) {
-      persistableCard.image = 'Default.png';
-    }
-    persistableCard.population = normalizePopulationValue(persistableCard.population);
-    result[name] = persistableCard;
-  }
-
-  return result;
-}
-
-async function hydrateCardsByRarityFromStorage() {
-  if (!canUseLocalStorage()) return;
-
-  const defaultCardsByRarity = {};
-  for (const [rarity, group] of Object.entries(cardsByRarity || {})) {
-    defaultCardsByRarity[rarity] = { ...(group || {}) };
-  }
-
-  try {
-    const parsed = await storageService.getJson(CARDS_STORAGE_KEY, null);
-    if (parsed && typeof parsed === 'object') {
-        const merged = {};
-
-        for (const [rarity, group] of Object.entries(defaultCardsByRarity)) {
-          merged[rarity] = { ...(group || {}) };
-        }
-
-        for (const [rarity, group] of Object.entries(parsed || {})) {
-          if (!group || typeof group !== 'object') continue;
-          if (!merged[rarity]) merged[rarity] = {};
-
-          for (const [name, card] of Object.entries(group)) {
-            if (!card || typeof card !== 'object') continue;
-            merged[rarity][name] = card;
-          }
-        }
-
-        for (const key of Object.keys(cardsByRarity)) {
-          delete cardsByRarity[key];
-        }
-        Object.assign(cardsByRarity, merged);
-    }
-  } catch {
-    // Ignore malformed localStorage data and continue with in-memory defaults.
-  }
-
-  ensurePopulationFields(cardsByRarity);
-
-  try {
-    const payload = toPersistableCardsByRarity(cardsByRarity);
-    await storageService.setJson(CARDS_STORAGE_KEY, payload);
-  } catch {
-    // Ignore storage write failures on hydration.
-  }
-}
-
-async function hydratePendingApprovalFromStorage() {
-  if (!canUseLocalStorage()) return;
-
-  let merged = {};
-
-  try {
-    const parsed = await storageService.getJson(PENDING_APPROVAL_STORAGE_KEY, null);
-    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-      merged = { ...parsed };
-    }
-  } catch {
-    merged = {};
-  }
-
-  for (const key of Object.keys(pendingApproval)) {
-    delete pendingApproval[key];
-  }
-  Object.assign(pendingApproval, merged);
-
-  try {
-    const payload = toPersistablePendingApproval(pendingApproval);
-    await storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
-  } catch {
-    // Ignore storage write failures on hydration.
-  }
-}
-
 export function persistCardsByRarity() {
-  if (!canUseLocalStorage()) return;
-
-  const payload = toPersistableCardsByRarity(cardsByRarity);
-  void storageService.setJson(CARDS_STORAGE_KEY, payload);
+  // Step 3: local client persistence removed; backend is the source of truth.
 }
 
 export function persistPendingApproval() {
-  if (!canUseLocalStorage()) return;
-
-  const payload = toPersistablePendingApproval(pendingApproval);
-  void storageService.setJson(PENDING_APPROVAL_STORAGE_KEY, payload);
+  // Step 3: local client persistence removed; backend is the source of truth.
 }
 
 export function addCardToRarity(rarity, name, cardData) {
@@ -701,10 +574,6 @@ export function incrementCardPopulations(cards) {
   persistCardsByRarity();
   return cardsByRarity;
 }
-
-void hydrateCardsByRarityFromStorage();
-void hydratePendingApprovalFromStorage();
-
 
 export function getCardByName(name) {
   for (const rarity in cardsByRarity) {
