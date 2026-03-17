@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card } from '../data/card';
-import { getUser } from '../data/users';
 import { gameApiClient } from '../../service/gameApiClient';
 
 export function Trades({ userName }) {
@@ -18,18 +17,13 @@ export function Trades({ userName }) {
         const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
         const hasValidTradePartner = Boolean(otherUserName);
 
-        const activeUser = getUser(userName);
-        if (activeUser && (!activeUser.cards || typeof activeUser.cards !== 'object')) {
-            activeUser.cards = {};
-        }
-
         const getCurrentCardValue = React.useCallback((cardLike) => {
             return gameApiClient.getCurrentCardValue(cardLike);
         }, []);
 
         const buildOwnedDeckCards = React.useCallback(async () => {
-            return await gameApiClient.buildOwnedDeckCards(userName, activeUser?.cards || {});
-        }, [activeUser, userName]);
+            return await gameApiClient.buildOwnedDeckCards(userName);
+        }, [userName]);
 
         React.useEffect(() => {
             if (!isDeckOverlayOpen) return;
@@ -113,7 +107,7 @@ export function Trades({ userName }) {
             const cardName = clickedCard?.name;
             if (!userName || !cardName) return;
 
-            await gameApiClient.transferCardFromOwnedToTrade(userName, cardName, activeUser?.cards);
+            await gameApiClient.transferCardFromOwnedToTrade(userName, cardName);
             setOwnedDeckCards(await buildOwnedDeckCards());
 
             setSelectedTradeCards((prev) => ([
@@ -129,7 +123,7 @@ export function Trades({ userName }) {
             const tradeCard = selectedTradeCards.find((card) => card.tradeEntryId === tradeEntryId);
             if (!tradeCard?.name || !userName) return;
 
-            await gameApiClient.returnCardFromTradeSelection(userName, tradeCard.name, activeUser?.cards);
+            await gameApiClient.returnCardFromTradeSelection(userName, tradeCard.name);
             setOwnedDeckCards(await buildOwnedDeckCards());
             setSelectedTradeCards((prev) => prev.filter((card) => card.tradeEntryId !== tradeEntryId));
         };
@@ -143,7 +137,7 @@ export function Trades({ userName }) {
         }, 0);
 
         const handleCancelTrade = async () => {
-            await gameApiClient.cancelTrade(userName, selectedTradeCards, activeUser?.cards);
+            await gameApiClient.cancelTrade(userName, selectedTradeCards);
 
             setSelectedTradeCards([]);
             setOtherTradeCards([]);
