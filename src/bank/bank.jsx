@@ -18,6 +18,7 @@ export function Bank({ userName }) {
   const [isSellMode, setIsSellMode] = React.useState(false);
   const [sortBy, setSortBy] = React.useState('Rarity');
   const [walletBalance, setWalletBalance] = React.useState(0);
+  const [totalPopulation, setTotalPopulation] = React.useState(0);
   const walletValue = normalizeWalletValue(walletBalance);
 
   const loadBankCards = React.useCallback(async () => {
@@ -128,6 +129,7 @@ export function Bank({ userName }) {
     setBankCards(mapBankEntriesToCards(response.bankEntries));
     setBankCards(await loadBankCards());
     setOwnedDeckCards(await buildOwnedDeckCards());
+    setTotalPopulation(gameApiClient.getTotalCardPopulation());
   };
 
   const handleSellCard = async (cardName) => {
@@ -153,6 +155,7 @@ export function Bank({ userName }) {
     setBankCards(await loadBankCards());
 
     setOwnedDeckCards(await buildOwnedDeckCards());
+    setTotalPopulation(gameApiClient.getTotalCardPopulation());
   };
 
   const buildOwnedDeckCards = React.useCallback(async () => {
@@ -163,6 +166,7 @@ export function Bank({ userName }) {
   React.useEffect(() => {
     (async () => {
       setBankCards(await loadBankCards());
+      setTotalPopulation(gameApiClient.getTotalCardPopulation());
     })();
   }, [loadBankCards]);
 
