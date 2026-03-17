@@ -508,9 +508,9 @@ export const gameApiClient = {
     };
   },
 
-  async openPack(userName, packName) {
+  async openPack(userName, packName, fallbackOpenedCards = []) {
     if (!userName || !packName) {
-      return { ok: false, packs: normalizePacksMap({}) };
+      return { ok: false, packs: normalizePacksMap({}), openedCards: [] };
     }
 
     const response = await requestTradeApi('/api/packs/open', {
@@ -518,16 +518,27 @@ export const gameApiClient = {
       body: JSON.stringify({
         userName,
         packName,
+        openedCards: Array.isArray(fallbackOpenedCards) ? fallbackOpenedCards : [],
       }),
     });
 
     if (!response) {
-      return { ok: false, packs: normalizePacksMap({}) };
+      return { ok: false, packs: normalizePacksMap({}), openedCards: [] };
+    }
+
+    const nextMap = response?.valuesByName;
+    const nextTotalPopulation = Number(response?.totalPopulation);
+    if (nextMap && typeof nextMap === 'object') {
+      liveCardValuesByName = nextMap;
+      if (Number.isFinite(nextTotalPopulation)) {
+        liveTotalPopulation = Math.max(0, parseInt(nextTotalPopulation, 10) || 0);
+      }
     }
 
     return {
       ok: Boolean(response.ok),
       packs: normalizePacksMap(response.packs || {}),
+      openedCards: hydrateCards(Array.isArray(response.openedCards) ? response.openedCards : []),
     };
   },
 
