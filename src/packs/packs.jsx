@@ -24,6 +24,7 @@ export function Packs({ userName }) {
     const [walletBalance, setWalletBalance] = React.useState(0);
     const [openedCards, setOpenedCards] = React.useState([]);
     const [isPackOverlayOpen, setIsPackOverlayOpen] = React.useState(false);
+    const [isOpeningPack, setIsOpeningPack] = React.useState(false);
     const walletValue = normalizeWalletValue(walletBalance);
 
     const openedCardsTotalValue = openedCards.reduce((sum, card) => {
@@ -72,6 +73,8 @@ export function Packs({ userName }) {
     };
 
     const claimOpenedCards = async () => {
+        if (isOpeningPack) return;
+
         if (!openedCards.length) {
             setIsPackOverlayOpen(false);
             return;
@@ -99,18 +102,29 @@ export function Packs({ userName }) {
     }, [isPackOverlayOpen, claimOpenedCards]);
 
     const openPack = async (packName, cardGenerator) => {
-        if (!userName) return;
+        if (!userName || isOpeningPack) return;
+
+        setOpenedCards([]);
+        setIsPackOverlayOpen(true);
+        setIsOpeningPack(true);
 
         const fallbackCards = cardGenerator();
 
-        const response = await gameApiClient.openPack(userName, packName, fallbackCards);
-        if (!response.ok) return;
+        try {
+            const response = await gameApiClient.openPack(userName, packName, fallbackCards);
+            if (!response.ok) {
+                setIsPackOverlayOpen(false);
+                return;
+            }
 
-        applyPackState(response.packs, walletValue);
-        const cardsToDisplay = Array.isArray(response.openedCards) && response.openedCards.length > 0
-            ? response.openedCards
-            : fallbackCards;
-        showOpenedCards(applyGeneratedCardsToValueCalculation(cardsToDisplay));
+            applyPackState(response.packs, walletValue);
+            const cardsToDisplay = Array.isArray(response.openedCards) && response.openedCards.length > 0
+                ? response.openedCards
+                : fallbackCards;
+            showOpenedCards(applyGeneratedCardsToValueCalculation(cardsToDisplay));
+        } finally {
+            setIsOpeningPack(false);
+        }
     };
 
     const openNormalPack = async () => {
@@ -239,15 +253,22 @@ export function Packs({ userName }) {
         </div>
 
         {isPackOverlayOpen && (
-            <div className="pexels-overlay" onClick={claimOpenedCards}>
+            <div className="pexels-overlay" onClick={isOpeningPack ? undefined : claimOpenedCards}>
                 <div className="pexels-overlay-panel pack-overlay-panel" onClick={e => e.stopPropagation()}>
                     <div className="pexels-overlay-header">
-                        <h3>Pack Value: ${openedCardsTotalValue.toFixed(2)}</h3>
-                        <button type="button" className="pexels-overlay-close" onClick={claimOpenedCards}>Claim Cards</button>
+                        <h3>{isOpeningPack ? 'Opening Pack...' : `Pack Value: $${openedCardsTotalValue.toFixed(2)}`}</h3>
+                        {!isOpeningPack && (
+                            <button type="button" className="pexels-overlay-close" onClick={claimOpenedCards}>Claim Cards</button>
+                        )}
                     </div>
 
                     <div className="row deck-row pack-overlay-cards">
-                        {openedCards.map((card, index) => (
+                        {isOpeningPack && (
+                            <div className="col deck-col pack-overlay-col" style={{ textAlign: 'center' }}>
+                                <h4>Looking at Cards...</h4>
+                            </div>
+                        )}
+                        {!isOpeningPack && openedCards.map((card, index) => (
                             <div key={`${card.name}-${index}`} className="col deck-col pack-overlay-col">
                                 <Card
                                     image={card.image}
@@ -264,6 +285,14 @@ export function Packs({ userName }) {
                                 </div>
                             </div>
                         ))}
+                        {!isOpeningPack && openedCards.length === 0 && (
+                            <div className="col deck-col pack-overlay-col" style={{ textAlign: 'center' }}>
+                                <h4>No cards were generated.</h4>
+                                <div className="card-value mt-1">
+                                    <small>Press Claim Cards to close.</small>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>
