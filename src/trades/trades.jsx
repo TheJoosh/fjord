@@ -17,8 +17,9 @@ export function Trades({ userName }) {
         const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
         const hasValidTradePartner = Boolean(otherUserName);
 
-        const getCurrentCardValue = React.useCallback((cardLike) => {
-            return gameApiClient.getCurrentCardValue(cardLike);
+        const getDisplayCardValue = React.useCallback((cardLike) => {
+            const value = Number(cardLike?.value);
+            return Number.isFinite(value) ? value : 0;
         }, []);
 
         const buildOwnedDeckCards = React.useCallback(async () => {
@@ -129,11 +130,11 @@ export function Trades({ userName }) {
         };
 
         const userTradeValue = selectedTradeCards.reduce((sum, card) => {
-            return sum + getCurrentCardValue(card);
+            return sum + getDisplayCardValue(card);
         }, 0);
 
         const otherTradeValue = otherTradeCards.reduce((sum, card) => {
-            return sum + getCurrentCardValue(card);
+            return sum + getDisplayCardValue(card);
         }, 0);
 
         const handleCancelTrade = async () => {
@@ -189,7 +190,7 @@ export function Trades({ userName }) {
                                 endurance={card.endurance}
                             />
                             <div className="card-value mt-1">
-                                <small>Value: ${getCurrentCardValue(card).toFixed(2)}</small>
+                                <small>Value: ${getDisplayCardValue(card).toFixed(2)}</small>
                             </div>
                         </div>
                     ))}
@@ -226,7 +227,7 @@ export function Trades({ userName }) {
                                 endurance={card.endurance}
                             />
                             <div className="card-value mt-1">
-                                <small>Value: ${getCurrentCardValue(card).toFixed(2)}</small>
+                                <small>Value: ${getDisplayCardValue(card).toFixed(2)}</small>
                             </div>
                             <button
                                 type="button"
