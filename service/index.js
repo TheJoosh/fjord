@@ -542,11 +542,19 @@ app.post('/api/packs/open', async (req, res) => {
     return;
   }
 
+  const requestedOpenedCards = sanitizeOpenedCards(req.body?.openedCards);
   const cardState = await persistence.getCardValuesMap();
-  let generatedCardNames = drawPackCardNames(packName, cardState.valuesByName);
-  if (generatedCardNames.length === 0) {
-    generatedCardNames = sanitizeOpenedCardNames(req.body?.openedCards);
+
+  let generatedCards = requestedOpenedCards;
+  if (generatedCards.length === 0) {
+    const generatedCardNames = drawPackCardNames(packName, cardState.valuesByName);
+    generatedCards = generatedCardNames.map((name) => ({
+      name,
+      rarity: normalizeRarity(cardState.valuesByName?.[name]?.rarity),
+    }));
   }
+
+  const generatedCardNames = generatedCards.map((card) => card.name);
 
   if (generatedCardNames.length === 0) {
     res.send({ ok: false, packs: normalizePacksMap(packs), openedCards: [] });
@@ -561,6 +569,7 @@ app.post('/api/packs/open', async (req, res) => {
 
   await persistence.setUserPacks(userName, packs);
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await persistence.incrementCardsPopulation(generatedCards);
   const nextState = await recalculateCardValuesInDb();
 
   res.send({
@@ -762,10 +771,17 @@ async function createUser(username, password) {
   return await persistence.createUser(username, passwordHash);
 }
 
-function sanitizeOpenedCardNames(openedCards) {
+function sanitizeOpenedCards(openedCards) {
   if (!Array.isArray(openedCards)) return [];
   return openedCards
-    .map((card) => sanitizeCardName(card?.name || card))
+    .map((card) => {
+      const name = sanitizeCardName(card?.name || card);
+      if (!name) return null;
+      return {
+        name,
+        rarity: normalizeRarity(card?.rarity),
+      };
+    })
     .filter(Boolean);
 }
 
@@ -875,6 +891,21 @@ function normalizeDeckSort(value) {
     return next;
   }
   return 'Rarity';
+}
+
+function normalizeRarity(value) {
+  const rarity = String(value || '').trim();
+  if (
+    rarity === 'Common' ||
+    rarity === 'Uncommon' ||
+    rarity === 'Rare' ||
+    rarity === 'Loric' ||
+    rarity === 'Mythical' ||
+    rarity === 'Legendary'
+  ) {
+    return rarity;
+  }
+  return 'Common';
 }
 
 async function ensureDeckSortPreference(userName, fallbackSort) {
