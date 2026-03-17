@@ -68,27 +68,22 @@ app.get('/api/user/me', async (req, res) => {
   }
 });
 
-app.post('/api/trades/bootstrap', async (req, res) => {
+app.get('/api/user/profile', async (req, res) => {
   const authUser = await getAuthUser(req);
   if (!authUser) {
     res.status(401).send({ msg: 'Unauthorized' });
     return;
   }
 
-  const usersMap = req.body?.usersMap;
-  if (!usersMap || typeof usersMap !== 'object') {
-    res.send({ ok: true });
-    return;
-  }
+  const username = sanitizeUsername(authUser.username);
+  const admin = await persistence.ensureUserAdmin(username, Boolean(authUser.admin));
+  const wallet = await ensureBankWallet(username, 0);
 
-  for (const [name, profile] of Object.entries(usersMap)) {
-    if (!name) continue;
-    const normalized = normalizeCardMap(profile?.cards || {});
-    const existing = await persistence.ensureTradeProfile(name, {});
-    await persistence.setTradeProfileCards(name, { ...normalized, ...existing.cards });
-  }
-
-  res.send({ ok: true });
+  res.send({
+    username,
+    admin,
+    wallet,
+  });
 });
 
 app.post('/api/trades/owned', async (req, res) => {
