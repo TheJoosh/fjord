@@ -74,6 +74,23 @@ async function requestTradeApi(path, options = {}) {
 }
 
 export const gameApiClient = {
+  async loadUserProfile() {
+    const response = await requestTradeApi('/api/user/profile', {
+      method: 'GET',
+    });
+
+    if (!response) {
+      return { ok: false, username: '', admin: false, wallet: 0 };
+    }
+
+    return {
+      ok: true,
+      username: String(response.username || ''),
+      admin: Boolean(response.admin),
+      wallet: normalizeWalletValue(response.wallet),
+    };
+  },
+
   getCurrentCardValue(cardLike) {
     if (!cardLike?.name) return 0;
     const latest = getCardByName(cardLike.name);
