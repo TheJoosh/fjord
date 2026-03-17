@@ -1,4 +1,7 @@
-import { getCardByName } from '../src/data/cards';
+import { cardsByRarity, getCardByName } from '../src/data/cards';
+
+let liveCardValuesByName = {};
+let liveTotalPopulation = 0;
 
 function normalizeQty(value) {
   return Math.max(0, parseInt(value, 10) || 0);
@@ -31,6 +34,19 @@ function hydrateCards(cards) {
   return (cards || []).map((card) => hydrateCard(card));
 }
 
+function buildCatalogEntries() {
+  const entries = [];
+  for (const [rarity, group] of Object.entries(cardsByRarity || {})) {
+    if (!group || typeof group !== 'object') continue;
+    for (const [name, card] of Object.entries(group)) {
+      if (!card || typeof card !== 'object') continue;
+      if (!name || name === 'totalPopulation') continue;
+      entries.push({ name, rarity });
+    }
+  }
+  return entries;
+}
+
 async function requestTradeApi(path, options = {}) {
   try {
     const res = await fetch(path, {
@@ -54,6 +70,65 @@ async function requestTradeApi(path, options = {}) {
 }
 
 export const gameApiClient = {
+  async syncCardCatalog() {
+    const response = await requestTradeApi('/api/cards/catalog', {
+      method: 'POST',
+      body: JSON.stringify({ entries: buildCatalogEntries() }),
+    });
+
+    const nextMap = response?.valuesByName;
+    const nextTotalPopulation = Number(response?.totalPopulation);
+    if (nextMap && typeof nextMap === 'object') {
+      liveCardValuesByName = nextMap;
+      if (Number.isFinite(nextTotalPopulation)) {
+        liveTotalPopulation = Math.max(0, parseInt(nextTotalPopulation, 10) || 0);
+      }
+      return true;
+    }
+
+    return false;
+  },
+
+  async loadCardValues() {
+    const response = await requestTradeApi('/api/cards/values', {
+      method: 'GET',
+    });
+
+    const nextMap = response?.valuesByName;
+    const nextTotalPopulation = Number(response?.totalPopulation);
+    if (nextMap && typeof nextMap === 'object') {
+      liveCardValuesByName = nextMap;
+      if (Number.isFinite(nextTotalPopulation)) {
+        liveTotalPopulation = Math.max(0, parseInt(nextTotalPopulation, 10) || 0);
+      }
+      return {
+        valuesByName: liveCardValuesByName,
+        totalPopulation: liveTotalPopulation,
+      };
+    }
+
+    return {
+      valuesByName: liveCardValuesByName,
+      totalPopulation: liveTotalPopulation,
+    };
+  },
+
+  getCurrentCardScarcity(cardLike) {
+    if (!cardLike?.name) return 0;
+    const scarcity = Number(liveCardValuesByName?.[cardLike.name]?.scarcity);
+    return Number.isFinite(scarcity) ? scarcity : 0;
+  },
+
+  getCurrentCardPopulation(cardLike) {
+    if (!cardLike?.name) return 0;
+    const population = Number(liveCardValuesByName?.[cardLike.name]?.population);
+    return Number.isFinite(population) ? Math.max(0, parseInt(population, 10) || 0) : 0;
+  },
+
+  getTotalCardPopulation() {
+    return Math.max(0, parseInt(liveTotalPopulation, 10) || 0);
+  },
+
   async loadUserProfile() {
     const response = await requestTradeApi('/api/user/profile', {
       method: 'GET',
@@ -72,6 +147,13 @@ export const gameApiClient = {
   },
 
   getCurrentCardValue(cardLike) {
+    if (cardLike?.name) {
+      const liveValue = Number(liveCardValuesByName?.[cardLike.name]?.value);
+      if (Number.isFinite(liveValue)) {
+        return liveValue;
+      }
+    }
+
     if (!cardLike?.name) return 0;
     const latest = getCardByName(cardLike.name);
     if (latest && typeof latest.value === 'number') {
@@ -82,6 +164,8 @@ export const gameApiClient = {
 
   async buildOwnedDeckCards(userName) {
     if (!userName) return [];
+
+    await this.loadCardValues();
 
     const response = await requestTradeApi('/api/trades/owned', {
       method: 'POST',
@@ -95,7 +179,19 @@ export const gameApiClient = {
         const card = getCardByName(name);
         const normalizedQty = normalizeQty(qty);
         if (!card || normalizedQty <= 0) return null;
-        return { ...card, qty: normalizedQty };
+        const liveState = liveCardValuesByName?.[name] || {};
+        const liveValue = Number(liveState.value);
+        const liveScarcity = Number(liveState.scarcity);
+        const livePopulation = Number(liveState.population);
+        return {
+          ...card,
+          qty: normalizedQty,
+          value: Number.isFinite(liveValue) ? liveValue : card.value,
+          scarcity: Number.isFinite(liveScarcity) ? liveScarcity : 0,
+          population: Number.isFinite(livePopulation)
+            ? Math.max(0, parseInt(livePopulation, 10) || 0)
+            : 0,
+        };
       })
       .filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name));
@@ -255,6 +351,8 @@ export const gameApiClient = {
   },
 
   async loadBankInventory() {
+    await this.loadCardValues();
+
     const response = await requestTradeApi('/api/bank/inventory', {
       method: 'POST',
       body: JSON.stringify({}),
@@ -266,7 +364,21 @@ export const gameApiClient = {
         const card = getCardByName(name);
         const normalizedQty = normalizeQty(qty);
         if (!card || normalizedQty <= 0) return null;
-        return { name, qty: normalizedQty, card };
+        const liveValue = Number(liveCardValuesByName?.[name]?.value);
+        return {
+          name,
+          qty: normalizedQty,
+          card: {
+            ...card,
+            value: Number.isFinite(liveValue) ? liveValue : card.value,
+            scarcity: Number.isFinite(Number(liveCardValuesByName?.[name]?.scarcity))
+              ? Number(liveCardValuesByName[name].scarcity)
+              : 0,
+            population: Number.isFinite(Number(liveCardValuesByName?.[name]?.population))
+              ? Math.max(0, parseInt(liveCardValuesByName[name].population, 10) || 0)
+              : 0,
+          },
+        };
       })
       .filter(Boolean)
       .sort((a, b) => a.name.localeCompare(b.name));
