@@ -1,7 +1,7 @@
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import '../app.css';
-import { drawWeightedCards, getCardByName } from '../data/cards';
+import { drawWeightedCards } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 import { Card } from '../data/card';
 
@@ -50,6 +50,7 @@ export function Packs({ userName }) {
 
     React.useEffect(() => {
         (async () => {
+            await gameApiClient.loadCardValues();
             const response = await gameApiClient.loadPackState(userName);
             applyPackState(response.packs, response.wallet);
         })();
@@ -63,8 +64,10 @@ export function Packs({ userName }) {
     const applyGeneratedCardsToValueCalculation = (generatedCards) => {
         return generatedCards.map((card) => {
             if (!card?.name) return card;
-            const updatedCard = getCardByName(card.name);
-            return updatedCard ? { ...card, value: updatedCard.value } : card;
+            return {
+                ...card,
+                value: gameApiClient.getCurrentCardValue({ name: card.name, value: card.value }),
+            };
         });
     };
 
@@ -75,6 +78,7 @@ export function Packs({ userName }) {
         }
 
         await gameApiClient.claimOpenedPackCards(userName, openedCards);
+        await gameApiClient.loadCardValues();
 
         setOpenedCards([]);
         setIsPackOverlayOpen(false);
@@ -101,6 +105,7 @@ export function Packs({ userName }) {
         if (!response.ok) return;
 
         applyPackState(response.packs, walletValue);
+        await gameApiClient.loadCardValues();
 
         const cards = cardGenerator();
         showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
