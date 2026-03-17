@@ -1,5 +1,4 @@
 import { getCardByName } from '../src/data/cards';
-import { getUser, users } from '../src/data/users';
 
 function normalizeQty(value) {
   return Math.max(0, parseInt(value, 10) || 0);
@@ -19,16 +18,6 @@ function normalizePacksMap(packs) {
     'Heroic Pack': normalizeQty(source['Heroic Pack']),
     'Mythbound Pack': normalizeQty(source['Mythbound Pack']),
   };
-}
-
-function toUserSnapshot() {
-  const snapshot = {};
-  for (const [name, profile] of Object.entries(users || {})) {
-    snapshot[name] = {
-      cards: { ...(profile?.cards || {}) },
-    };
-  }
-  return snapshot;
 }
 
 function hydrateCard(cardLike) {
@@ -84,21 +73,6 @@ async function requestTradeApi(path, options = {}) {
   }
 }
 
-let hasBootstrappedProfiles = false;
-
-async function ensureBootstrap() {
-  if (hasBootstrappedProfiles) return;
-
-  const response = await requestTradeApi('/api/trades/bootstrap', {
-    method: 'POST',
-    body: JSON.stringify({ usersMap: toUserSnapshot() }),
-  });
-
-  if (response && response.ok) {
-    hasBootstrappedProfiles = true;
-  }
-}
-
 export const gameApiClient = {
   getCurrentCardValue(cardLike) {
     if (!cardLike?.name) return 0;
@@ -111,7 +85,6 @@ export const gameApiClient = {
 
   async buildOwnedDeckCards(userName, activeUserCards = {}) {
     if (!userName) return [];
-    await ensureBootstrap();
 
     const response = await requestTradeApi('/api/trades/owned', {
       method: 'POST',
@@ -192,19 +165,7 @@ export const gameApiClient = {
     });
   },
 
-  async resolveUserName(inputName) {
-    const target = (inputName || '').trim();
-    if (!target) return null;
-
-    const fallbackKeys = Object.keys(users || {});
-    const exactFallback = fallbackKeys.find((name) => name === target);
-    if (exactFallback) return exactFallback;
-    return fallbackKeys.find((name) => name.toLowerCase() === target.toLowerCase()) || null;
-  },
-
   async requestTradeUser(currentUserName, requestUserInput) {
-    await ensureBootstrap();
-
     const response = await requestTradeApi('/api/trades/request-user', {
       method: 'POST',
       body: JSON.stringify({
@@ -278,9 +239,6 @@ export const gameApiClient = {
       return { nextActiveOwned: [], nextTargetOwned: [] };
     }
 
-    const activeUser = getUser(activeUserName);
-    const targetUser = getUser(otherUserName);
-
     const response = await requestTradeApi('/api/trades/accept', {
       method: 'POST',
       body: JSON.stringify({
@@ -297,20 +255,6 @@ export const gameApiClient = {
 
     const nextActiveOwned = Array.isArray(response?.nextActiveOwned) ? response.nextActiveOwned : [];
     const nextTargetOwned = Array.isArray(response?.nextTargetOwned) ? response.nextTargetOwned : [];
-
-    if (activeUser) {
-      activeUser.cards = Object.fromEntries(
-        nextActiveOwned.map((entry) => [entry.name, normalizeQty(entry.qty)])
-      );
-    }
-
-    await applyOwnedEntriesToActiveUser(activeUser?.cards, nextActiveOwned);
-
-    if (targetUser) {
-      targetUser.cards = Object.fromEntries(
-        nextTargetOwned.map((entry) => [entry.name, normalizeQty(entry.qty)])
-      );
-    }
 
     return {
       nextActiveOwned: hydrateCards(nextActiveOwned),
@@ -341,8 +285,6 @@ export const gameApiClient = {
       return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
 
-    await ensureBootstrap();
-
     const response = await requestTradeApi('/api/bank/buy', {
       method: 'POST',
       body: JSON.stringify({
@@ -370,8 +312,6 @@ export const gameApiClient = {
     if (!userName || !cardName) {
       return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
-
-    await ensureBootstrap();
 
     const response = await requestTradeApi('/api/bank/sell', {
       method: 'POST',
@@ -471,8 +411,6 @@ export const gameApiClient = {
     if (!userName) {
       return { ok: false };
     }
-
-    await ensureBootstrap();
 
     const response = await requestTradeApi('/api/packs/claim', {
       method: 'POST',
