@@ -668,14 +668,40 @@ async function getCardDetailsByNames(cardNames) {
 
 async function recalculateAndStoreCardValues() {
   const db = await getDb();
-  const tradeProfiles = await db
-    .collection('trade_profiles')
-    .find({}, { projection: { cards: 1 } })
-    .toArray();
-  const catalogDocs = await db
-    .collection('card_catalog')
-    .find({}, { projection: { _id: 1, rarity: 1 } })
-    .toArray();
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const [tradeProfiles, catalogDocs, stateDocs, cardsRootDoc] = await Promise.all([
+    db
+      .collection('trade_profiles')
+      .find({}, { projection: { cards: 1 } })
+      .toArray(),
+    db
+      .collection('card_catalog')
+      .find({}, { projection: { _id: 1, rarity: 1 } })
+      .toArray(),
+    db
+      .collection('state_cards')
+      .find({}, { projection: { _id: 1, rarity: 1 } })
+      .toArray(),
+    db
+      .collection('cards')
+      .findOne(cardsRootFilter, {
+        projection: {
+          Common: 1,
+          Uncommon: 1,
+          Rare: 1,
+          Loric: 1,
+          Mythical: 1,
+          Legendary: 1,
+        },
+      }),
+  ]);
 
   const ownedTotalsByName = {};
   for (const profile of tradeProfiles) {
@@ -690,8 +716,38 @@ async function recalculateAndStoreCardValues() {
   const rarityByName = {};
   for (const doc of catalogDocs) {
     if (!doc?._id) continue;
-    if (rarityByName[String(doc._id)]) continue;
-    rarityByName[String(doc._id)] = normalizeRarity(doc.rarity);
+    const name = String(doc._id);
+    if (rarityByName[name]) continue;
+    rarityByName[name] = normalizeRarity(doc.rarity);
+  }
+  for (const doc of stateDocs) {
+    if (!doc?._id || doc._id === STATE_CARDS_META_ID) continue;
+    const name = String(doc._id);
+    if (rarityByName[name]) continue;
+    rarityByName[name] = normalizeRarity(doc.rarity);
+  }
+
+  const existingCardsPathByName = {};
+  for (const rarity of Object.keys(RARITY_SCORES)) {
+    const bucket = cardsRootDoc?.[rarity];
+    if (!bucket || typeof bucket !== 'object') continue;
+
+    for (const key of Object.keys(bucket)) {
+      if (!key || key === 'totalPopulation') continue;
+
+      const normalizedName = String(key)
+        .replace(/\uFF0E/g, '.')
+        .replace(/\uFF04/g, '$');
+
+      if (!existingCardsPathByName[normalizedName]) {
+        existingCardsPathByName[normalizedName] = [];
+      }
+
+      existingCardsPathByName[normalizedName].push({ rarity, key });
+      if (!rarityByName[normalizedName]) {
+        rarityByName[normalizedName] = rarity;
+      }
+    }
   }
 
   const allNames = new Set([
@@ -706,6 +762,7 @@ async function recalculateAndStoreCardValues() {
 
   const operations = [];
   const valuesMap = {};
+  const now = new Date();
 
   for (const name of allNames) {
     const population = normalizeQty(ownedTotalsByName[name]);
@@ -730,7 +787,7 @@ async function recalculateAndStoreCardValues() {
             population,
             scarcity,
             totalPopulation,
-            updatedAt: new Date(),
+            updatedAt: now,
           },
         },
         upsert: true,
@@ -744,7 +801,7 @@ async function recalculateAndStoreCardValues() {
       update: {
         $set: {
           totalPopulation,
-          updatedAt: new Date(),
+          updatedAt: now,
         },
       },
       upsert: true,
@@ -752,6 +809,35 @@ async function recalculateAndStoreCardValues() {
   });
 
   await db.collection('state_cards').bulkWrite(operations, { ordered: false });
+
+  const cardsPopulationSet = {
+    totalPopulation,
+    updatedAt: now,
+  };
+
+  for (const paths of Object.values(existingCardsPathByName)) {
+    for (const pathInfo of paths) {
+      cardsPopulationSet[`${pathInfo.rarity}.${pathInfo.key}.population`] = 0;
+    }
+  }
+
+  for (const name of allNames) {
+    const population = normalizeQty(ownedTotalsByName[name]);
+    const targetRarity = normalizeRarity(rarityByName[name]);
+    const existingPaths = existingCardsPathByName[name] || [];
+    const inTarget = existingPaths.find((pathInfo) => pathInfo.rarity === targetRarity);
+    const key = inTarget
+      ? inTarget.key
+      : String(name).replace(/\./g, '\uFF0E').replace(/\$/g, '\uFF04');
+
+    cardsPopulationSet[`${targetRarity}.${key}.population`] = population;
+  }
+
+  await db.collection('cards').updateOne(
+    cardsRootFilter,
+    { $set: cardsPopulationSet },
+    { upsert: true }
+  );
 
   return {
     valuesByName: valuesMap,
