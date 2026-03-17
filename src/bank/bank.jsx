@@ -15,9 +15,12 @@ export function Bank({ userName }) {
   const [bankCards, setBankCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [isSellMode, setIsSellMode] = React.useState(false);
+  const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [sortBy, setSortBy] = React.useState('Rarity');
   const [walletBalance, setWalletBalance] = React.useState(0);
   const [pendingAction, setPendingAction] = React.useState(null);
+  const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
+  const [hasLoadedShowDuplicatesPreference, setHasLoadedShowDuplicatesPreference] = React.useState(false);
   const walletValue = normalizeWalletValue(walletBalance);
 
   const loadBankCards = React.useCallback(async () => {
@@ -83,6 +86,23 @@ export function Bank({ userName }) {
       return (a?.name || '').localeCompare(b?.name || '');
     });
   }, [ownedDeckCards, sortBy]);
+
+  const renderedSellDeckCards = React.useMemo(() => {
+    return sortedOwnedDeckCards.flatMap((card) => {
+      const qty = Math.max(0, parseInt(card?.qty, 10) || 0);
+      if (qty <= 0) return [];
+
+      const copiesToRender = showDuplicates ? qty : 1;
+      const showStack = !showDuplicates && qty > 1;
+
+      return Array.from({ length: copiesToRender }).map((_, copyIndex) => ({
+        card,
+        qty,
+        copyIndex,
+        showStack,
+      }));
+    });
+  }, [sortedOwnedDeckCards, showDuplicates]);
 
   const totalRenderedCards = sortedOwned.length;
   const totalPages = Math.max(1, Math.ceil(totalRenderedCards / cardsPerPage));
@@ -183,8 +203,39 @@ export function Bank({ userName }) {
   }, [userName]);
 
   React.useEffect(() => {
+    let isActive = true;
+
+    setHasLoadedSortPreference(false);
+    (async () => {
+      if (!userName) {
+        if (!isActive) return;
+        setSortBy('Rarity');
+        setHasLoadedSortPreference(true);
+        return;
+      }
+
+      const saved = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
+      if (!isActive) return;
+
+      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+      setHasLoadedSortPreference(true);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [userName]);
+
+  React.useEffect(() => {
+    (async () => {
+      if (!userName || !hasLoadedSortPreference) return;
+      await gameApiClient.saveDeckSortPreference(userName, sortBy);
+    })();
+  }, [userName, sortBy, hasLoadedSortPreference]);
+
+  React.useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, isSellMode]);
+  }, [sortBy, isSellMode, showDuplicates]);
   
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -205,6 +256,48 @@ export function Bank({ userName }) {
     })();
   }, [userName, buildOwnedDeckCards]);
 
+  React.useEffect(() => {
+    let isActive = true;
+
+    setHasLoadedShowDuplicatesPreference(false);
+    (async () => {
+      if (!userName) {
+        if (!isActive) return;
+        setShowDuplicates(true);
+        setHasLoadedShowDuplicatesPreference(true);
+        return;
+      }
+
+      const saved = await gameApiClient.loadDeckShowDuplicatesPreference(userName, true);
+      if (!isActive) return;
+
+      setShowDuplicates(Boolean(saved));
+      setHasLoadedShowDuplicatesPreference(true);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [userName]);
+
+  React.useEffect(() => {
+    (async () => {
+      if (!userName || !hasLoadedShowDuplicatesPreference) return;
+      await gameApiClient.saveDeckShowDuplicatesPreference(userName, showDuplicates);
+    })();
+  }, [userName, showDuplicates, hasLoadedShowDuplicatesPreference]);
+
+  if (userName && (!hasLoadedSortPreference || !hasLoadedShowDuplicatesPreference)) {
+    return (
+      <main className="bank-page">
+        <div className="user">
+          <h2>Bank</h2>
+          <div className="deck-value">Loading preferences...</div>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="bank-page">
       <div className="user">
@@ -221,6 +314,16 @@ export function Bank({ userName }) {
                 ))}
               </select>
             </label>
+            {isSellMode && (
+              <label className="show-duplicates-control">
+                <input
+                  type="checkbox"
+                  checked={showDuplicates}
+                  onChange={(e) => setShowDuplicates(e.target.checked)}
+                />
+                <span>Show duplicates</span>
+              </label>
+            )}
           </div>
         </div>
         {
@@ -298,26 +401,46 @@ export function Bank({ userName }) {
           <section className="yoUser">
             <div className="container-fluid">
               <div className="row deck-row">
-                {sortedOwnedDeckCards.map((card) => {
+                {renderedSellDeckCards.map(({ card, qty, copyIndex, showStack }) => {
                   const payoutAmount = normalizeWalletValue(((typeof card.value === 'number' ? card.value : 0) * 0.85));
                   const isSellingThisCard = pendingAction?.type === 'sell' && pendingAction.cardName === card.name;
 
                   return (
-                  <div key={card.name} className="col deck-col">
-                    <Card
-                      image={card.image}
-                      name={card.name}
-                      cost={card.cost}
-                      rarity={card.rarity}
-                      cardType={card.cardType}
-                      description={card.description}
-                      strength={card.strength}
-                      endurance={card.endurance}
-                    />
+                  <div key={`${card.name}-${copyIndex}`} className="col deck-col">
+                    <div className={showStack ? 'card-stack' : ''}>
+                      {showStack && (
+                        <div className="card-stack-ghost" aria-hidden="true">
+                          <Card
+                            image={card.image}
+                            name={card.name}
+                            cost={card.cost}
+                            rarity={card.rarity}
+                            cardType={card.cardType}
+                            description={card.description}
+                            strength={card.strength}
+                            endurance={card.endurance}
+                          />
+                        </div>
+                      )}
+                      <div className="card-stack-main">
+                        <Card
+                          image={card.image}
+                          name={card.name}
+                          cost={card.cost}
+                          rarity={card.rarity}
+                          cardType={card.cardType}
+                          description={card.description}
+                          strength={card.strength}
+                          endurance={card.endurance}
+                        />
+                      </div>
+                    </div>
                     <div className="card-value mt-1">
                       <div className="card-meta-row">
                         <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
-                        <small className="card-quantity">Quantity: {card.qty}</small>
+                        {!showDuplicates && (
+                          <small className="card-quantity">Quantity: {qty}</small>
+                        )}
                       </div>
                     </div>
                     <button

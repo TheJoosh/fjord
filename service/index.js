@@ -865,6 +865,32 @@ app.put('/api/preferences/deck-sort', async (req, res) => {
   res.send({ ok: true, sortBy: current });
 });
 
+app.get('/api/preferences/deck-duplicates', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.query?.userName);
+  const current = await ensureDeckShowDuplicatesPreference(userName, true);
+  res.send({ showDuplicates: current });
+});
+
+app.put('/api/preferences/deck-duplicates', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const userName = sanitizeUsername(req.body?.userName);
+  const showDuplicates = normalizeShowDuplicates(req.body?.showDuplicates);
+  await persistence.setDeckShowDuplicatesPreference(userName, showDuplicates);
+  const current = await ensureDeckShowDuplicatesPreference(userName, showDuplicates);
+  res.send({ ok: true, showDuplicates: current });
+});
+
 async function createUser(username, password) {
   const passwordHash = await bcrypt.hash(password, 10);
   return await persistence.createUser(username, passwordHash);
@@ -1008,6 +1034,16 @@ function normalizeDeckSort(value) {
   return 'Rarity';
 }
 
+function normalizeShowDuplicates(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const next = value.trim().toLowerCase();
+    if (next === 'true') return true;
+    if (next === 'false') return false;
+  }
+  return true;
+}
+
 function normalizeRarity(value) {
   const rarity = String(value || '').trim();
   if (
@@ -1029,6 +1065,14 @@ async function ensureDeckSortPreference(userName, fallbackSort) {
   }
 
   return await persistence.ensureDeckSortPreference(userName, fallbackSort);
+}
+
+async function ensureDeckShowDuplicatesPreference(userName, fallbackShowDuplicates) {
+  if (!userName) {
+    return normalizeShowDuplicates(fallbackShowDuplicates);
+  }
+
+  return await persistence.ensureDeckShowDuplicatesPreference(userName, fallbackShowDuplicates);
 }
 
 async function recalculateCardValuesInDb() {

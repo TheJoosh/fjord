@@ -101,6 +101,16 @@ function normalizeDeckSort(value) {
   return 'Rarity';
 }
 
+function normalizeShowDuplicates(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    const next = value.trim().toLowerCase();
+    if (next === 'true') return true;
+    if (next === 'false') return false;
+  }
+  return true;
+}
+
 function normalizeRarity(value) {
   const rarity = String(value || '').trim();
   if (Object.prototype.hasOwnProperty.call(RARITY_SCORES, rarity)) {
@@ -498,6 +508,36 @@ async function setDeckSortPreference(userName, sortBy) {
   await db.collection('deck_preferences').updateOne(
     { _id: userName },
     { $set: { sortBy: normalizeDeckSort(sortBy) } },
+    { upsert: true }
+  );
+}
+
+async function ensureDeckShowDuplicatesPreference(userName, fallbackShowDuplicates) {
+  if (!userName) return normalizeShowDuplicates(fallbackShowDuplicates);
+
+  const db = await getDb();
+  const prefs = db.collection('deck_preferences');
+  const fallback = normalizeShowDuplicates(fallbackShowDuplicates);
+
+  await prefs.updateOne(
+    { _id: userName },
+    { $setOnInsert: { showDuplicates: fallback } },
+    { upsert: true }
+  );
+
+  const doc = await prefs.findOne({ _id: userName });
+  const showDuplicates = normalizeShowDuplicates(doc?.showDuplicates);
+  await prefs.updateOne({ _id: userName }, { $set: { showDuplicates } });
+
+  return showDuplicates;
+}
+
+async function setDeckShowDuplicatesPreference(userName, showDuplicates) {
+  if (!userName) return;
+  const db = await getDb();
+  await db.collection('deck_preferences').updateOne(
+    { _id: userName },
+    { $set: { showDuplicates: normalizeShowDuplicates(showDuplicates) } },
     { upsert: true }
   );
 }
@@ -1065,6 +1105,8 @@ module.exports = {
   renamePendingApproval,
   ensureDeckSortPreference,
   setDeckSortPreference,
+  ensureDeckShowDuplicatesPreference,
+  setDeckShowDuplicatesPreference,
   upsertCardCatalogEntries,
   getCardValuesMap,
   getCardsPoolByRarity,

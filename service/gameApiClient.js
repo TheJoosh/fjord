@@ -711,4 +711,27 @@ export const gameApiClient = {
       body: JSON.stringify({ userName, sortBy }),
     });
   },
+
+  async loadDeckShowDuplicatesPreference(userName, fallbackShowDuplicates = true) {
+    if (!userName) return Boolean(fallbackShowDuplicates);
+
+    const response = await requestTradeApi(
+      `/api/preferences/deck-duplicates?userName=${encodeURIComponent(userName)}`,
+      { method: 'GET' }
+    );
+
+    if (typeof response?.showDuplicates === 'boolean') {
+      return response.showDuplicates;
+    }
+
+    return Boolean(fallbackShowDuplicates);
+  },
+
+  async saveDeckShowDuplicatesPreference(userName, showDuplicates) {
+    if (!userName) return;
+    await requestTradeApi('/api/preferences/deck-duplicates', {
+      method: 'PUT',
+      body: JSON.stringify({ userName, showDuplicates: Boolean(showDuplicates) }),
+    });
+  },
 };

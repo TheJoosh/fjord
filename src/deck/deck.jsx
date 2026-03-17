@@ -18,6 +18,8 @@ export function Deck({ userName }) {
   const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [walletBalance, setWalletBalance] = React.useState(0);
+  const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
+  const [hasLoadedShowDuplicatesPreference, setHasLoadedShowDuplicatesPreference] = React.useState(false);
 
   const combinedCardsByName = {};
   for (const entry of ownedDeckCards) {
@@ -152,21 +154,65 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     (async () => {
-      if (!userName) return;
+      if (!userName || !hasLoadedSortPreference) return;
       await gameApiClient.saveDeckSortPreference(userName, sortBy);
     })();
-  }, [userName, sortBy]);
+  }, [userName, sortBy, hasLoadedSortPreference]);
+
+  React.useEffect(() => {
+    let isActive = true;
+
+    setHasLoadedSortPreference(false);
+    (async () => {
+      if (!userName) {
+        if (!isActive) return;
+        setSortBy('Rarity');
+        setHasLoadedSortPreference(true);
+        return;
+      }
+
+      const saved = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
+      if (!isActive) return;
+
+      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+      setHasLoadedSortPreference(true);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [userName]);
+
+  React.useEffect(() => {
+    let isActive = true;
+
+    setHasLoadedShowDuplicatesPreference(false);
+    (async () => {
+      if (!userName) {
+        if (!isActive) return;
+        setShowDuplicates(true);
+        setHasLoadedShowDuplicatesPreference(true);
+        return;
+      }
+
+      const saved = await gameApiClient.loadDeckShowDuplicatesPreference(userName, true);
+      if (!isActive) return;
+
+      setShowDuplicates(Boolean(saved));
+      setHasLoadedShowDuplicatesPreference(true);
+    })();
+
+    return () => {
+      isActive = false;
+    };
+  }, [userName]);
 
   React.useEffect(() => {
     (async () => {
-      if (!userName) {
-        setSortBy('Rarity');
-        return;
-      }
-      const saved = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
-      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+      if (!userName || !hasLoadedShowDuplicatesPreference) return;
+      await gameApiClient.saveDeckShowDuplicatesPreference(userName, showDuplicates);
     })();
-  }, [userName]);
+  }, [userName, showDuplicates, hasLoadedShowDuplicatesPreference]);
 
   React.useEffect(() => {
     if (!userName) {
@@ -189,6 +235,17 @@ export function Deck({ userName }) {
       setCurrentPage(totalPages);
     }
   }, [currentPage, totalPages]);
+
+  if (userName && (!hasLoadedSortPreference || !hasLoadedShowDuplicatesPreference)) {
+    return (
+      <main>
+        <div className="user">
+          <h2>{title}</h2>
+          <div className="deck-value">Loading preferences...</div>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main>
