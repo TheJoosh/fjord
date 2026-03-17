@@ -26,8 +26,29 @@ function normalizePacksMap(packs) {
 function hydrateCard(cardLike) {
   if (!cardLike?.name) return cardLike;
   const latest = getCardByName(cardLike.name);
+  const liveState = liveCardValuesByName?.[cardLike.name] || {};
+  const liveValue = Number(liveState.value);
+  const liveScarcity = Number(liveState.scarcity);
+  const livePopulation = Number(liveState.population);
+
+  const value = Number.isFinite(liveValue)
+    ? liveValue
+    : (typeof cardLike.value === 'number' ? cardLike.value : 0);
+  const scarcity = Number.isFinite(liveScarcity)
+    ? liveScarcity
+    : (typeof cardLike.scarcity === 'number' ? cardLike.scarcity : 0);
+  const population = Number.isFinite(livePopulation)
+    ? Math.max(0, parseInt(livePopulation, 10) || 0)
+    : Math.max(0, parseInt(cardLike.population, 10) || 0);
+
   if (!latest) return cardLike;
-  return { ...latest, ...cardLike };
+  return {
+    ...latest,
+    ...cardLike,
+    value,
+    scarcity,
+    population,
+  };
 }
 
 function hydrateCards(cards) {
@@ -154,12 +175,11 @@ export const gameApiClient = {
       }
     }
 
-    if (!cardLike?.name) return 0;
-    const latest = getCardByName(cardLike.name);
-    if (latest && typeof latest.value === 'number') {
-      return latest.value;
+    if (cardLike && typeof cardLike.value === 'number') {
+      return cardLike.value;
     }
-    return cardLike && typeof cardLike.value === 'number' ? cardLike.value : 0;
+
+    return 0;
   },
 
   async buildOwnedDeckCards(userName) {
@@ -202,6 +222,8 @@ export const gameApiClient = {
       return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
     }
 
+    await this.loadCardValues();
+
     const parsedResponse = await requestTradeApi(
       `/api/trades/pending?userName=${encodeURIComponent(userName)}`,
       { method: 'GET' }
@@ -237,6 +259,8 @@ export const gameApiClient = {
 
   async loadSelectedTradeCards(userName) {
     if (!userName) return [];
+
+    await this.loadCardValues();
 
     const parsedResponse = await requestTradeApi(
       `/api/trades/selection?userName=${encodeURIComponent(userName)}`,
