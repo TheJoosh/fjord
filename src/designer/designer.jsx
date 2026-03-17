@@ -485,10 +485,7 @@ export function Designer({ userName }) {
             return;
         }
 
-        const submittedImage =
-            typeof previewImage === 'string' && previewImage.startsWith('data:')
-                ? 'Default.png'
-                : (previewImage || "Default.png");
+        const submittedImage = previewImage || "Default.png";
         const activeUserName = (userName || '').trim();
 
         try {
