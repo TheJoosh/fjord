@@ -1,10 +1,11 @@
 const path = require('path');
 const fs = require('fs');
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const DEFAULT_DB_NAME = 'Fjord';
 const GLOBAL_BANK_INVENTORY_ID = 'global';
 const STATE_CARDS_META_ID = '__meta__';
+const CARDS_ROOT_DOC_ID = process.env.CARDS_ROOT_DOC_ID || '69b045d736b3687c61767638';
 
 const RARITY_SCORES = {
   Common: 2,
@@ -523,6 +524,7 @@ async function recalculateAndStoreCardValues() {
   const rarityByName = {};
   for (const doc of catalogDocs) {
     if (!doc?._id) continue;
+    if (rarityByName[String(doc._id)]) continue;
     rarityByName[String(doc._id)] = normalizeRarity(doc.rarity);
   }
 
@@ -591,6 +593,136 @@ async function recalculateAndStoreCardValues() {
   };
 }
 
+async function incrementCardsPopulation(cardEntries) {
+  const normalizedEntries = Array.isArray(cardEntries)
+    ? cardEntries
+        .map((entry) => {
+          if (entry && typeof entry === 'object') {
+            const name = String(entry.name || '').trim();
+            if (!name) return null;
+            const rawRarity = String(entry.rarity || '').trim();
+            const rarity = Object.prototype.hasOwnProperty.call(RARITY_SCORES, rawRarity)
+              ? rawRarity
+              : '';
+            return { name, rarity };
+          }
+
+          const name = String(entry || '').trim();
+          if (!name) return null;
+          return { name, rarity: '' };
+        })
+        .filter(Boolean)
+    : [];
+
+  if (normalizedEntries.length === 0) return;
+
+  const countsByName = {};
+  const providedRarityByName = {};
+  for (const entry of normalizedEntries) {
+    countsByName[entry.name] = (countsByName[entry.name] || 0) + 1;
+    if (!providedRarityByName[entry.name] && entry.rarity) {
+      providedRarityByName[entry.name] = entry.rarity;
+    }
+  }
+
+  const db = await getDb();
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsCollection = db.collection('cards');
+
+  const [catalogDocs, stateCardDocs, cardsRootDoc] = await Promise.all([
+    db
+      .collection('card_catalog')
+      .find({}, { projection: { _id: 1, rarity: 1 } })
+      .toArray(),
+    db
+      .collection('state_cards')
+      .find({}, { projection: { _id: 1, rarity: 1 } })
+      .toArray(),
+    cardsCollection.findOne(cardsRootFilter, {
+      projection: {
+        Common: 1,
+        Uncommon: 1,
+        Rare: 1,
+        Loric: 1,
+        Mythical: 1,
+        Legendary: 1,
+      },
+    }),
+  ]);
+
+  const rarityByName = {};
+  for (const [name, rarity] of Object.entries(providedRarityByName)) {
+    rarityByName[name] = rarity;
+  }
+
+  for (const doc of catalogDocs) {
+    if (!doc?._id) continue;
+    rarityByName[String(doc._id)] = normalizeRarity(doc.rarity);
+  }
+  for (const doc of stateCardDocs) {
+    if (!doc?._id || doc._id === STATE_CARDS_META_ID) continue;
+    if (rarityByName[String(doc._id)]) continue;
+    rarityByName[String(doc._id)] = normalizeRarity(doc.rarity);
+  }
+
+  for (const name of Object.keys(countsByName)) {
+    if (rarityByName[name]) continue;
+
+    let bestRarity = '';
+    let bestScore = -1;
+    for (const rarity of Object.keys(RARITY_SCORES)) {
+      const rarityBucket = cardsRootDoc?.[rarity];
+      if (!rarityBucket || typeof rarityBucket !== 'object') continue;
+
+      if (Object.prototype.hasOwnProperty.call(rarityBucket, name)) {
+        const cardDoc = rarityBucket[name];
+        const hasMetadata =
+          cardDoc &&
+          typeof cardDoc === 'object' &&
+          (
+            Object.prototype.hasOwnProperty.call(cardDoc, 'image') ||
+            Object.prototype.hasOwnProperty.call(cardDoc, 'cardType') ||
+            Object.prototype.hasOwnProperty.call(cardDoc, 'description') ||
+            Object.prototype.hasOwnProperty.call(cardDoc, 'author')
+          );
+        const score = hasMetadata ? 2 : 1;
+        if (score > bestScore) {
+          bestScore = score;
+          bestRarity = rarity;
+        }
+      }
+    }
+
+    if (bestRarity) {
+      rarityByName[name] = bestRarity;
+    }
+  }
+
+  const incUpdate = {};
+  for (const [name, incrementBy] of Object.entries(countsByName)) {
+    const rarity = normalizeRarity(rarityByName[name]);
+    const safeName = String(name).replace(/\./g, '\uFF0E').replace(/\$/g, '\uFF04');
+    incUpdate[`${rarity}.${safeName}.population`] = incrementBy;
+  }
+  incUpdate.totalPopulation = normalizedEntries.length;
+
+  await cardsCollection.updateOne(
+    cardsRootFilter,
+    {
+      $inc: incUpdate,
+      $set: { updatedAt: new Date() },
+      $setOnInsert: {},
+    },
+    { upsert: true }
+  );
+}
+
 module.exports = {
   initPersistence,
   createUser,
@@ -624,4 +756,5 @@ module.exports = {
   upsertCardCatalogEntries,
   getCardValuesMap,
   recalculateAndStoreCardValues,
+  incrementCardsPopulation,
 };
