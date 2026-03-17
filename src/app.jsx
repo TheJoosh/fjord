@@ -25,14 +25,12 @@ export default function App() {
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
 
-        const activeUserCards = {};
-
         const selectedTradeCards = await gameApiClient.loadSelectedTradeCards(activeUserName);
         if (!Array.isArray(selectedTradeCards) || selectedTradeCards.length === 0) {
             return;
         }
 
-        await gameApiClient.cancelTrade(activeUserName, selectedTradeCards, activeUserCards);
+        await gameApiClient.cancelTrade(activeUserName, selectedTradeCards);
     };
 
     const logout = async () => {
