@@ -542,17 +542,8 @@ app.post('/api/packs/open', async (req, res) => {
     return;
   }
 
-  const requestedOpenedCards = sanitizeOpenedCards(req.body?.openedCards);
-  const cardState = await persistence.getCardValuesMap();
-
-  let generatedCards = requestedOpenedCards;
-  if (generatedCards.length === 0) {
-    const generatedCardNames = drawPackCardNames(packName, cardState.valuesByName);
-    generatedCards = generatedCardNames.map((name) => ({
-      name,
-      rarity: normalizeRarity(cardState.valuesByName?.[name]?.rarity),
-    }));
-  }
+  const cardsPoolByRarity = await persistence.getCardsPoolByRarity();
+  const generatedCards = drawPackCardsFromDbPool(packName, cardsPoolByRarity);
 
   const generatedCardNames = generatedCards.map((card) => card.name);
 
@@ -729,13 +720,24 @@ app.post('/api/approvals/approve', async (req, res) => {
   }
 
   const card = pending.card;
+  const approvedRarity = normalizeRarity(card?.rarity);
+
+  await persistence.upsertApprovedCardToCards(name, {
+    ...card,
+    rarity: approvedRarity,
+  });
+  await persistence.upsertCardCatalogEntries([{ name, rarity: approvedRarity }]);
+  await recalculateCardValuesInDb();
   await persistence.deletePendingApproval(name);
 
   res.send({
     ok: true,
     approvedCard: {
       name,
-      card: { ...card },
+      card: {
+        ...card,
+        rarity: approvedRarity,
+      },
     },
   });
 });
@@ -1014,25 +1016,15 @@ const PACK_OPEN_RULES = {
   },
 };
 
-function drawPackCardNames(packName, valuesByName) {
+function drawPackCardsFromDbPool(packName, cardsPoolByRarity) {
   const rule = PACK_OPEN_RULES[packName];
   if (!rule) return [];
-
-  const namesByRarity = {};
-  for (const [name, cardState] of Object.entries(valuesByName || {})) {
-    if (!name) continue;
-    const rarity = normalizeRarity(cardState?.rarity);
-    if (!namesByRarity[rarity]) {
-      namesByRarity[rarity] = [];
-    }
-    namesByRarity[rarity].push(name);
-  }
 
   const weightedRarities = Object.entries(rule.rarityWeights || {})
     .map(([rarity, weight]) => ({
       rarity,
       weight: Math.max(0, Number(weight) || 0),
-      names: namesByRarity[rarity] || [],
+      names: Array.isArray(cardsPoolByRarity?.[rarity]) ? cardsPoolByRarity[rarity] : [],
     }))
     .filter((entry) => entry.weight > 0 && entry.names.length > 0);
 
@@ -1061,7 +1053,10 @@ function drawPackCardNames(packName, valuesByName) {
     const names = rarityEntry.names;
     const chosenName = names[Math.floor(Math.random() * names.length)];
     if (chosenName) {
-      picks.push(chosenName);
+      picks.push({
+        name: chosenName,
+        rarity: rarityEntry.rarity,
+      });
     }
   }
 
