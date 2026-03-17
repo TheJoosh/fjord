@@ -99,8 +99,7 @@ app.post('/api/trades/owned', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.body?.userName);
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, {});
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -237,8 +236,7 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, {});
 
   const currentQty = normalizeQty(profile.cards[cardName]);
   if (currentQty <= 1) {
@@ -261,8 +259,7 @@ app.post('/api/trades/owned/increment', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, {});
 
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
   await persistence.setTradeProfileCards(userName, profile.cards);
@@ -280,8 +277,7 @@ app.post('/api/trades/cancel', async (req, res) => {
   const selectedTradeCards = Array.isArray(req.body?.selectedTradeCards)
     ? req.body.selectedTradeCards
     : [];
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, {});
 
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
@@ -310,11 +306,8 @@ app.post('/api/trades/accept', async (req, res) => {
   const otherTradeCards = Array.isArray(req.body?.otherTradeCards)
     ? req.body.otherTradeCards
     : [];
-  const activeFallbackCards = normalizeCardMap(req.body?.activeFallbackCards || {});
-  const otherFallbackCards = normalizeCardMap(req.body?.otherFallbackCards || {});
-
-  const activeProfile = await ensureTradeProfile(activeUserName, activeFallbackCards);
-  const otherProfile = await ensureTradeProfile(otherUserName, otherFallbackCards);
+  const activeProfile = await ensureTradeProfile(activeUserName, {});
+  const otherProfile = await ensureTradeProfile(otherUserName, {});
 
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
@@ -352,21 +345,7 @@ app.post('/api/bank/inventory', async (req, res) => {
     return;
   }
 
-  const fallbackEntries = Array.isArray(req.body?.fallbackEntries)
-    ? req.body.fallbackEntries
-    : [];
   const bankInventory = await persistence.getBankInventory();
-
-  if (Object.keys(bankInventory).length === 0 && fallbackEntries.length > 0) {
-    for (const entry of fallbackEntries) {
-      if (!entry?.name) continue;
-      const qty = normalizeQty(entry.qty);
-      if (qty > 0) {
-        bankInventory[entry.name] = qty;
-      }
-    }
-    await persistence.setBankInventory(bankInventory);
-  }
 
   res.send({ bankEntries: toOwnedEntries(bankInventory) });
 });
@@ -381,11 +360,8 @@ app.post('/api/bank/buy', async (req, res) => {
   const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
   const buyPrice = normalizeWalletValue(req.body?.buyPrice);
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
-
-  const profile = await ensureTradeProfile(userName, fallbackCards);
-  const currentWallet = await ensureBankWallet(userName, fallbackWallet);
+  const profile = await ensureTradeProfile(userName, {});
+  const currentWallet = await ensureBankWallet(userName, 0);
   const bankInventory = await persistence.getBankInventory();
   const availableQty = normalizeQty(bankInventory[cardName]);
 
@@ -431,11 +407,8 @@ app.post('/api/bank/sell', async (req, res) => {
   const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
   const payoutAmount = normalizeWalletValue(req.body?.payoutAmount);
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
-
-  const profile = await ensureTradeProfile(userName, fallbackCards);
-  const currentWallet = await ensureBankWallet(userName, fallbackWallet);
+  const profile = await ensureTradeProfile(userName, {});
+  const currentWallet = await ensureBankWallet(userName, 0);
   const bankInventory = await persistence.getBankInventory();
   const ownedQty = normalizeQty(profile.cards[cardName]);
 
@@ -479,16 +452,13 @@ app.post('/api/packs/state', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.body?.userName);
-  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
-  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
-
   if (!userName) {
     res.send({ ok: false, packs: normalizePacksMap({}), wallet: 0 });
     return;
   }
 
-  const packs = await ensureUserPacks(userName, fallbackPacks);
-  const wallet = await ensureBankWallet(userName, fallbackWallet);
+  const packs = await ensureUserPacks(userName, {});
+  const wallet = await ensureBankWallet(userName, 0);
 
   res.send({ ok: true, packs, wallet });
 });
@@ -503,16 +473,13 @@ app.post('/api/packs/buy', async (req, res) => {
   const userName = sanitizeUsername(req.body?.userName);
   const packName = req.body?.packName;
   const packPrice = normalizeWalletValue(req.body?.packPrice);
-  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
-  const fallbackWallet = normalizeWalletValue(req.body?.fallbackWallet);
-
   if (!userName || !isKnownPackName(packName)) {
     res.send({ ok: false, packs: normalizePacksMap({}), wallet: 0 });
     return;
   }
 
-  const packs = await ensureUserPacks(userName, fallbackPacks);
-  const currentWallet = await ensureBankWallet(userName, fallbackWallet);
+  const packs = await ensureUserPacks(userName, {});
+  const currentWallet = await ensureBankWallet(userName, 0);
   if (currentWallet < packPrice) {
     res.send({ ok: false, packs, wallet: currentWallet });
     return;
@@ -536,14 +503,12 @@ app.post('/api/packs/open', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const packName = req.body?.packName;
-  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
-
   if (!userName || !isKnownPackName(packName)) {
     res.send({ ok: false, packs: normalizePacksMap({}) });
     return;
   }
 
-  const packs = await ensureUserPacks(userName, fallbackPacks);
+  const packs = await ensureUserPacks(userName, {});
   const currentCount = normalizeQty(packs[packName]);
   if (currentCount <= 0) {
     res.send({ ok: false, packs: normalizePacksMap(packs) });
@@ -564,14 +529,12 @@ app.post('/api/packs/claim', async (req, res) => {
 
   const userName = sanitizeUsername(req.body?.userName);
   const openedCards = Array.isArray(req.body?.openedCards) ? req.body.openedCards : [];
-  const fallbackCards = normalizeCardMap(req.body?.fallbackCards || {});
-
   if (!userName) {
     res.send({ ok: false, ownedEntries: [] });
     return;
   }
 
-  const profile = await ensureTradeProfile(userName, fallbackCards);
+  const profile = await ensureTradeProfile(userName, {});
   for (const card of openedCards) {
     if (!card?.name) continue;
     profile.cards[card.name] = normalizeQty(profile.cards[card.name]) + 1;
@@ -590,20 +553,17 @@ app.post('/api/designer/submit', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.body?.userName);
-  const fallbackDesigned = normalizeQty(req.body?.fallbackDesigned);
-  const fallbackPacks = normalizePacksMap(req.body?.fallbackPacks || {});
-
   if (!userName) {
     res.send({ ok: false, nextDesigned: 0, rewardPackKey: 'Default Pack', packs: normalizePacksMap({}) });
     return;
   }
 
-  const currentDesigned = await ensureDesignedCount(userName, fallbackDesigned);
+  const currentDesigned = await ensureDesignedCount(userName, 0);
   const nextDesigned = currentDesigned + 1;
   await persistence.setDesignedCount(userName, nextDesigned);
 
   const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
-  const packs = await ensureUserPacks(userName, fallbackPacks);
+  const packs = await ensureUserPacks(userName, {});
   packs[rewardPackKey] = normalizeQty(packs[rewardPackKey]) + 1;
   await persistence.setUserPacks(userName, packs);
 
@@ -735,8 +695,7 @@ app.get('/api/preferences/deck-sort', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.query?.userName);
-  const fallbackSort = normalizeDeckSort(req.query?.fallback);
-  const current = await ensureDeckSortPreference(userName, fallbackSort);
+  const current = await ensureDeckSortPreference(userName, 'Rarity');
   res.send({ sortBy: current });
 });
 
