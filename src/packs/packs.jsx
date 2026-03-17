@@ -101,14 +101,16 @@ export function Packs({ userName }) {
     const openPack = async (packName, cardGenerator) => {
         if (!userName) return;
 
-        const response = await gameApiClient.openPack(userName, packName);
+        const fallbackCards = cardGenerator();
+
+        const response = await gameApiClient.openPack(userName, packName, fallbackCards);
         if (!response.ok) return;
 
         applyPackState(response.packs, walletValue);
-        await gameApiClient.loadCardValues();
-
-        const cards = cardGenerator();
-        showOpenedCards(applyGeneratedCardsToValueCalculation(cards));
+        const cardsToDisplay = Array.isArray(response.openedCards) && response.openedCards.length > 0
+            ? response.openedCards
+            : fallbackCards;
+        showOpenedCards(applyGeneratedCardsToValueCalculation(cardsToDisplay));
     };
 
     const openNormalPack = async () => {
