@@ -538,13 +538,38 @@ app.post('/api/packs/open', async (req, res) => {
   const packs = await ensureUserPacks(userName, {});
   const currentCount = normalizeQty(packs[packName]);
   if (currentCount <= 0) {
-    res.send({ ok: false, packs: normalizePacksMap(packs) });
+    res.send({ ok: false, packs: normalizePacksMap(packs), openedCards: [] });
+    return;
+  }
+
+  const cardState = await persistence.getCardValuesMap();
+  let generatedCardNames = drawPackCardNames(packName, cardState.valuesByName);
+  if (generatedCardNames.length === 0) {
+    generatedCardNames = sanitizeOpenedCardNames(req.body?.openedCards);
+  }
+
+  if (generatedCardNames.length === 0) {
+    res.send({ ok: false, packs: normalizePacksMap(packs), openedCards: [] });
     return;
   }
 
   packs[packName] = Math.max(0, currentCount - 1);
+  const profile = await ensureTradeProfile(userName, {});
+  for (const cardName of generatedCardNames) {
+    profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
+  }
+
   await persistence.setUserPacks(userName, packs);
-  res.send({ ok: true, packs: normalizePacksMap(packs) });
+  await persistence.setTradeProfileCards(userName, profile.cards);
+  const nextState = await recalculateCardValuesInDb();
+
+  res.send({
+    ok: true,
+    packs: normalizePacksMap(packs),
+    openedCards: generatedCardNames.map((name) => ({ name })),
+    valuesByName: nextState.valuesByName,
+    totalPopulation: nextState.totalPopulation,
+  });
 });
 
 app.post('/api/packs/claim', async (req, res) => {
@@ -555,21 +580,12 @@ app.post('/api/packs/claim', async (req, res) => {
   }
 
   const userName = sanitizeUsername(req.body?.userName);
-  const openedCards = Array.isArray(req.body?.openedCards) ? req.body.openedCards : [];
   if (!userName) {
     res.send({ ok: false, ownedEntries: [] });
     return;
   }
 
   const profile = await ensureTradeProfile(userName, {});
-  for (const card of openedCards) {
-    if (!card?.name) continue;
-    profile.cards[card.name] = normalizeQty(profile.cards[card.name]) + 1;
-  }
-
-  await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
-
   res.send({ ok: true, ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -746,6 +762,13 @@ async function createUser(username, password) {
   return await persistence.createUser(username, passwordHash);
 }
 
+function sanitizeOpenedCardNames(openedCards) {
+  if (!Array.isArray(openedCards)) return [];
+  return openedCards
+    .map((card) => sanitizeCardName(card?.name || card))
+    .filter(Boolean);
+}
+
 async function getUser(field, value) {
   return await persistence.getUserByField(field, value);
 }
@@ -911,6 +934,107 @@ function getRewardPackKeyForDesignCount(designCount) {
   }
 
   return selectedPack;
+}
+
+const PACK_OPEN_RULES = {
+  'Default Pack': {
+    quantity: 10,
+    rarityWeights: {
+      Common: 47,
+      Uncommon: 28,
+      Rare: 14,
+      Loric: 7,
+      Mythical: 3,
+      Legendary: 1,
+    },
+  },
+  'Saga Pack': {
+    quantity: 10,
+    rarityWeights: {
+      Common: 32,
+      Uncommon: 30,
+      Rare: 23,
+      Loric: 7,
+      Mythical: 7,
+      Legendary: 1,
+    },
+  },
+  'Heroic Pack': {
+    quantity: 10,
+    rarityWeights: {
+      Common: 0,
+      Uncommon: 35,
+      Rare: 30,
+      Loric: 18,
+      Mythical: 12,
+      Legendary: 5,
+    },
+  },
+  'Mythbound Pack': {
+    quantity: 10,
+    rarityWeights: {
+      Common: 0,
+      Uncommon: 0,
+      Rare: 40,
+      Loric: 30,
+      Mythical: 20,
+      Legendary: 10,
+    },
+  },
+};
+
+function drawPackCardNames(packName, valuesByName) {
+  const rule = PACK_OPEN_RULES[packName];
+  if (!rule) return [];
+
+  const namesByRarity = {};
+  for (const [name, cardState] of Object.entries(valuesByName || {})) {
+    if (!name) continue;
+    const rarity = normalizeRarity(cardState?.rarity);
+    if (!namesByRarity[rarity]) {
+      namesByRarity[rarity] = [];
+    }
+    namesByRarity[rarity].push(name);
+  }
+
+  const weightedRarities = Object.entries(rule.rarityWeights || {})
+    .map(([rarity, weight]) => ({
+      rarity,
+      weight: Math.max(0, Number(weight) || 0),
+      names: namesByRarity[rarity] || [],
+    }))
+    .filter((entry) => entry.weight > 0 && entry.names.length > 0);
+
+  if (weightedRarities.length === 0) {
+    return [];
+  }
+
+  const totalWeight = weightedRarities.reduce((sum, entry) => sum + entry.weight, 0);
+  if (totalWeight <= 0) {
+    return [];
+  }
+
+  const pickRarity = () => {
+    let roll = Math.random() * totalWeight;
+    for (const entry of weightedRarities) {
+      roll -= entry.weight;
+      if (roll < 0) return entry;
+    }
+    return weightedRarities[weightedRarities.length - 1];
+  };
+
+  const count = Math.max(0, parseInt(rule.quantity, 10) || 0);
+  const picks = [];
+  for (let i = 0; i < count; i += 1) {
+    const rarityEntry = pickRarity();
+    const names = rarityEntry.names;
+    const chosenName = names[Math.floor(Math.random() * names.length)];
+    if (chosenName) {
+      picks.push(chosenName);
+    }
+  }
+
+  return picks;
 }
 
 function isKnownPackName(packName) {
