@@ -31,26 +31,6 @@ function hydrateCards(cards) {
   return (cards || []).map((card) => hydrateCard(card));
 }
 
-async function applyOwnedEntriesToActiveUser(activeUserCards, ownedEntries) {
-  if (!Array.isArray(ownedEntries)) return;
-
-  const normalizedMap = {};
-  for (const entry of ownedEntries) {
-    if (!entry?.name) continue;
-    const qty = normalizeQty(entry.qty);
-    if (qty > 0) {
-      normalizedMap[entry.name] = qty;
-    }
-  }
-
-  if (activeUserCards && typeof activeUserCards === 'object') {
-    for (const key of Object.keys(activeUserCards)) {
-      delete activeUserCards[key];
-    }
-    Object.assign(activeUserCards, normalizedMap);
-  }
-}
-
 async function requestTradeApi(path, options = {}) {
   try {
     const res = await fetch(path, {
@@ -100,7 +80,7 @@ export const gameApiClient = {
     return cardLike && typeof cardLike.value === 'number' ? cardLike.value : 0;
   },
 
-  async buildOwnedDeckCards(userName, activeUserCards = {}) {
+  async buildOwnedDeckCards(userName) {
     if (!userName) return [];
 
     const response = await requestTradeApi('/api/trades/owned', {
@@ -109,8 +89,6 @@ export const gameApiClient = {
     });
 
     const sourceEntries = Array.isArray(response?.ownedEntries) ? response.ownedEntries : [];
-
-    await applyOwnedEntriesToActiveUser(activeUserCards, sourceEntries);
 
     return sourceEntries
       .map(({ name, qty }) => {
@@ -206,7 +184,7 @@ export const gameApiClient = {
     };
   },
 
-  async transferCardFromOwnedToTrade(userName, cardName, activeUserCards) {
+  async transferCardFromOwnedToTrade(userName, cardName) {
     if (!userName || !cardName) return;
 
     const response = await requestTradeApi('/api/trades/owned/decrement', {
@@ -218,10 +196,9 @@ export const gameApiClient = {
     });
 
     if (!response) return;
-    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
   },
 
-  async returnCardFromTradeSelection(userName, cardName, activeUserCards) {
+  async returnCardFromTradeSelection(userName, cardName) {
     if (!userName || !cardName) return;
 
     const response = await requestTradeApi('/api/trades/owned/increment', {
@@ -233,10 +210,9 @@ export const gameApiClient = {
     });
 
     if (!response) return;
-    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
   },
 
-  async cancelTrade(userName, selectedTradeCards, activeUserCards) {
+  async cancelTrade(userName, selectedTradeCards) {
     if (!userName) return;
 
     const response = await requestTradeApi('/api/trades/cancel', {
@@ -248,7 +224,6 @@ export const gameApiClient = {
     });
 
     if (!response) return;
-    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
   },
 
   async acceptTrade(activeUserName, otherUserName, selectedTradeCards, otherTradeCards) {
@@ -297,7 +272,7 @@ export const gameApiClient = {
       .sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  async buyBankCard(userName, cardName, buyPrice, activeUserCards = {}) {
+  async buyBankCard(userName, cardName, buyPrice) {
     if (!userName || !cardName) {
       return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
@@ -315,8 +290,6 @@ export const gameApiClient = {
       return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
 
-    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
-
     return {
       ok: Boolean(response.ok),
       bankEntries: Array.isArray(response.bankEntries) ? response.bankEntries : [],
@@ -325,7 +298,7 @@ export const gameApiClient = {
     };
   },
 
-  async sellBankCard(userName, cardName, payoutAmount, activeUserCards = {}) {
+  async sellBankCard(userName, cardName, payoutAmount) {
     if (!userName || !cardName) {
       return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
@@ -342,8 +315,6 @@ export const gameApiClient = {
     if (!response) {
       return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
-
-    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
 
     return {
       ok: Boolean(response.ok),
@@ -424,7 +395,7 @@ export const gameApiClient = {
     };
   },
 
-  async claimOpenedPackCards(userName, openedCards, activeUserCards = {}) {
+  async claimOpenedPackCards(userName, openedCards) {
     if (!userName) {
       return { ok: false };
     }
@@ -441,7 +412,6 @@ export const gameApiClient = {
       return { ok: false };
     }
 
-    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
     return { ok: Boolean(response.ok) };
   },
 
