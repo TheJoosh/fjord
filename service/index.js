@@ -648,6 +648,30 @@ app.post('/api/approvals/pending', async (req, res) => {
     return;
   }
 
+  if (Boolean(authUser.admin)) {
+    const approvedRarity = normalizeRarity(card.rarity);
+    await persistence.upsertApprovedCardToCards(name, {
+      ...card,
+      rarity: approvedRarity,
+    });
+    await persistence.upsertCardCatalogEntries([{ name, rarity: approvedRarity }]);
+    await recalculateCardValuesInDb();
+    await persistence.deletePendingApproval(name);
+
+    res.send({
+      ok: true,
+      bypassedApproval: true,
+      approvedCard: {
+        name,
+        card: {
+          ...card,
+          rarity: approvedRarity,
+        },
+      },
+    });
+    return;
+  }
+
   if (await persistence.getPendingApproval(name)) {
     res.send({ ok: false, error: 'A pending card with that name already exists' });
     return;
