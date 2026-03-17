@@ -272,8 +272,6 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
   }
 
   await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
-
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -290,7 +288,6 @@ app.post('/api/trades/owned/increment', async (req, res) => {
 
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
   await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -315,7 +312,6 @@ app.post('/api/trades/cancel', async (req, res) => {
   await persistence.setSelectedTradeCards(userName, []);
   await persistence.deletePendingTrade(userName);
   await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -360,7 +356,6 @@ app.post('/api/trades/accept', async (req, res) => {
   await persistence.deletePendingTrade(activeUserName);
   await persistence.setTradeProfileCards(activeUserName, activeProfile.cards);
   await persistence.setTradeProfileCards(otherUserName, otherProfile.cards);
-  await recalculateCardValuesInDb();
 
   res.send({
     nextActiveOwned: toOwnedEntries(activeProfile.cards),
