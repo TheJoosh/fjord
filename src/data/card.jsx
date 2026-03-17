@@ -4,10 +4,13 @@ export function Card({ image, name, cost, rarity, cardType, description, strengt
   const stats = strength === '-' && endurance === '-' ? '-/-' : `${strength}/${endurance}`;
 
   // Support both local filenames (assumed in Card Images/) and data URLs / absolute URLs.
+  const imageRef = typeof image === 'string' ? image.trim() : '';
   const src = image
-    ? (typeof image === 'string' && (image.startsWith('data:') || image.startsWith('http') || image.includes('/'))
-        ? image
-        : `Card Images/${image}`)
+    ? (imageRef.startsWith('cardimg:')
+        ? `/api/card-images/${encodeURIComponent(imageRef.slice('cardimg:'.length))}`
+        : (imageRef.startsWith('data:') || imageRef.startsWith('http') || imageRef.includes('/'))
+            ? imageRef
+            : `Card Images/${imageRef}`)
     : '';
 
   return (

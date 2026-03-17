@@ -1,6 +1,6 @@
 const path = require('path');
 const fs = require('fs');
-const { MongoClient, ObjectId } = require('mongodb');
+const { MongoClient, ObjectId, Binary } = require('mongodb');
 
 const DEFAULT_DB_NAME = 'Fjord';
 const GLOBAL_BANK_INVENTORY_ID = 'global';
@@ -392,6 +392,64 @@ async function setPendingApproval(name, card) {
     { $set: { card: { ...card } } },
     { upsert: true }
   );
+}
+
+async function saveCardImageDataUrl(dataUrl) {
+  const raw = String(dataUrl || '').trim();
+  if (!raw.startsWith('data:')) return '';
+
+  const match = raw.match(/^data:([^;,]+)?(?:;charset=[^;,]+)?(;base64)?,(.*)$/i);
+  if (!match) return '';
+
+  const mimeType = (match[1] || 'image/png').toLowerCase();
+  const isBase64 = Boolean(match[2]);
+  const payload = match[3] || '';
+
+  let buffer;
+  try {
+    buffer = isBase64
+      ? Buffer.from(payload, 'base64')
+      : Buffer.from(decodeURIComponent(payload), 'utf8');
+  } catch {
+    return '';
+  }
+
+  if (!buffer || buffer.length === 0) return '';
+
+  const db = await getDb();
+  const result = await db.collection('card_images').insertOne({
+    mimeType,
+    data: new Binary(buffer),
+    size: buffer.length,
+    createdAt: new Date(),
+  });
+
+  return result?.insertedId ? String(result.insertedId) : '';
+}
+
+async function getCardImageById(imageId) {
+  const id = String(imageId || '').trim();
+  if (!id) return null;
+
+  const db = await getDb();
+  let parsedId;
+  try {
+    parsedId = new ObjectId(id);
+  } catch {
+    return null;
+  }
+
+  const doc = await db.collection('card_images').findOne(
+    { _id: parsedId },
+    { projection: { mimeType: 1, data: 1 } }
+  );
+
+  if (!doc?.data) return null;
+
+  return {
+    mimeType: String(doc.mimeType || 'image/png'),
+    data: doc.data,
+  };
 }
 
 async function deletePendingApproval(name) {
@@ -1001,6 +1059,8 @@ module.exports = {
   listPendingApprovals,
   getPendingApproval,
   setPendingApproval,
+  saveCardImageDataUrl,
+  getCardImageById,
   deletePendingApproval,
   renamePendingApproval,
   ensureDeckSortPreference,

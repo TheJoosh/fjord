@@ -117,6 +117,27 @@ app.get('/api/cards/values', async (req, res) => {
   });
 });
 
+app.get('/api/card-images/:id', async (req, res) => {
+  const image = await persistence.getCardImageById(req.params?.id);
+  if (!image?.data) {
+    res.status(404).send({ msg: 'Image not found' });
+    return;
+  }
+
+  const payload = Buffer.isBuffer(image.data)
+    ? image.data
+    : (image.data?.buffer ? Buffer.from(image.data.buffer) : null);
+
+  if (!payload) {
+    res.status(404).send({ msg: 'Image not found' });
+    return;
+  }
+
+  res.setHeader('Content-Type', image.mimeType || 'image/png');
+  res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+  res.send(payload);
+});
+
 app.post('/api/trades/owned', async (req, res) => {
   const authUser = await getAuthUser(req);
   if (!authUser) {
@@ -693,6 +714,8 @@ app.post('/api/approvals/pending', async (req, res) => {
     return;
   }
 
+  card.image = await resolveCardImageReference(card.image);
+
   if (Boolean(authUser.admin)) {
     const approvedRarity = normalizeRarity(card.rarity);
     await persistence.upsertApprovedCardToCards(name, {
@@ -742,6 +765,8 @@ app.put('/api/approvals/pending', async (req, res) => {
     return;
   }
 
+  nextCard.image = await resolveCardImageReference(nextCard.image);
+
   if (!(await persistence.getPendingApproval(originalName))) {
     res.send({ ok: false, error: 'Pending card not found' });
     return;
@@ -788,7 +813,10 @@ app.post('/api/approvals/approve', async (req, res) => {
     return;
   }
 
-  const card = pending.card;
+  const card = {
+    ...(pending.card || {}),
+    image: await resolveCardImageReference(pending?.card?.image),
+  };
   const approvedRarity = normalizeRarity(card?.rarity);
 
   await persistence.upsertApprovedCardToCards(name, {
@@ -876,6 +904,22 @@ function sanitizeUsername(username) {
 function sanitizeCardName(name) {
   if (!name) return '';
   return String(name).trim();
+}
+
+async function resolveCardImageReference(imageValue) {
+  const image = String(imageValue || '').trim();
+  if (!image) return 'Default.png';
+
+  if (image.startsWith('cardimg:')) {
+    return image;
+  }
+
+  if (image.startsWith('data:')) {
+    const imageId = await persistence.saveCardImageDataUrl(image);
+    return imageId ? `cardimg:${imageId}` : 'Default.png';
+  }
+
+  return image;
 }
 
 function normalizePendingCard(card) {
