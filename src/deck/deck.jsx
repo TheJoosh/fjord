@@ -1,6 +1,5 @@
 import React from 'react';
 import { Card } from '../data/card';
-import { getCardByName } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 
 function normalizeWalletValue(value) {
@@ -17,39 +16,52 @@ export function Deck({ userName }) {
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState('Rarity');
   const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
-  const [ownedCardsMap, setOwnedCardsMap] = React.useState({});
+  const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [walletBalance, setWalletBalance] = React.useState(0);
-  const [totalPopulation, setTotalPopulation] = React.useState(0);
 
-  const effectiveCards = { ...(ownedCardsMap || {}) };
+  const combinedCardsByName = {};
+  for (const entry of ownedDeckCards) {
+    if (!entry?.name) continue;
+    combinedCardsByName[entry.name] = {
+      ...entry,
+      qty: Math.max(0, parseInt(entry.qty, 10) || 0),
+      value: typeof entry.value === 'number' ? entry.value : 0,
+      scarcity: typeof entry.scarcity === 'number' ? entry.scarcity : 0,
+    };
+  }
+
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
-    effectiveCards[card.name] = (parseInt(effectiveCards[card.name], 10) || 0) + 1;
+    if (!combinedCardsByName[card.name]) {
+      combinedCardsByName[card.name] = {
+        ...card,
+        qty: 0,
+        value: typeof card.value === 'number' ? card.value : 0,
+        scarcity: typeof card.scarcity === 'number' ? card.scarcity : 0,
+      };
+    }
+    combinedCardsByName[card.name].qty += 1;
   }
 
   // calculate total deck value
   let deckValue = 0;
   const walletValue = normalizeWalletValue(walletBalance);
-  for (const [name, qty] of Object.entries(effectiveCards)) {
-    const cardValue = gameApiClient.getCurrentCardValue({ name });
-    deckValue += cardValue * (parseInt(qty, 10) || 0);
+  for (const card of Object.values(combinedCardsByName)) {
+    deckValue += (typeof card.value === 'number' ? card.value : 0) * (parseInt(card.qty, 10) || 0);
   }
 
   // build list of owned cards with quantities
-  const owned = Object.keys(effectiveCards || {}).map(name => ({
-      name,
-      qty: Math.max(0, parseInt(effectiveCards[name], 10) || 0),
-      card: (() => {
-        const base = getCardByName(name);
-        if (!base) return null;
-        return {
-          ...base,
-          value: gameApiClient.getCurrentCardValue({ name }),
-          scarcity: gameApiClient.getCurrentCardScarcity({ name }),
-          population: gameApiClient.getCurrentCardPopulation({ name }),
-        };
-      })(),
-    })).filter(x => x.qty > 0);
+  const owned = Object.values(combinedCardsByName)
+    .map((entry) => ({
+      name: entry.name,
+      qty: Math.max(0, parseInt(entry.qty, 10) || 0),
+      card: {
+        ...entry,
+        value: typeof entry.value === 'number' ? entry.value : 0,
+        scarcity: typeof entry.scarcity === 'number' ? entry.scarcity : 0,
+      },
+    }))
+    .filter((x) => x.qty > 0 && x.card?.name);
 
   const sortedOwned = [...owned].sort((a, b) => {
     const aCard = a.card;
@@ -111,30 +123,19 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     if (!userName) {
-      setOwnedCardsMap({});
+      setOwnedDeckCards([]);
       return;
     }
 
     (async () => {
-      const ownedDeckCards = await gameApiClient.buildOwnedDeckCards(userName);
-      const nextOwnedCardsMap = {};
-      for (const entry of ownedDeckCards) {
-        if (!entry?.name) continue;
-        nextOwnedCardsMap[entry.name] = Math.max(0, parseInt(entry.qty, 10) || 0);
-      }
-      setOwnedCardsMap(nextOwnedCardsMap);
-      setTotalPopulation(gameApiClient.getTotalCardPopulation());
+      const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(userName);
+      setOwnedDeckCards(nextOwnedDeckCards);
     })();
   }, [userName]);
 
   React.useEffect(() => {
     (async () => {
-      if (!userName) {
-        setTotalPopulation(0);
-        return;
-      }
       await gameApiClient.loadCardValues();
-      setTotalPopulation(gameApiClient.getTotalCardPopulation());
     })();
   }, [userName]);
 
