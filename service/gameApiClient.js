@@ -1,6 +1,5 @@
 import { getCardByName } from '../src/data/cards';
 import { getUser, users } from '../src/data/users';
-import { storageService } from './storageService';
 
 function normalizeQty(value) {
   return Math.max(0, parseInt(value, 10) || 0);
@@ -43,7 +42,7 @@ function hydrateCards(cards) {
   return (cards || []).map((card) => hydrateCard(card));
 }
 
-async function applyOwnedEntriesToActiveUser(userName, activeUserCards, ownedEntries) {
+async function applyOwnedEntriesToActiveUser(activeUserCards, ownedEntries) {
   if (!Array.isArray(ownedEntries)) return;
 
   const normalizedMap = {};
@@ -60,15 +59,6 @@ async function applyOwnedEntriesToActiveUser(userName, activeUserCards, ownedEnt
       delete activeUserCards[key];
     }
     Object.assign(activeUserCards, normalizedMap);
-  }
-
-  if (userName) {
-    const persistableEntries = Object.entries(normalizedMap).map(([name, qty]) => ({
-      name,
-      qty,
-      card: getCardByName(name),
-    }));
-    await storageService.setOwnedCards(userName, persistableEntries);
   }
 }
 
@@ -119,28 +109,18 @@ export const gameApiClient = {
     return cardLike && typeof cardLike.value === 'number' ? cardLike.value : 0;
   },
 
-  async buildOwnedDeckCards(userName, fallbackCards = {}) {
+  async buildOwnedDeckCards(userName, activeUserCards = {}) {
     if (!userName) return [];
     await ensureBootstrap();
 
     const response = await requestTradeApi('/api/trades/owned', {
       method: 'POST',
-      body: JSON.stringify({ userName, fallbackCards }),
+      body: JSON.stringify({ userName }),
     });
 
-    let sourceEntries;
-    if (Array.isArray(response?.ownedEntries)) {
-      sourceEntries = response.ownedEntries;
-    } else {
-      const cachedOwned = await storageService.getOwnedCards(userName);
-      if (Array.isArray(cachedOwned) && cachedOwned.length > 0) {
-        sourceEntries = cachedOwned;
-      } else {
-        sourceEntries = Object.entries(fallbackCards || {}).map(([name, qty]) => ({ name, qty }));
-      }
-    }
+    const sourceEntries = Array.isArray(response?.ownedEntries) ? response.ownedEntries : [];
 
-    await applyOwnedEntriesToActiveUser(userName, fallbackCards, sourceEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, sourceEntries);
 
     return sourceEntries
       .map(({ name, qty }) => {
@@ -256,12 +236,11 @@ export const gameApiClient = {
       body: JSON.stringify({
         userName,
         cardName,
-        fallbackCards: activeUserCards || {},
       }),
     });
 
     if (!response) return;
-    await applyOwnedEntriesToActiveUser(userName, activeUserCards, response.ownedEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
   },
 
   async returnCardFromTradeSelection(userName, cardName, activeUserCards) {
@@ -272,12 +251,11 @@ export const gameApiClient = {
       body: JSON.stringify({
         userName,
         cardName,
-        fallbackCards: activeUserCards || {},
       }),
     });
 
     if (!response) return;
-    await applyOwnedEntriesToActiveUser(userName, activeUserCards, response.ownedEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
   },
 
   async cancelTrade(userName, selectedTradeCards, activeUserCards) {
@@ -288,12 +266,11 @@ export const gameApiClient = {
       body: JSON.stringify({
         userName,
         selectedTradeCards: Array.isArray(selectedTradeCards) ? selectedTradeCards : [],
-        fallbackCards: activeUserCards || {},
       }),
     });
 
     if (!response) return;
-    await applyOwnedEntriesToActiveUser(userName, activeUserCards, response.ownedEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
   },
 
   async acceptTrade(activeUserName, otherUserName, selectedTradeCards, otherTradeCards) {
@@ -311,8 +288,6 @@ export const gameApiClient = {
         otherUserName,
         selectedTradeCards: Array.isArray(selectedTradeCards) ? selectedTradeCards : [],
         otherTradeCards: Array.isArray(otherTradeCards) ? otherTradeCards : [],
-        activeFallbackCards: activeUser?.cards || {},
-        otherFallbackCards: targetUser?.cards || {},
       }),
     });
 
@@ -329,7 +304,7 @@ export const gameApiClient = {
       );
     }
 
-    await applyOwnedEntriesToActiveUser(activeUserName, activeUser?.cards, nextActiveOwned);
+    await applyOwnedEntriesToActiveUser(activeUser?.cards, nextActiveOwned);
 
     if (targetUser) {
       targetUser.cards = Object.fromEntries(
@@ -343,12 +318,10 @@ export const gameApiClient = {
     };
   },
 
-  async loadBankInventory(fallbackEntries = []) {
+  async loadBankInventory() {
     const response = await requestTradeApi('/api/bank/inventory', {
       method: 'POST',
-      body: JSON.stringify({
-        fallbackEntries: Array.isArray(fallbackEntries) ? fallbackEntries : [],
-      }),
+      body: JSON.stringify({}),
     });
 
     const bankEntries = Array.isArray(response?.bankEntries) ? response.bankEntries : [];
@@ -363,9 +336,9 @@ export const gameApiClient = {
       .sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  async buyBankCard(userName, cardName, buyPrice, fallbackCards = {}, fallbackWallet = 0) {
+  async buyBankCard(userName, cardName, buyPrice, activeUserCards = {}) {
     if (!userName || !cardName) {
-      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
 
     await ensureBootstrap();
@@ -376,28 +349,26 @@ export const gameApiClient = {
         userName,
         cardName,
         buyPrice,
-        fallbackCards,
-        fallbackWallet,
       }),
     });
 
     if (!response) {
-      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
 
-    await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
 
     return {
       ok: Boolean(response.ok),
       bankEntries: Array.isArray(response.bankEntries) ? response.bankEntries : [],
       ownedEntries: Array.isArray(response.ownedEntries) ? response.ownedEntries : [],
-      wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : fallbackWallet,
+      wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : 0,
     };
   },
 
-  async sellBankCard(userName, cardName, payoutAmount, fallbackCards = {}, fallbackWallet = 0) {
+  async sellBankCard(userName, cardName, payoutAmount, activeUserCards = {}) {
     if (!userName || !cardName) {
-      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
 
     await ensureBootstrap();
@@ -408,53 +379,49 @@ export const gameApiClient = {
         userName,
         cardName,
         payoutAmount,
-        fallbackCards,
-        fallbackWallet,
       }),
     });
 
     if (!response) {
-      return { ok: false, bankEntries: [], ownedEntries: [], wallet: fallbackWallet };
+      return { ok: false, bankEntries: [], ownedEntries: [], wallet: 0 };
     }
 
-    await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
 
     return {
       ok: Boolean(response.ok),
       bankEntries: Array.isArray(response.bankEntries) ? response.bankEntries : [],
       ownedEntries: Array.isArray(response.ownedEntries) ? response.ownedEntries : [],
-      wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : fallbackWallet,
+      wallet: Number.isFinite(Number(response.wallet)) ? Number(response.wallet) : 0,
     };
   },
 
-  async loadPackState(userName, fallbackPacks = {}, fallbackWallet = 0) {
+  async loadPackState(userName) {
     if (!userName) {
-      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+      return { ok: false, packs: normalizePacksMap({}), wallet: 0 };
     }
 
     const response = await requestTradeApi('/api/packs/state', {
       method: 'POST',
       body: JSON.stringify({
         userName,
-        fallbackPacks,
-        fallbackWallet,
       }),
     });
 
     if (!response) {
-      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+      return { ok: false, packs: normalizePacksMap({}), wallet: 0 };
     }
 
     return {
       ok: Boolean(response.ok),
-      packs: normalizePacksMap(response.packs || fallbackPacks),
+      packs: normalizePacksMap(response.packs || {}),
       wallet: normalizeWalletValue(response.wallet),
     };
   },
 
-  async buyPack(userName, packName, packPrice, fallbackPacks = {}, fallbackWallet = 0) {
+  async buyPack(userName, packName, packPrice) {
     if (!userName || !packName) {
-      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+      return { ok: false, packs: normalizePacksMap({}), wallet: 0 };
     }
 
     const response = await requestTradeApi('/api/packs/buy', {
@@ -463,25 +430,23 @@ export const gameApiClient = {
         userName,
         packName,
         packPrice,
-        fallbackPacks,
-        fallbackWallet,
       }),
     });
 
     if (!response) {
-      return { ok: false, packs: normalizePacksMap(fallbackPacks), wallet: normalizeWalletValue(fallbackWallet) };
+      return { ok: false, packs: normalizePacksMap({}), wallet: 0 };
     }
 
     return {
       ok: Boolean(response.ok),
-      packs: normalizePacksMap(response.packs || fallbackPacks),
+      packs: normalizePacksMap(response.packs || {}),
       wallet: normalizeWalletValue(response.wallet),
     };
   },
 
-  async openPack(userName, packName, fallbackPacks = {}) {
+  async openPack(userName, packName) {
     if (!userName || !packName) {
-      return { ok: false, packs: normalizePacksMap(fallbackPacks) };
+      return { ok: false, packs: normalizePacksMap({}) };
     }
 
     const response = await requestTradeApi('/api/packs/open', {
@@ -489,21 +454,20 @@ export const gameApiClient = {
       body: JSON.stringify({
         userName,
         packName,
-        fallbackPacks,
       }),
     });
 
     if (!response) {
-      return { ok: false, packs: normalizePacksMap(fallbackPacks) };
+      return { ok: false, packs: normalizePacksMap({}) };
     }
 
     return {
       ok: Boolean(response.ok),
-      packs: normalizePacksMap(response.packs || fallbackPacks),
+      packs: normalizePacksMap(response.packs || {}),
     };
   },
 
-  async claimOpenedPackCards(userName, openedCards, fallbackCards = {}) {
+  async claimOpenedPackCards(userName, openedCards, activeUserCards = {}) {
     if (!userName) {
       return { ok: false };
     }
@@ -515,7 +479,6 @@ export const gameApiClient = {
       body: JSON.stringify({
         userName,
         openedCards: Array.isArray(openedCards) ? openedCards : [],
-        fallbackCards,
       }),
     });
 
@@ -523,17 +486,17 @@ export const gameApiClient = {
       return { ok: false };
     }
 
-    await applyOwnedEntriesToActiveUser(userName, fallbackCards, response.ownedEntries);
+    await applyOwnedEntriesToActiveUser(activeUserCards, response.ownedEntries);
     return { ok: Boolean(response.ok) };
   },
 
-  async submitDesignerProgress(userName, fallbackDesigned = 0, fallbackPacks = {}) {
+  async submitDesignerProgress(userName) {
     if (!userName) {
       return {
         ok: false,
-        nextDesigned: normalizeQty(fallbackDesigned),
+        nextDesigned: 0,
         rewardPackKey: 'Default Pack',
-        packs: normalizePacksMap(fallbackPacks),
+        packs: normalizePacksMap({}),
       };
     }
 
@@ -541,17 +504,15 @@ export const gameApiClient = {
       method: 'POST',
       body: JSON.stringify({
         userName,
-        fallbackDesigned,
-        fallbackPacks,
       }),
     });
 
     if (!response) {
       return {
         ok: false,
-        nextDesigned: normalizeQty(fallbackDesigned),
+        nextDesigned: 0,
         rewardPackKey: 'Default Pack',
-        packs: normalizePacksMap(fallbackPacks),
+        packs: normalizePacksMap({}),
       };
     }
 
@@ -559,7 +520,7 @@ export const gameApiClient = {
       ok: Boolean(response.ok),
       nextDesigned: normalizeQty(response.nextDesigned),
       rewardPackKey: response.rewardPackKey || 'Default Pack',
-      packs: normalizePacksMap(response.packs || fallbackPacks),
+      packs: normalizePacksMap(response.packs || {}),
     };
   },
 
@@ -630,7 +591,7 @@ export const gameApiClient = {
     if (!userName) return fallbackSort;
 
     const response = await requestTradeApi(
-      `/api/preferences/deck-sort?userName=${encodeURIComponent(userName)}&fallback=${encodeURIComponent(fallbackSort)}`,
+      `/api/preferences/deck-sort?userName=${encodeURIComponent(userName)}`,
       { method: 'GET' }
     );
 
