@@ -99,7 +99,7 @@ async function initPersistence() {
 async function createUser(username, passwordHash) {
   const db = await getDb();
   const users = db.collection('users_auth');
-  const doc = { username, password: passwordHash, token: null };
+  const doc = { username, password: passwordHash, token: null, admin: false };
   await users.insertOne(doc);
   return doc;
 }
@@ -110,6 +110,25 @@ async function getUserByField(field, value) {
 
   const db = await getDb();
   return db.collection('users_auth').findOne({ [field]: value });
+}
+
+async function ensureUserAdmin(username, fallbackAdmin = false) {
+  if (!username) return false;
+
+  const db = await getDb();
+  const users = db.collection('users_auth');
+  const normalizedFallback = Boolean(fallbackAdmin);
+
+  await users.updateOne(
+    { username },
+    { $setOnInsert: { admin: normalizedFallback } },
+    { upsert: true }
+  );
+
+  const doc = await users.findOne({ username });
+  const admin = Boolean(doc?.admin);
+  await users.updateOne({ username }, { $set: { admin } });
+  return admin;
 }
 
 async function setUserToken(username, token) {
@@ -397,6 +416,7 @@ module.exports = {
   initPersistence,
   createUser,
   getUserByField,
+  ensureUserAdmin,
   setUserToken,
   clearUserToken,
   ensureTradeProfile,
