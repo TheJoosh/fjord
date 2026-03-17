@@ -1,5 +1,3 @@
-import { storageService } from '../../service/storageService';
-
 export const users = {
   Tradey: {
     wallet: 0,
@@ -186,50 +184,6 @@ function ensureUsersWallets() {
 }
 
 ensureUsersWallets();
-
-async function hydrateUsersFromStorage() {
-  const storedUsers = await storageService.getUsersMap();
-
-  let hasChanges = false;
-  for (const [username, userObj] of Object.entries(storedUsers || {})) {
-    if (!userObj || typeof userObj !== 'object') continue;
-
-    const prevWallet = userObj.wallet;
-    const prevAdmin = userObj.admin;
-    ensureUserProfileFields(username, userObj);
-    if (prevWallet !== userObj.wallet || prevAdmin !== userObj.admin) {
-      hasChanges = true;
-    }
-
-    if (!users[username]) {
-      users[username] = userObj;
-    } else {
-      ensureUserProfileFields(username, users[username]);
-    }
-  }
-
-  for (const [username, userObj] of Object.entries(users || {})) {
-    const existingStored = storedUsers[username];
-    if (!existingStored || typeof existingStored !== 'object') {
-      storedUsers[username] = { ...userObj };
-      hasChanges = true;
-      continue;
-    }
-
-    const prevWallet = existingStored.wallet;
-    const prevAdmin = existingStored.admin;
-    ensureUserProfileFields(username, existingStored);
-    if (prevWallet !== existingStored.wallet || prevAdmin !== existingStored.admin) {
-      hasChanges = true;
-    }
-  }
-
-  if (hasChanges) {
-    await storageService.setUsersMap(storedUsers);
-  }
-}
-
-void hydrateUsersFromStorage();
 
 export function getUser(username) {
   if (!username) return null;
