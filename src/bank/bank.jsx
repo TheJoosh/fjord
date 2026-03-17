@@ -17,6 +17,7 @@ export function Bank({ userName }) {
   const [isSellMode, setIsSellMode] = React.useState(false);
   const [sortBy, setSortBy] = React.useState('Rarity');
   const [walletBalance, setWalletBalance] = React.useState(0);
+  const [pendingAction, setPendingAction] = React.useState(null);
   const walletValue = normalizeWalletValue(walletBalance);
 
   const loadBankCards = React.useCallback(async () => {
@@ -101,7 +102,7 @@ export function Bank({ userName }) {
   };
 
   const handleBuyCard = async (cardName) => {
-    if (!userName || !cardName) return;
+    if (!userName || !cardName || pendingAction) return;
 
     const currentCardValue = gameApiClient.getCurrentCardValue({ name: cardName });
     const buyPrice = normalizeWalletValue(currentCardValue * 1.15);
@@ -112,41 +113,51 @@ export function Bank({ userName }) {
     const bankQty = Math.max(0, parseInt(bankEntry?.qty, 10) || 0);
     if (bankQty <= 0) return;
 
-    const response = await gameApiClient.buyBankCard(
-      userName,
-      cardName,
-      buyPrice
-    );
-    if (!response.ok) return;
+    setPendingAction({ type: 'buy', cardName });
+    try {
+      const response = await gameApiClient.buyBankCard(
+        userName,
+        cardName,
+        buyPrice
+      );
+      if (!response.ok) return;
 
-    const nextWallet = normalizeWalletValue(response.wallet);
-    setWalletBalance(nextWallet);
+      const nextWallet = normalizeWalletValue(response.wallet);
+      setWalletBalance(nextWallet);
 
-    setBankCards(mapBankEntriesToCards(response.bankEntries));
-    setBankCards(await loadBankCards());
-    setOwnedDeckCards(await buildOwnedDeckCards());
+      setBankCards(mapBankEntriesToCards(response.bankEntries));
+      setBankCards(await loadBankCards());
+      setOwnedDeckCards(await buildOwnedDeckCards());
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const handleSellCard = async (cardName) => {
-    if (!userName || !cardName) return;
+    if (!userName || !cardName || pendingAction) return;
 
     const sellValue = gameApiClient.getCurrentCardValue({ name: cardName });
     const payoutAmount = normalizeWalletValue(sellValue * 0.85);
     const currentWallet = normalizeWalletValue(walletValue);
-    const response = await gameApiClient.sellBankCard(
-      userName,
-      cardName,
-      payoutAmount
-    );
-    if (!response.ok) return;
+    setPendingAction({ type: 'sell', cardName });
+    try {
+      const response = await gameApiClient.sellBankCard(
+        userName,
+        cardName,
+        payoutAmount
+      );
+      if (!response.ok) return;
 
-    const nextWallet = normalizeWalletValue(response.wallet);
-    setWalletBalance(nextWallet);
+      const nextWallet = normalizeWalletValue(response.wallet);
+      setWalletBalance(nextWallet);
 
-    setBankCards(mapBankEntriesToCards(response.bankEntries));
-    setBankCards(await loadBankCards());
+      setBankCards(mapBankEntriesToCards(response.bankEntries));
+      setBankCards(await loadBankCards());
 
-    setOwnedDeckCards(await buildOwnedDeckCards());
+      setOwnedDeckCards(await buildOwnedDeckCards());
+    } finally {
+      setPendingAction(null);
+    }
   };
 
   const buildOwnedDeckCards = React.useCallback(async () => {
@@ -245,6 +256,7 @@ export function Bank({ userName }) {
             {paginatedCards.map(({ name, card, qty }) => {
               const buyPrice = normalizeWalletValue((typeof card.value === 'number' ? card.value : 0) * 1.15);
               const canAfford = walletValue >= buyPrice;
+              const isBuyingThisCard = pendingAction?.type === 'buy' && pendingAction.cardName === name;
 
               return (
                 <div className="col deck-col" key={name}>
@@ -269,10 +281,10 @@ export function Bank({ userName }) {
                     type="button"
                     className="picker"
                     onClick={() => handleBuyCard(name)}
-                    disabled={!canAfford}
+                    disabled={!canAfford || Boolean(pendingAction)}
                     style={!canAfford ? { color: 'red' } : undefined}
                   >
-                    Buy for ${buyPrice.toFixed(2)}?
+                    {isBuyingThisCard ? 'Loading...' : `Buy for $${buyPrice.toFixed(2)}?`}
                   </button>
                 </div>
               );
@@ -288,6 +300,7 @@ export function Bank({ userName }) {
               <div className="row deck-row">
                 {sortedOwnedDeckCards.map((card) => {
                   const payoutAmount = normalizeWalletValue(((typeof card.value === 'number' ? card.value : 0) * 0.85));
+                  const isSellingThisCard = pendingAction?.type === 'sell' && pendingAction.cardName === card.name;
 
                   return (
                   <div key={card.name} className="col deck-col">
@@ -311,8 +324,9 @@ export function Bank({ userName }) {
                       type="button"
                       className="picker"
                       onClick={() => handleSellCard(card.name)}
+                      disabled={Boolean(pendingAction)}
                     >
-                      Sell for ${payoutAmount.toFixed(2)}?
+                      {isSellingThisCard ? 'Loading...' : `Sell for $${payoutAmount.toFixed(2)}?`}
                     </button>
                   </div>
                 )})}
