@@ -39,3 +39,7 @@ export async function logoutAuth() {
 export async function getMe() {
   return requestAuth('/api/user/me', { method: 'GET' });
 }
+
+export async function getProfile() {
+  return requestAuth('/api/user/profile', { method: 'GET' });
+}
