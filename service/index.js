@@ -1008,7 +1008,9 @@ app.put('/api/preferences/deck-duplicates', async (req, res) => {
 
 async function createUser(username, password) {
   const passwordHash = await bcrypt.hash(password, 10);
-  return await persistence.createUser(username, passwordHash);
+  const user = await persistence.createUser(username, passwordHash);
+  await persistence.ensureUserPacks(username, { 'Default Pack': 1 });
+  return user;
 }
 
 function sanitizeOpenedCards(openedCards) {
