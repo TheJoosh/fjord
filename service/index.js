@@ -427,8 +427,36 @@ app.post('/api/bank/inventory', async (req, res) => {
   }
 
   const bankInventory = await persistence.getBankInventory();
+  const bankEntries = toOwnedEntries(bankInventory);
+  const entryNames = bankEntries.map((entry) => entry.name);
+  const [detailsByName, cardValues] = await Promise.all([
+    persistence.getCardDetailsByNames(entryNames),
+    persistence.getCardValuesMap(),
+  ]);
+  const valuesByName = cardValues?.valuesByName || {};
 
-  res.send({ bankEntries: toOwnedEntries(bankInventory) });
+  res.send({
+    bankEntries: bankEntries.map((entry) => ({
+      ...entry,
+      card:
+        detailsByName[entry.name] ||
+        {
+          name: entry.name,
+          image: 'Default.png',
+          cost: '-',
+          rarity: normalizeRarity(valuesByName[entry.name]?.rarity),
+          cardType: 'Type',
+          description: '',
+          strength: '-',
+          endurance: '-',
+          author: 'Unknown',
+          value: Number.isFinite(Number(valuesByName[entry.name]?.value))
+            ? Number(valuesByName[entry.name].value)
+            : 0,
+          population: Math.max(0, parseInt(valuesByName[entry.name]?.population, 10) || 0),
+        },
+    })),
+  });
 });
 
 app.post('/api/bank/buy', async (req, res) => {

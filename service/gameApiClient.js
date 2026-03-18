@@ -81,12 +81,23 @@ async function requestTradeApi(path, options = {}) {
 
     const body = await res.json().catch(() => null);
     if (!res.ok) {
-      return null;
+      return {
+        ok: false,
+        error:
+          body?.error ||
+          body?.msg ||
+          `Request failed with status ${res.status}`,
+        status: res.status,
+      };
     }
 
     return body;
-  } catch {
-    return null;
+  } catch (error) {
+    return {
+      ok: false,
+      error: error?.message || 'Network request failed',
+      status: 0,
+    };
   }
 }
 
@@ -419,8 +430,51 @@ export const gameApiClient = {
 
     const bankEntries = Array.isArray(response?.bankEntries) ? response.bankEntries : [];
     return bankEntries
-      .map(({ name, qty }) => {
-        const card = getCardByName(name);
+      .map(({ name, qty, card: serverCard }) => {
+        const staticCard = getCardByName(name);
+        const fallbackCard = {
+          name,
+          image: 'Default.png',
+          cost: '-',
+          rarity: 'Common',
+          cardType: 'Type',
+          description: '',
+          strength: '-',
+          endurance: '-',
+          author: 'Unknown',
+          value: 0,
+          population: 0,
+          scarcity: 0,
+        };
+
+        const hasServerMetadata = Boolean(
+          serverCard && (
+            (typeof serverCard.image === 'string' && serverCard.image.trim() && serverCard.image !== 'Default.png') ||
+            (typeof serverCard.description === 'string' && serverCard.description.trim()) ||
+            (typeof serverCard.cardType === 'string' && serverCard.cardType !== 'Type') ||
+            (typeof serverCard.author === 'string' && serverCard.author !== 'Unknown')
+          )
+        );
+
+        const mergedCard = {
+          ...fallbackCard,
+          ...(staticCard || {}),
+          ...(hasServerMetadata ? (serverCard || {}) : {}),
+        };
+
+        if (!hasServerMetadata && serverCard) {
+          // Keep high-signal stats from server without clobbering richer card metadata.
+          if (serverCard.rarity) mergedCard.rarity = serverCard.rarity;
+          if (Number.isFinite(Number(serverCard.value))) mergedCard.value = Number(serverCard.value);
+          if (Number.isFinite(Number(serverCard.population))) {
+            mergedCard.population = Math.max(0, parseInt(serverCard.population, 10) || 0);
+          }
+          if (Number.isFinite(Number(serverCard.scarcity))) {
+            mergedCard.scarcity = Number(serverCard.scarcity);
+          }
+        }
+
+        const card = mergedCard;
         const normalizedQty = normalizeQty(qty);
         if (!card || normalizedQty <= 0) return null;
         const liveValue = Number(liveCardValuesByName?.[name]?.value);
@@ -657,7 +711,7 @@ export const gameApiClient = {
 
     return {
       ok: Boolean(response?.ok),
-      error: response?.error || '',
+      error: response?.error || response?.msg || '',
     };
   },
 

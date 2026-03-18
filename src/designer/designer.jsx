@@ -290,13 +290,7 @@ export function Designer({ userName }) {
     const displayStats = (abilities === 'Passive' || abilities === 'Forge' || abilities === 'Flight' || abilities === 'Command' || abilities === 'Berserk') ? calculatePassiveStats() : stats;
 
     function getCommandInputMax(currentValue, otherValue) {
-        const coupledMax = getCommandFieldMax(otherValue);
-        if (displayStats.strength === 1 && displayStats.endurance === 1) {
-            const current = parseInt(currentValue, 10);
-            const safeCurrent = isNaN(current) ? 1 : Math.max(1, current);
-            return Math.min(coupledMax, safeCurrent);
-        }
-        return coupledMax;
+        return getCommandFieldMax(otherValue);
     }
 
     function generatePassiveDescription() {
@@ -331,6 +325,18 @@ export function Designer({ userName }) {
         };
         const parsed = parseInt(value, 10);
         return numberWords[parsed] || value;
+    }
+
+    function getNormalizedModifierType(value) {
+        return String(value || '').trim().toLowerCase();
+    }
+
+    function getModifierLabel(value) {
+        const normalized = getNormalizedModifierType(value);
+        if (normalized === 'strength') return 'Strength';
+        if (normalized === 'endurance') return 'Endurance';
+        if (normalized === 'maximum fate' || normalized === 'fate') return 'Maximum Fate';
+        return '';
     }
 
     function getEffectivePassiveValue() {
@@ -420,7 +426,8 @@ export function Designer({ userName }) {
         return !isNaN(parsed) && parsed >= min && parsed <= max;
     }
 
-    const isImageValid = Boolean(previewImage);
+    // Image is optional; if none is provided we submit with Default.png.
+    const isImageValid = true;
     const isTitleValid = title.trim().length > 0;
     const isClassValid = Boolean(cardType);
     const isCostValid = isNumberInRange(cost, 1, 5);
@@ -443,7 +450,8 @@ export function Designer({ userName }) {
         const isTargetValid = ['Enemy', 'Allied'].includes(passiveTarget);
         isAbilitySubFieldsValid = isPassiveValueValid && isPassiveTypeValid && (!requiresTarget || isTargetValid);
     } else if (abilities === 'Command') {
-        const isCommandTypeValid = ['Strength', 'Endurance'].includes(passiveModifierType);
+        const normalizedModifierType = getNormalizedModifierType(passiveModifierType);
+        const isCommandTypeValid = normalizedModifierType === 'strength' || normalizedModifierType === 'endurance';
         isAbilitySubFieldsValid = isPassiveValueValid && isCommandValueValid && commandTotalValid && isCommandTypeValid;
     }
 
@@ -456,13 +464,50 @@ export function Designer({ userName }) {
         isAbilityValid &&
         isAbilitySubFieldsValid;
 
+    let submitDisabledReason = '';
+    if (!isSubmitReady) {
+        if (!isTitleValid) {
+            submitDisabledReason = 'Enter a card title.';
+        } else if (!isClassValid) {
+            submitDisabledReason = 'Select a class.';
+        } else if (!isCostValid) {
+            submitDisabledReason = 'Choose a cost between 1 and 5.';
+        } else if (!isBalanceValid) {
+            submitDisabledReason = 'Select a balance.';
+        } else if (!isAbilityValid) {
+            submitDisabledReason = 'Select an ability.';
+        } else if (abilities === 'Spell' && spellDescription.trim().length === 0) {
+            submitDisabledReason = 'Enter a spell description.';
+        } else if (abilities === 'Passive') {
+            if (!isPassiveValueValid) {
+                submitDisabledReason = `Passive value must be between 1 and ${passiveMax}.`;
+            } else if (!['Maximum Fate', 'Strength', 'Endurance'].includes(passiveModifierType)) {
+                submitDisabledReason = 'Select a passive type.';
+            } else if ((passiveModifierType === 'Strength' || passiveModifierType === 'Endurance') && !['Enemy', 'Allied'].includes(passiveTarget)) {
+                submitDisabledReason = 'Select a passive target.';
+            }
+        } else if (abilities === 'Flight' || abilities === 'Forge' || abilities === 'Berserk') {
+            submitDisabledReason = `Ability value must be between 1 and ${passiveMax}.`;
+        } else if (abilities === 'Command') {
+            if (!isPassiveValueValid) {
+                submitDisabledReason = `Command boost must be between 1 and ${passiveMax}.`;
+            } else if (!isCommandValueValid) {
+                submitDisabledReason = `Command target count must be between 1 and ${passiveMax}.`;
+            } else if (!commandTotalValid) {
+                submitDisabledReason = `Command values must add up to ${passiveMax} or less.`;
+            } else if (!['strength', 'endurance'].includes(getNormalizedModifierType(passiveModifierType))) {
+                submitDisabledReason = 'Select Command type: Strength or Endurance.';
+            }
+        }
+    }
+
     const previewDescription = abilities
         ? (abilities === "Swift"
             ? "Swift - this card can attack on the same turn it enters play"
             : abilities === "Spell"
                 ? `Spell - ${spellDescription}`
                 : abilities === "Command"
-                    ? `Command - can temporarily increase the ${(passiveModifierType || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn`
+                    ? `Command - can temporarily increase the ${(getModifierLabel(passiveModifierType) || 'passiveType').toLowerCase()} of any ${getNumberWord(commandValue || 1)} allied ${parseInt(commandValue, 10) === 1 ? 'card' : 'cards'} by ${passiveValue || 1} each turn`
                     : abilities === "Passive"
                         ? generatePassiveDescription()
                         : abilities === "Forge"
@@ -669,10 +714,10 @@ export function Designer({ userName }) {
                             <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" className="design-inline-input" />
                             <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" className="design-inline-input" />
                             <select id="command_passive_type" name="command_passive_type" onChange={e => {
-                                const selectedType = e.target.options[e.target.selectedIndex].text;
+                                const selectedType = e.target.value;
                                 setPassiveModifierType(selectedType);
                                 setPassiveTarget('');
-                            }} className="design-inline-input">
+                            }} value={['strength', 'endurance'].includes(getNormalizedModifierType(passiveModifierType)) ? getNormalizedModifierType(passiveModifierType) : ''} className="design-inline-input">
                                 <option value="">-- Select Type --</option>
                                 <option value="fate" disabled>Maximum Fate</option>
                                 <option value="strength">Strength</option>
@@ -709,6 +754,12 @@ export function Designer({ userName }) {
                     {isSubmitReady && (
                         <div>
                             <button type="submit" className="submit-card-btn">Submit Card</button>
+                        </div>
+                    )}
+
+                    {!isSubmitReady && submitDisabledReason && (
+                        <div>
+                            <h4 className="designer-message">{submitDisabledReason}</h4>
                         </div>
                     )}
 
