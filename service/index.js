@@ -304,15 +304,11 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
   const cardName = req.body?.cardName;
   const profile = await ensureTradeProfile(userName, {});
 
-  const currentQty = normalizeQty(profile.cards[cardName]);
-  if (currentQty <= 1) {
-    delete profile.cards[cardName];
-  } else {
-    profile.cards[cardName] = currentQty - 1;
+  if (!userName || !cardName) {
+    res.send({ ownedEntries: toOwnedEntries(profile.cards) });
+    return;
   }
 
-  await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -327,9 +323,11 @@ app.post('/api/trades/owned/increment', async (req, res) => {
   const cardName = req.body?.cardName;
   const profile = await ensureTradeProfile(userName, {});
 
-  profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
-  await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
+  if (!userName || !cardName) {
+    res.send({ ownedEntries: toOwnedEntries(profile.cards) });
+    return;
+  }
+
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
 
@@ -346,15 +344,8 @@ app.post('/api/trades/cancel', async (req, res) => {
     : [];
   const profile = await ensureTradeProfile(userName, {});
 
-  for (const card of selectedTradeCards) {
-    if (!card?.name) continue;
-    profile.cards[card.name] = normalizeQty(profile.cards[card.name]) + 1;
-  }
-
   await persistence.setSelectedTradeCards(userName, []);
   await persistence.deletePendingTrade(userName);
-  await persistence.setTradeProfileCards(userName, profile.cards);
-  await recalculateCardValuesInDb();
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -377,9 +368,18 @@ app.post('/api/trades/accept', async (req, res) => {
   const activeProfile = await ensureTradeProfile(activeUserName, {});
   const otherProfile = await ensureTradeProfile(otherUserName, {});
 
+  const selectedCounts = {};
   for (const card of selectedTradeCards) {
     if (!card?.name) continue;
-    otherProfile.cards[card.name] = normalizeQty(otherProfile.cards[card.name]) + 1;
+    selectedCounts[card.name] = normalizeQty(selectedCounts[card.name]) + 1;
+  }
+
+  for (const [name, qty] of Object.entries(selectedCounts)) {
+    const available = normalizeQty(activeProfile.cards[name]);
+    if (available < qty) {
+      res.send({ ok: false, error: 'Insufficient selected cards to complete trade' });
+      return;
+    }
   }
 
   for (const card of otherTradeCards) {
@@ -393,6 +393,18 @@ app.post('/api/trades/accept', async (req, res) => {
     }
 
     activeProfile.cards[card.name] = normalizeQty(activeProfile.cards[card.name]) + 1;
+  }
+
+  for (const [name, qty] of Object.entries(selectedCounts)) {
+    const available = normalizeQty(activeProfile.cards[name]);
+    const remaining = Math.max(0, available - qty);
+    if (remaining > 0) {
+      activeProfile.cards[name] = remaining;
+    } else {
+      delete activeProfile.cards[name];
+    }
+
+    otherProfile.cards[name] = normalizeQty(otherProfile.cards[name]) + qty;
   }
 
   await persistence.setSelectedTradeCards(activeUserName, []);

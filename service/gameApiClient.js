@@ -381,7 +381,7 @@ export const gameApiClient = {
 
   async acceptTrade(activeUserName, otherUserName, selectedTradeCards, otherTradeCards) {
     if (!activeUserName || !otherUserName) {
-      return { nextActiveOwned: [], nextTargetOwned: [] };
+      return { ok: false, error: 'Missing trade users', nextActiveOwned: [], nextTargetOwned: [] };
     }
 
     const response = await requestTradeApi('/api/trades/accept', {
@@ -395,13 +395,15 @@ export const gameApiClient = {
     });
 
     if (!response) {
-      return { nextActiveOwned: [], nextTargetOwned: [] };
+      return { ok: false, error: 'Unable to accept trade', nextActiveOwned: [], nextTargetOwned: [] };
     }
 
     const nextActiveOwned = Array.isArray(response?.nextActiveOwned) ? response.nextActiveOwned : [];
     const nextTargetOwned = Array.isArray(response?.nextTargetOwned) ? response.nextTargetOwned : [];
 
     return {
+      ok: Boolean(response?.ok ?? true),
+      error: response?.error || '',
       nextActiveOwned: hydrateCards(nextActiveOwned),
       nextTargetOwned: hydrateCards(nextTargetOwned),
     };

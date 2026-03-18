@@ -15,7 +15,6 @@ export function Deck({ userName }) {
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState('Rarity');
-  const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [walletBalance, setWalletBalance] = React.useState(0);
   const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
@@ -30,19 +29,6 @@ export function Deck({ userName }) {
       value: typeof entry.value === 'number' ? entry.value : 0,
       scarcity: typeof entry.scarcity === 'number' ? entry.scarcity : 0,
     };
-  }
-
-  for (const card of selectedTradeCards) {
-    if (!card?.name) continue;
-    if (!combinedCardsByName[card.name]) {
-      combinedCardsByName[card.name] = {
-        ...card,
-        qty: 0,
-        value: typeof card.value === 'number' ? card.value : 0,
-        scarcity: typeof card.scarcity === 'number' ? card.scarcity : 0,
-      };
-    }
-    combinedCardsByName[card.name].qty += 1;
   }
 
   // calculate total deck value
@@ -213,18 +199,6 @@ export function Deck({ userName }) {
       await gameApiClient.saveDeckShowDuplicatesPreference(userName, showDuplicates);
     })();
   }, [userName, showDuplicates, hasLoadedShowDuplicatesPreference]);
-
-  React.useEffect(() => {
-    if (!userName) {
-      setSelectedTradeCards([]);
-      return;
-    }
-
-    (async () => {
-      const parsed = await gameApiClient.loadSelectedTradeCards(userName);
-      setSelectedTradeCards(Array.isArray(parsed) ? parsed : []);
-    })();
-  }, [userName]);
 
   React.useEffect(() => {
     setCurrentPage(1);
