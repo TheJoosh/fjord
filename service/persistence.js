@@ -119,6 +119,17 @@ function normalizeRarity(value) {
   return 'Common';
 }
 
+function isPlaceholderCardEntry(name, card) {
+  const normalizedName = String(name || '').trim().toLowerCase();
+  if (!normalizedName) return true;
+  if (normalizedName === 'placeholder') return true;
+
+  const image = String(card?.image || '').trim().toLowerCase();
+  if (image === 'placeholder.png') return true;
+
+  return false;
+}
+
 function computeCardValue(rarity, totalOwned, totalPopulation) {
   const R = RARITY_SCORES[normalizeRarity(rarity)] || 0;
   const T = normalizeQty(totalOwned);
@@ -640,6 +651,7 @@ async function getCardsPoolByRarity() {
     pool[rarity] = Object.entries(bucket)
       .filter(([name, card]) => {
         if (!name || name === 'totalPopulation') return false;
+        if (isPlaceholderCardEntry(name, card)) return false;
         return card && typeof card === 'object';
       })
       .map(([name]) => name);

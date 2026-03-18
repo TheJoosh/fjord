@@ -600,7 +600,13 @@ export function drawWeightedCards(
   for (let i = 0; i < count; i++) {
     const rarity = chooseRarity();
     const group = cardsByRarity[rarity] || {};
-    const names = Object.keys(group);
+    const names = Object.keys(group).filter((name) => {
+      const normalizedName = String(name || '').trim().toLowerCase();
+      if (!normalizedName || normalizedName === 'placeholder') return false;
+      const card = group[name];
+      const image = String(card?.image || '').trim().toLowerCase();
+      return image !== 'placeholder.png';
+    });
     if (names.length === 0) continue;
 
     const randomName = names[Math.floor(Math.random() * names.length)];

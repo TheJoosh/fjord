@@ -11,7 +11,9 @@
     "preview": "vite preview",
     "optimize:images": "node scripts/optimize-card-images.mjs",
     "migrate:card-images:dry": "node scripts/migrate-card-image-data-urls.js --dry-run",
-    "migrate:card-images": "node scripts/migrate-card-image-data-urls.js"
+    "migrate:card-images": "node scripts/migrate-card-image-data-urls.js",
+    "cleanup:placeholders:dry": "node scripts/cleanup-placeholder-cards.js --dry-run",
+    "cleanup:placeholders": "node scripts/cleanup-placeholder-cards.js"
   },
   "repository": {
     "type": "git",
