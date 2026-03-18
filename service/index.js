@@ -913,10 +913,15 @@ app.put('/api/admin/cards/designs', async (req, res) => {
   const originalName = sanitizeCardName(req.body?.originalName);
   const nextName = sanitizeCardName(req.body?.nextName);
   const nextCard = normalizePendingCard(req.body?.card);
+  const requestedDisplayName = String(req.body?.displayname || req.body?.card?.displayname || '').trim();
 
   if (!originalName || !nextName || !nextCard) {
     res.send({ ok: false, error: 'Invalid card edit request' });
     return;
+  }
+
+  if (requestedDisplayName) {
+    nextCard.displayname = requestedDisplayName;
   }
 
   nextCard.image = await resolveCardImageReference(nextCard.image);
@@ -929,14 +934,20 @@ app.put('/api/admin/cards/designs', async (req, res) => {
 
   const approvedRarity = normalizeRarity(nextCard.rarity);
   await persistence.upsertCardCatalogEntries([{ name: nextName, rarity: approvedRarity }]);
+  await persistence.setCardDisplayNameInCards(nextName, nextCard.displayname);
   await recalculateCardValuesInDb();
+
+  const persisted = (await persistence.listAllCardDesigns()).find((entry) => entry?.name === nextName);
+  const persistedCard = persisted?.card || {};
 
   res.send({
     ok: true,
+    persistedDisplayName: persistedCard.displayname || nextCard.displayname || nextName,
     updatedCard: {
       name: nextName,
       card: {
         ...nextCard,
+        displayname: persistedCard.displayname || nextCard.displayname || nextName,
         rarity: approvedRarity,
       },
     },

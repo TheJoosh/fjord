@@ -728,6 +728,8 @@ async function getCardsPoolByRarity() {
 }
 
 async function listAllCardDesigns() {
+  await ensureCardsDisplayNames();
+
   const db = await getDb();
   const cardsCollection = db.collection('cards');
 
@@ -845,8 +847,14 @@ async function updateCardDesignInCards(originalName, nextName, card) {
       .find((value) => value != null)
   );
 
+  const existingCardDoc = currentLocations
+    .map((location) => cardsRootDoc?.[location.rarity]?.[location.key])
+    .find((entry) => entry && typeof entry === 'object') || {};
+
+  const existingDisplayName = normalizeDisplayName(existingCardDoc.displayname, targetName);
+
   const nextCardDoc = {
-    displayname: normalizeDisplayName(card.displayname, targetName),
+    displayname: normalizeDisplayName(card.displayname, existingDisplayName),
     image: card.image || 'Default.png',
     cost: card.cost != null ? card.cost : '-',
     rarity: targetRarity,
@@ -887,6 +895,70 @@ async function updateCardDesignInCards(originalName, nextName, card) {
       },
     },
   };
+}
+
+async function setCardDisplayNameInCards(cardName, displayName) {
+  const targetName = String(cardName || '').trim();
+  const nextDisplayName = normalizeDisplayName(displayName, targetName);
+  if (!targetName || !nextDisplayName) {
+    return { ok: false, error: 'Invalid card displayname payload' };
+  }
+
+  const safeName = targetName.replace(/\./g, '\uFF0E').replace(/\$/g, '\uFF04');
+
+  const db = await getDb();
+  const cardsCollection = db.collection('cards');
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsRootDoc = await cardsCollection.findOne(cardsRootFilter, {
+    projection: {
+      Common: 1,
+      Uncommon: 1,
+      Rare: 1,
+      Loric: 1,
+      Mythical: 1,
+      Legendary: 1,
+    },
+  });
+
+  let targetPath = '';
+  for (const rarity of Object.keys(RARITY_SCORES)) {
+    const bucket = cardsRootDoc?.[rarity];
+    if (!bucket || typeof bucket !== 'object') continue;
+
+    if (Object.prototype.hasOwnProperty.call(bucket, targetName)) {
+      targetPath = `${rarity}.${targetName}.displayname`;
+      break;
+    }
+
+    if (Object.prototype.hasOwnProperty.call(bucket, safeName)) {
+      targetPath = `${rarity}.${safeName}.displayname`;
+      break;
+    }
+  }
+
+  if (!targetPath) {
+    return { ok: false, error: 'Live card not found' };
+  }
+
+  await cardsCollection.updateOne(
+    cardsRootFilter,
+    {
+      $set: {
+        [targetPath]: nextDisplayName,
+        updatedAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
+
+  return { ok: true, displayname: nextDisplayName };
 }
 
 async function upsertApprovedCardToCards(name, card) {
@@ -1354,6 +1426,7 @@ module.exports = {
   getCardValuesMap,
   getCardsPoolByRarity,
   listAllCardDesigns,
+  setCardDisplayNameInCards,
   updateCardDesignInCards,
   upsertApprovedCardToCards,
   getCardDetailsByNames,

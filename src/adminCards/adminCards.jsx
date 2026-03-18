@@ -110,6 +110,23 @@ export function AdminCards() {
       return;
     }
 
+    if (response.persistedDisplayName && response.persistedDisplayName !== nextDisplayName) {
+      setEditError(`Saved but persisted display name differs: ${response.persistedDisplayName}`);
+    }
+
+    if (response.updatedCard?.name && response.updatedCard?.card) {
+      const updatedName = response.updatedCard.name;
+      const updatedCard = {
+        ...response.updatedCard.card,
+        name: updatedName,
+        displayname: response.updatedCard.card.displayname || updatedName,
+      };
+
+      setCatalogCards((previousCards) => previousCards.map((entry) => (
+        entry.name === updatedName ? { ...entry, card: updatedCard } : entry
+      )));
+    }
+
     await loadCatalogCards();
     closeEditOverlay();
     setCatalogVersion((value) => value + 1);

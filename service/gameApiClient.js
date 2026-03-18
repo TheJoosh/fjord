@@ -464,6 +464,13 @@ export const gameApiClient = {
           ...(hasServerMetadata ? (serverCard || {}) : {}),
         };
 
+        if (serverCard && typeof serverCard === 'object') {
+          const serverDisplayName = String(serverCard.displayname || '').trim();
+          if (serverDisplayName) {
+            mergedCard.displayname = serverDisplayName;
+          }
+        }
+
         if (!hasServerMetadata && serverCard) {
           // Keep high-signal stats from server without clobbering richer card metadata.
           if (serverCard.rarity) mergedCard.rarity = serverCard.rarity;
@@ -752,8 +759,9 @@ export const gameApiClient = {
   },
 
   async loadAdminCardDesigns() {
-    const response = await requestTradeApi('/api/admin/cards/designs', {
+    const response = await requestTradeApi(`/api/admin/cards/designs?t=${Date.now()}`, {
       method: 'GET',
+      cache: 'no-store',
     });
 
     const cards = Array.isArray(response?.cards) ? response.cards : [];
@@ -776,7 +784,12 @@ export const gameApiClient = {
   async updateAdminCardDesign(originalName, nextName, card) {
     const response = await requestTradeApi('/api/admin/cards/designs', {
       method: 'PUT',
-      body: JSON.stringify({ originalName, nextName, card }),
+      body: JSON.stringify({
+        originalName,
+        nextName,
+        displayname: card?.displayname,
+        card,
+      }),
     });
 
     return {
