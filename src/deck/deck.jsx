@@ -272,6 +272,9 @@ export function Deck({ userName }) {
       </div>
 
       <div className="container-fluid">
+        {userName && paginatedCards.length === 0 ? (
+          <div className="deck-value">Open card packs to get cards!</div>
+        ) : (
         <div className="row deck-row">
           {paginatedCards.map(({ entry, card, qty, copyIndex, showStack }) => (
               <div className="col deck-col" key={`${entry.name}-${copyIndex}`}>
@@ -317,6 +320,7 @@ export function Deck({ userName }) {
               </div>
             ))}
         </div>
+        )}
       </div>
     </main>
   );
