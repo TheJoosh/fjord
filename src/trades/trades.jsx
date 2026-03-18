@@ -211,6 +211,7 @@ export function Trades({ userName }) {
                                         <Card
                                             image={card.image}
                                             name={card.name}
+                                            displayname={card.displayname}
                                             cost={card.cost}
                                             rarity={card.rarity}
                                             cardType={card.cardType}
@@ -247,6 +248,7 @@ export function Trades({ userName }) {
                                         <Card
                                             image={card.image}
                                             name={card.name}
+                                            displayname={card.displayname}
                                             cost={card.cost}
                                             rarity={card.rarity}
                                             cardType={card.cardType}
@@ -328,6 +330,7 @@ export function Trades({ userName }) {
                                             <Card
                                                 image={card.image}
                                                 name={card.name}
+                                                displayname={card.displayname}
                                                 cost={card.cost}
                                                 rarity={card.rarity}
                                                 cardType={card.cardType}

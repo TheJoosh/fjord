@@ -45,6 +45,7 @@ function hydrateCard(cardLike) {
   return {
     ...latest,
     ...cardLike,
+    displayname: String(cardLike.displayname || latest.displayname || cardLike.name || '').trim() || cardLike.name,
     value,
     scarcity,
     population,
@@ -434,6 +435,7 @@ export const gameApiClient = {
         const staticCard = getCardByName(name);
         const fallbackCard = {
           name,
+          displayname: name,
           image: 'Default.png',
           cost: '-',
           rarity: 'Common',
@@ -696,6 +698,7 @@ export const gameApiClient = {
           card: {
             ...entry.card,
             name: entry.name,
+            displayname: entry.card.displayname || entry.name,
           },
         };
       })
@@ -762,6 +765,7 @@ export const gameApiClient = {
           card: {
             ...entry.card,
             name: entry.name,
+            displayname: entry.card.displayname || entry.name,
           },
         };
       })

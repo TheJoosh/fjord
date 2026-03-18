@@ -193,6 +193,7 @@ export function Approve({ userName }) {
                   <Card
                     image={card.image}
                     name={card.name}
+                    displayname={card.displayname}
                     cost={card.cost}
                     rarity={card.rarity}
                     cardType={card.cardType}
@@ -297,6 +298,7 @@ export function Approve({ userName }) {
               <Card
                 image={editingDraft.image || 'Default.png'}
                 name={editingDraft.name || 'Card Name'}
+                displayname={editingDraft.displayname || editingDraft.name || 'Card Name'}
                 cost={editingDraft.cost || '-'}
                 rarity={editingDraft.rarity || 'Common'}
                 cardType={editingDraft.cardType || 'Type'}

@@ -124,6 +124,12 @@ function normalizeRarity(value) {
   return 'Common';
 }
 
+function normalizeDisplayName(value, fallbackName) {
+  const next = String(value || '').trim();
+  if (next) return next;
+  return String(fallbackName || '').trim();
+}
+
 function isPlaceholderCardEntry(name, card) {
   const normalizedName = String(name || '').trim().toLowerCase();
   if (!normalizedName) return true;
@@ -152,6 +158,62 @@ async function initPersistence() {
     db.collection('users_auth').createIndex({ username: 1 }, { unique: true }),
     db.collection('users_auth').createIndex({ token: 1 }),
   ]);
+
+  await ensureCardsDisplayNames();
+}
+
+async function ensureCardsDisplayNames() {
+  const db = await getDb();
+  const cardsCollection = db.collection('cards');
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsRootDoc = await cardsCollection.findOne(cardsRootFilter, {
+    projection: {
+      Common: 1,
+      Uncommon: 1,
+      Rare: 1,
+      Loric: 1,
+      Mythical: 1,
+      Legendary: 1,
+    },
+  });
+
+  if (!cardsRootDoc) return;
+
+  const set = {};
+  for (const rarity of Object.keys(RARITY_SCORES)) {
+    const bucket = cardsRootDoc[rarity];
+    if (!bucket || typeof bucket !== 'object') continue;
+
+    for (const [key, card] of Object.entries(bucket)) {
+      if (!key || key === 'totalPopulation') continue;
+      if (!card || typeof card !== 'object') continue;
+
+      const normalizedName = String(key).replace(/\uFF0E/g, '.').replace(/\uFF04/g, '$');
+      const nextDisplayName = normalizeDisplayName(card.displayname, normalizedName);
+      if (String(card.displayname || '') === nextDisplayName) continue;
+      set[`${rarity}.${key}.displayname`] = nextDisplayName;
+    }
+  }
+
+  if (Object.keys(set).length === 0) return;
+
+  await cardsCollection.updateOne(
+    cardsRootFilter,
+    {
+      $set: {
+        ...set,
+        updatedAt: new Date(),
+      },
+    },
+    { upsert: true }
+  );
 }
 
 async function createUser(username, passwordHash) {
@@ -704,6 +766,7 @@ async function listAllCardDesigns() {
       designsByName[name] = {
         name,
         card: {
+          displayname: normalizeDisplayName(card.displayname, name),
           image: card.image || 'Default.png',
           cost: card.cost != null ? card.cost : '-',
           rarity: normalizeRarity(card.rarity || rarity),
@@ -783,6 +846,7 @@ async function updateCardDesignInCards(originalName, nextName, card) {
   );
 
   const nextCardDoc = {
+    displayname: normalizeDisplayName(card.displayname, targetName),
     image: card.image || 'Default.png',
     cost: card.cost != null ? card.cost : '-',
     rarity: targetRarity,
@@ -849,6 +913,7 @@ async function upsertApprovedCardToCards(name, card) {
   const currentPopulation = normalizeQty(existing?.[rarity]?.[safeName]?.population);
 
   const cardDoc = {
+    displayname: normalizeDisplayName(card.displayname, cardName),
     image: card.image || 'Default.png',
     cost: card.cost != null ? card.cost : '-',
     rarity,
@@ -923,6 +988,7 @@ async function getCardDetailsByNames(cardNames) {
 
       byName[name] = {
         name,
+        displayname: normalizeDisplayName(card.displayname, name),
         image: card.image || 'Default.png',
         cost: card.cost != null ? card.cost : '-',
         rarity: normalizeRarity(card.rarity || rarity),

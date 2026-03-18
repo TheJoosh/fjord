@@ -43,6 +43,7 @@ export function AdminCards() {
     setEditingOriginalName(name);
     setEditingDraft({
       name,
+      displayname: card.displayname || name,
       image: card.image || '',
       cost: card.cost != null ? String(card.cost) : '',
       rarity: card.rarity || 'Common',
@@ -79,13 +80,14 @@ export function AdminCards() {
   const handleSaveEdit = async () => {
     if (!editingDraft || !editingOriginalName) return;
 
-    const nextName = (editingDraft.name || '').trim();
-    if (!nextName) {
-      setEditError('Card name is required.');
+    const nextDisplayName = (editingDraft.displayname || '').trim();
+    if (!nextDisplayName) {
+      setEditError('Display name is required.');
       return;
     }
 
     const updatedCard = {
+      displayname: nextDisplayName,
       image: (editingDraft.image || '').trim() || 'Default.png',
       cost: (editingDraft.cost || '').trim() || '-',
       rarity: (editingDraft.rarity || '').trim() || 'Common',
@@ -99,7 +101,7 @@ export function AdminCards() {
 
     const response = await gameApiClient.updateAdminCardDesign(
       editingOriginalName,
-      nextName,
+      editingOriginalName,
       updatedCard
     );
 
@@ -162,6 +164,7 @@ export function AdminCards() {
                 <Card
                   image={card.image}
                   name={card.name}
+                  displayname={card.displayname}
                   cost={card.cost}
                   rarity={card.rarity}
                   cardType={card.cardType}
@@ -198,8 +201,12 @@ export function AdminCards() {
             <div className="designer" style={{ gap: '16px', alignItems: 'flex-start' }}>
               <div className="design-form">
                 <div>
-                  <span>Name:</span>
-                  <input type="text" value={editingDraft.name} onChange={(event) => handleEditDraftChange('name', event.target.value)} />
+                  <span>Card Id:</span>
+                  <input type="text" value={editingDraft.name} disabled />
+                </div>
+                <div>
+                  <span>Display Name:</span>
+                  <input type="text" value={editingDraft.displayname} onChange={(event) => handleEditDraftChange('displayname', event.target.value)} />
                 </div>
                 <div>
                   <span>Image:</span>
@@ -252,6 +259,7 @@ export function AdminCards() {
               <Card
                 image={editingDraft.image || 'Default.png'}
                 name={editingDraft.name || 'Card Name'}
+                displayname={editingDraft.displayname || editingDraft.name || 'Card Name'}
                 cost={editingDraft.cost || '-'}
                 rarity={editingDraft.rarity || 'Common'}
                 cardType={editingDraft.cardType || 'Type'}

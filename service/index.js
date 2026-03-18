@@ -152,6 +152,7 @@ app.post('/api/trades/owned', async (req, res) => {
   const ownedCards = ownedEntries.map((entry) => ({
     ...(detailsByName[entry.name] || {
       name: entry.name,
+      displayname: entry.name,
       image: 'Default.png',
       cost: '-',
       rarity: 'Common',
@@ -442,6 +443,7 @@ app.post('/api/bank/inventory', async (req, res) => {
         detailsByName[entry.name] ||
         {
           name: entry.name,
+          displayname: entry.name,
           image: 'Default.png',
           cost: '-',
           rarity: normalizeRarity(valuesByName[entry.name]?.rarity),
@@ -653,6 +655,7 @@ app.post('/api/packs/open', async (req, res) => {
     const liveState = nextState.valuesByName?.[entry.name] || {};
     return {
       name: entry.name,
+      displayname: details.displayname || entry.name,
       image: details.image || 'Default.png',
       cost: details.cost != null ? details.cost : '-',
       rarity: normalizeRarity(details.rarity || entry.rarity),
@@ -1052,6 +1055,7 @@ async function resolveCardImageReference(imageValue) {
 function normalizePendingCard(card) {
   if (!card || typeof card !== 'object') return null;
   return {
+    displayname: String(card.displayname || card.name || '').trim(),
     image: card.image || 'Default.png',
     cost: card.cost != null ? card.cost : '-',
     rarity: card.rarity || 'Common',
