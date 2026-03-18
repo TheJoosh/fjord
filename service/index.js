@@ -879,6 +879,67 @@ app.post('/api/approvals/approve', async (req, res) => {
   });
 });
 
+app.get('/api/admin/cards/designs', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  if (!Boolean(authUser.admin)) {
+    res.status(403).send({ msg: 'Forbidden' });
+    return;
+  }
+
+  const cards = await persistence.listAllCardDesigns();
+  res.send({ cards });
+});
+
+app.put('/api/admin/cards/designs', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  if (!Boolean(authUser.admin)) {
+    res.status(403).send({ msg: 'Forbidden' });
+    return;
+  }
+
+  const originalName = sanitizeCardName(req.body?.originalName);
+  const nextName = sanitizeCardName(req.body?.nextName);
+  const nextCard = normalizePendingCard(req.body?.card);
+
+  if (!originalName || !nextName || !nextCard) {
+    res.send({ ok: false, error: 'Invalid card edit request' });
+    return;
+  }
+
+  nextCard.image = await resolveCardImageReference(nextCard.image);
+
+  const update = await persistence.updateCardDesignInCards(originalName, nextName, nextCard);
+  if (!update?.ok) {
+    res.send({ ok: false, error: update?.error || 'Unable to update card' });
+    return;
+  }
+
+  const approvedRarity = normalizeRarity(nextCard.rarity);
+  await persistence.upsertCardCatalogEntries([{ name: nextName, rarity: approvedRarity }]);
+  await recalculateCardValuesInDb();
+
+  res.send({
+    ok: true,
+    updatedCard: {
+      name: nextName,
+      card: {
+        ...nextCard,
+        rarity: approvedRarity,
+      },
+    },
+  });
+});
+
 app.get('/api/preferences/deck-sort', async (req, res) => {
   const authUser = await getAuthUser(req);
   if (!authUser) {

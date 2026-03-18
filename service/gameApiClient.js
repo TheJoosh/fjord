@@ -748,6 +748,40 @@ export const gameApiClient = {
     };
   },
 
+  async loadAdminCardDesigns() {
+    const response = await requestTradeApi('/api/admin/cards/designs', {
+      method: 'GET',
+    });
+
+    const cards = Array.isArray(response?.cards) ? response.cards : [];
+    return cards
+      .map((entry) => {
+        if (!entry?.name || !entry?.card) return null;
+        return {
+          name: entry.name,
+          card: {
+            ...entry.card,
+            name: entry.name,
+          },
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  },
+
+  async updateAdminCardDesign(originalName, nextName, card) {
+    const response = await requestTradeApi('/api/admin/cards/designs', {
+      method: 'PUT',
+      body: JSON.stringify({ originalName, nextName, card }),
+    });
+
+    return {
+      ok: Boolean(response?.ok),
+      error: response?.error || '',
+      updatedCard: response?.updatedCard || null,
+    };
+  },
+
   async loadDeckSortPreference(userName, fallbackSort = 'Rarity') {
     if (!userName) return fallbackSort;
 

@@ -11,6 +11,7 @@ import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
 import { Bank } from './bank/bank';
 import { Approve } from './approve/approve';
+import { AdminCards } from './adminCards/adminCards';
 import { getMe, getProfile, logoutAuth } from './login/authService';
 import { gameApiClient } from '../service/gameApiClient';
 
@@ -111,6 +112,10 @@ export default function App() {
                         <li><NavLink to="/approve">Approve</NavLink></li>
                     )}
 
+                    {authState === AuthState.Authenticated && isAdminUser && (
+                        <li><NavLink to="/admin-cards">Card Catalog</NavLink></li>
+                    )}
+
                     {authState === AuthState.Authenticated && (
                         <li><button className="nav-link btn btn-link text-light p-0" onClick={logout}>Logout</button></li>
                     )}
@@ -136,6 +141,7 @@ export default function App() {
                 <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='/bank' element={<Bank userName={userName} />} />
                 <Route path='/approve' element={isAdminUser ? <Approve userName={userName} /> : <Navigate to='/' replace />} />
+                <Route path='/admin-cards' element={isAdminUser ? <AdminCards /> : <Navigate to='/' replace />} />
                 <Route path='*' element={<NotFound />} />
             </Routes>
 
