@@ -4,6 +4,7 @@ import { cardNameExists } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 
 export function Designer({ userName }) { 
+    const MAX_IMAGE_DATA_URL_LENGTH = 700000;
     const imageInputRef = useRef(null);
     const [previewImage, setPreviewImage] = useState(null);
     const [title, setTitle] = useState('');
@@ -62,22 +63,45 @@ export function Designer({ userName }) {
             const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
 
             const canvas = document.createElement('canvas');
-            canvas.width = targetWidth;
-            canvas.height = targetHeight;
-
             const context = canvas.getContext('2d');
             if (!context) {
                 return originalDataUrl;
             }
 
-            context.drawImage(image, 0, 0, targetWidth, targetHeight);
+            const qualitySteps = [0.82, 0.72, 0.62, 0.52, 0.42, 0.32];
+            let bestDataUrl = originalDataUrl;
 
-            const optimizedDataUrl = canvas.toDataURL('image/webp', 0.82);
-            if (!optimizedDataUrl) {
-                return originalDataUrl;
+            let currentWidth = targetWidth;
+            let currentHeight = targetHeight;
+
+            for (let pass = 0; pass < 7; pass++) {
+                canvas.width = currentWidth;
+                canvas.height = currentHeight;
+                context.clearRect(0, 0, currentWidth, currentHeight);
+                context.drawImage(image, 0, 0, currentWidth, currentHeight);
+
+                for (const quality of qualitySteps) {
+                    const candidate = canvas.toDataURL('image/webp', quality);
+                    if (!candidate) continue;
+
+                    if (candidate.length < bestDataUrl.length) {
+                        bestDataUrl = candidate;
+                    }
+
+                    if (candidate.length <= MAX_IMAGE_DATA_URL_LENGTH) {
+                        return candidate;
+                    }
+                }
+
+                if (currentWidth <= 300 || currentHeight <= 300) {
+                    break;
+                }
+
+                currentWidth = Math.max(300, Math.round(currentWidth * 0.85));
+                currentHeight = Math.max(300, Math.round(currentHeight * 0.85));
             }
 
-            return optimizedDataUrl.length < originalDataUrl.length ? optimizedDataUrl : originalDataUrl;
+            return bestDataUrl;
         } catch {
             return originalDataUrl;
         }
@@ -92,6 +116,14 @@ export function Designer({ userName }) {
 
         (async () => {
             const optimizedImage = await optimizeUploadedImage(file);
+
+            if (!optimizedImage || optimizedImage.length > MAX_IMAGE_DATA_URL_LENGTH) {
+                setPreviewImage(null);
+                setSubmitMessage('Image is too large to upload. Please use a smaller file.');
+                return;
+            }
+
+            setSubmitMessage('');
             setPreviewImage(optimizedImage);
         })();
     }
