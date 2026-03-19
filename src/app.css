@@ -6,6 +6,8 @@ body {
   height: 100vh;
   margin: 0;
   padding: 0;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .body {
@@ -28,6 +30,7 @@ body {
   border-radius: 14px;
   margin-top: 20px;
   position: relative;
+  overflow: hidden;
   z-index: 3;
   box-sizing: border-box;
   transition: transform 50ms ease, box-shadow 200ms ease;
@@ -69,11 +72,13 @@ body {
   border-radius: 0px 0px 15px 15px;
   background-color: rgb(0, 0, 0, 0.8);
   position: absolute;
+  overflow: hidden;
   z-index: 2;
 }
 
 .card-name {
   font-size: 20px;
+  line-height: 1.1;
   font-family: "Cinzel";
   font-weight: 600;
   color: whitesmoke;
@@ -84,6 +89,7 @@ body {
 
 .card-type {
   font-size: 14px;
+  line-height: 1.1;
   font-family: "Cinzel";
   font-weight: 400;
   color: whitesmoke;
@@ -99,6 +105,7 @@ body {
   background-color: rgb(0, 0, 0, 0.8);
   color: whitesmoke;
   font-size: 30px;
+  line-height: 1;
   font-family: "cinzel-bold";
   position: absolute;
   border-radius: 50%;
@@ -119,6 +126,7 @@ body {
   background-color: rgb(0, 0, 0, 0.8);
   color: whitesmoke;
   font-size: 14px;
+  line-height: 1;
   font-family: "Cinzel";
   position: absolute;
   border-radius: 50%;
@@ -133,14 +141,24 @@ body {
 }
 
 .card-description {
+  position: absolute;
   font-family: "Cinzel";
   font-size: 12px;
-  width: 278px;
+  line-height: 1.2;
+  left: 10px;
+  right: 10px;
   color: whitesmoke;
   border-top: 1px solid whitesmoke;
   padding: 10px;
   top: 60px;
-  left: 10px;
+  box-sizing: border-box;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
 .deck-row {
   display: flex;
   flex-wrap: wrap;
@@ -148,8 +166,6 @@ body {
   justify-content: flex-start;
   align-items: start;
   padding: 0;
-}
-  position: absolute;
 }
 
 header {
@@ -836,12 +852,14 @@ main {
 
 .pack-overlay-col .card-name {
   font-size: 13px;
+  line-height: 1.1;
   top: 6px;
   left: 6px;
 }
 
 .pack-overlay-col .card-type {
   font-size: 9px;
+  line-height: 1.1;
   top: 20px;
   left: 6px;
 }
@@ -850,6 +868,7 @@ main {
   width: 32px;
   height: 32px;
   font-size: 18px;
+  line-height: 1;
   border-width: 4px;
   top: 6px;
   right: 6px;
@@ -859,17 +878,31 @@ main {
   width: 26px;
   height: 26px;
   font-size: 9px;
+  line-height: 1;
   border-width: 3px;
   bottom: 98px;
   right: 6px;
 }
 
 .pack-overlay-col .card-description {
-  width: 181px;
+  left: 6px;
+  right: 6px;
   font-size: 8px;
+  line-height: 1.15;
   padding: 6px;
   top: 39px;
-  left: 6px;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+}
+
+.pack-overlay-col .fj-card,
+.pack-overlay-col .card-name,
+.pack-overlay-col .card-type,
+.pack-overlay-col .card-description,
+.pack-overlay-col .card-cost,
+.pack-overlay-col .card-stats {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .design-form textarea {
@@ -1011,6 +1044,16 @@ button {
     border-radius: 7px;
   }
 
+  .fj-card,
+  .card-name,
+  .card-type,
+  .card-description,
+  .card-cost,
+  .card-stats {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+  }
+
   .card-image {
     height: 210px;
     width: 150px;
@@ -1024,14 +1067,16 @@ button {
   }
 
   .card-name {
-    font-size: 10px;
+    font-size: 11px;
+    line-height: 1.1;
     font-weight: 300;
     top: 5px;
     left: 5px;
   }
 
   .card-type {
-    font-size: 7px;
+    font-size: 8px;
+    line-height: 1.1;
     font-weight: 200;
     top: 16px;
     left: 5px;
@@ -1039,6 +1084,7 @@ button {
 
   .card-cost {
     font-size: 15px;
+    line-height: 1;
     width: 25px;
     height: 25px;
     border-width: 3px;
@@ -1047,7 +1093,8 @@ button {
   }
 
   .card-stats {
-    font-size: 7px;
+    font-size: 8px;
+    line-height: 1;
     width: 20px;
     height: 20px;
     border-width: 2.5px;
@@ -1056,11 +1103,14 @@ button {
   }
 
   .card-description {
-    font-size: 5px;
-    width: 148px;
+    font-size: 7px;
+    line-height: 1.15;
+    left: 5px;
+    right: 5px;
     padding: 5px;
     top: 30px;
-    left: 5px;
+    -webkit-line-clamp: 5;
+    line-clamp: 5;
   }
 
   .designer {
@@ -1144,6 +1194,16 @@ button {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
+}
+
+.deck-col .fj-card,
+.deck-col .card-name,
+.deck-col .card-type,
+.deck-col .card-description,
+.deck-col .card-cost,
+.deck-col .card-stats {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 .card-stack {
