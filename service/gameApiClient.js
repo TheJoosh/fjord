@@ -41,7 +41,16 @@ function hydrateCard(cardLike) {
     ? Math.max(0, parseInt(livePopulation, 10) || 0)
     : Math.max(0, parseInt(cardLike.population, 10) || 0);
 
-  if (!latest) return cardLike;
+  if (!latest) {
+    return {
+      ...cardLike,
+      displayname: String(cardLike.displayname || cardLike.name || '').trim() || cardLike.name,
+      value,
+      scarcity,
+      population,
+    };
+  }
+
   return {
     ...latest,
     ...cardLike,

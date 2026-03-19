@@ -179,14 +179,13 @@ app.get('/api/trades/pending', async (req, res) => {
 
   const userName = sanitizeUsername(req.query?.userName);
   const pendingTrade = await persistence.getPendingTrade(userName);
+  const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(pendingTrade?.otherTradeCards);
   res.send({
     pendingTrade: pendingTrade
       ? {
           otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName || 'Other User',
           otherUserName: pendingTrade.otherUserName || '',
-          otherTradeCards: Array.isArray(pendingTrade.otherTradeCards)
-            ? pendingTrade.otherTradeCards
-            : [],
+          otherTradeCards: hydratedOtherTradeCards,
         }
       : {
       otherUserLabel: 'Other User',
@@ -230,7 +229,7 @@ app.get('/api/trades/selection', async (req, res) => {
 
   const userName = sanitizeUsername(req.query?.userName);
   const selectedTradeCards = await persistence.getSelectedTradeCards(userName);
-  res.send({ selectedTradeCards });
+  res.send({ selectedTradeCards: await hydrateTradeCardsForResponse(selectedTradeCards) });
 });
 
 app.put('/api/trades/selection', async (req, res) => {
@@ -286,11 +285,12 @@ app.post('/api/trades/request-user', async (req, res) => {
     name,
     otherTradeEntryId: `${name}-${now}-${index}-${Math.random()}`,
   }));
+  const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(otherTradeCards);
 
   res.send({
     otherUserLabel: matchedUserName,
     otherUserName: matchedUserName,
-    otherTradeCards,
+    otherTradeCards: hydratedOtherTradeCards,
   });
 });
 
@@ -1022,6 +1022,49 @@ function sanitizeOpenedCards(openedCards) {
       return {
         name,
         rarity: normalizeRarity(card?.rarity),
+      };
+    })
+    .filter(Boolean);
+}
+
+async function hydrateTradeCardsForResponse(cards) {
+  const sourceCards = Array.isArray(cards) ? cards : [];
+  const cardNames = Array.from(new Set(
+    sourceCards
+      .map((card) => sanitizeCardName(card?.name))
+      .filter(Boolean)
+  ));
+
+  const detailsByName = await persistence.getCardDetailsByNames(cardNames);
+
+  return sourceCards
+    .map((card) => {
+      const name = sanitizeCardName(card?.name);
+      if (!name) return null;
+
+      const details = detailsByName[name] || {};
+      const value = Number(card?.value);
+      const detailsValue = Number(details?.value);
+      const population = Number(card?.population);
+      const detailsPopulation = Number(details?.population);
+
+      return {
+        ...details,
+        ...card,
+        name,
+        displayname: String(card?.displayname || details?.displayname || name).trim() || name,
+        image: card?.image || details?.image || 'Default.png',
+        cost: card?.cost != null ? card.cost : (details?.cost != null ? details.cost : '-'),
+        rarity: card?.rarity || details?.rarity || 'Common',
+        cardType: card?.cardType || details?.cardType || 'Type',
+        description: card?.description || details?.description || '',
+        strength: card?.strength != null ? card.strength : (details?.strength != null ? details.strength : '-'),
+        endurance: card?.endurance != null ? card.endurance : (details?.endurance != null ? details.endurance : '-'),
+        author: card?.author || details?.author || 'Unknown',
+        value: Number.isFinite(value) ? value : (Number.isFinite(detailsValue) ? detailsValue : 0),
+        population: Number.isFinite(population)
+          ? normalizeQty(population)
+          : (Number.isFinite(detailsPopulation) ? normalizeQty(detailsPopulation) : 0),
       };
     })
     .filter(Boolean);
