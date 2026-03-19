@@ -67,7 +67,7 @@ body {
   width: 300px;
   bottom: 0%;
   border-radius: 0px 0px 15px 15px;
-  background-color: rgb(0, 0, 0, 0.6);
+  background-color: rgb(0, 0, 0, 0.8);
   position: absolute;
   z-index: 2;
 }
@@ -96,7 +96,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgb(0, 0, 0, 0.6);
+  background-color: rgb(0, 0, 0, 0.8);
   color: whitesmoke;
   font-size: 30px;
   font-family: "cinzel-bold";
@@ -116,7 +116,7 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgb(0, 0, 0, 0.6);
+  background-color: rgb(0, 0, 0, 0.8);
   color: whitesmoke;
   font-size: 14px;
   font-family: "Cinzel";
