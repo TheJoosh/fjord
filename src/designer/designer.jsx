@@ -583,24 +583,16 @@ export function Designer({ userName }) {
             const pendingSubmit = await gameApiClient.submitPendingApprovalCard(cardName, cardPayload);
             if (!pendingSubmit.ok) {
                 setSubmitMessage(pendingSubmit.error || 'Error: Unable to submit card for approval.');
+                setIsSubmitting(false);
                 return;
-            }
-
-            if (activeUserName) {
-                const progress = await gameApiClient.submitDesignerProgress(activeUserName);
-
-                const rewardMessageName = progress.rewardPackKey === 'Default Pack'
-                    ? 'Normal Pack'
-                    : progress.rewardPackKey;
-                setSubmitMessage(`You earned a ${rewardMessageName}`);
             }
         } catch (error) {
             console.error('Unable to save designed card', error);
             setIsSubmitting(false);
             return;
         }
-        setIsSubmitting(false);
 
+        // Card is saved — reset the form immediately so a network hiccup below can't cause a duplicate submit.
         setPreviewImage(null);
         setTitle('');
         setIsNamedCharacter(false);
@@ -618,9 +610,23 @@ export function Designer({ userName }) {
         setPexelsResults([]);
         setIsPexelsOverlayOpen(false);
         setIsFetchingPexels(false);
+        setIsSubmitting(false);
 
         if (imageInputRef.current) {
             imageInputRef.current.value = '';
+        }
+
+        if (activeUserName) {
+            try {
+                const progress = await gameApiClient.submitDesignerProgress(activeUserName);
+                const rewardMessageName = progress.rewardPackKey === 'Default Pack'
+                    ? 'Normal Pack'
+                    : progress.rewardPackKey;
+                setSubmitMessage(`You earned a ${rewardMessageName}`);
+            } catch (error) {
+                console.error('Unable to record designer progress', error);
+                setSubmitMessage('Card submitted! (Could not load reward info.)');
+            }
         }
     }
 
