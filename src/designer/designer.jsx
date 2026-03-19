@@ -24,6 +24,7 @@ export function Designer({ userName }) {
     const [pexelsResults, setPexelsResults] = useState([]);
     const [isPexelsOverlayOpen, setIsPexelsOverlayOpen] = useState(false);
     const [submitMessage, setSubmitMessage] = useState('');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const PEXELS_API_KEY = '3PQVY2DSpPY5xU8aU95IxDF8j2VOL19hZGc4GtnSVwk5amlxTPBUwo9Y';
 
@@ -553,7 +554,7 @@ export function Designer({ userName }) {
 
     async function handleSubmitCard(e) {
         e.preventDefault();
-        if (!isSubmitReady) return;
+        if (!isSubmitReady || isSubmitting) return;
 
         const cardName = title.trim();
         if (!cardName) return;
@@ -565,6 +566,7 @@ export function Designer({ userName }) {
         const submittedImage = previewImage || "Default.png";
         const activeUserName = (userName || '').trim();
 
+        setIsSubmitting(true);
         try {
             const cardPayload = {
                 image: submittedImage,
@@ -594,8 +596,10 @@ export function Designer({ userName }) {
             }
         } catch (error) {
             console.error('Unable to save designed card', error);
+            setIsSubmitting(false);
             return;
         }
+        setIsSubmitting(false);
 
         setPreviewImage(null);
         setTitle('');
@@ -783,9 +787,11 @@ export function Designer({ userName }) {
                         </div>
                     )}
 
-                    {isSubmitReady && (
+                    {(isSubmitReady || isSubmitting) && (
                         <div>
-                            <button type="submit" className="submit-card-btn">Submit Card</button>
+                            <button type="submit" className="submit-card-btn" disabled={isSubmitting}>
+                                {isSubmitting ? 'Sending Card Design...' : 'Submit Card'}
+                            </button>
                         </div>
                     )}
 
