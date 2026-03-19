@@ -299,6 +299,13 @@ li {
   font-size: 14px;
 }
 
+.search-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
 .deck-controls {
   display: flex;
   align-items: center;
@@ -370,6 +377,24 @@ li {
   padding: 4px 8px;
   -webkit-appearance: none;
   appearance: none;
+}
+
+.search-control input {
+  font-family: "Cinzel";
+  background-image: url("/wood.jpg");
+  background-size: cover;
+  background-position: center;
+  background-color: #582f0e;
+  background-blend-mode: multiply;
+  color: whitesmoke;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 6px;
+  padding: 4px 8px;
+  min-width: 180px;
+}
+
+.search-control input::placeholder {
+  color: rgba(245, 245, 245, 0.78);
 }
 
 .sort-by-control select option {
