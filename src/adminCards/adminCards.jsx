@@ -20,7 +20,7 @@ function matchesCardSearch(card, searchTerm) {
 
 export function AdminCards() {
   const title = 'Card Catalog';
-  const sortOptions = ['Name', 'Rarity', 'Author'];
+  const sortOptions = ['Name', 'Rarity', 'Author', 'Value'];
   const cardsPerPage = 40;
   const [catalogVersion, setCatalogVersion] = React.useState(0);
   const [isEditOverlayOpen, setIsEditOverlayOpen] = React.useState(false);
@@ -35,6 +35,14 @@ export function AdminCards() {
       const filteredCards = catalogCards.filter((entry) => matchesCardSearch(entry?.card, searchTerm));
 
       return [...filteredCards].sort((a, b) => {
+        if (sortBy === 'Value') {
+          const aValue = typeof a?.card?.value === 'number' ? a.card.value : 0;
+          const bValue = typeof b?.card?.value === 'number' ? b.card.value : 0;
+          const valueDiff = bValue - aValue;
+          if (valueDiff !== 0) return valueDiff;
+          return a.name.localeCompare(b.name);
+        }
+
         if (sortBy === 'Rarity') {
           const rarityDiff = String(a?.card?.rarity || '').localeCompare(String(b?.card?.rarity || ''));
           if (rarityDiff !== 0) return rarityDiff;
@@ -252,6 +260,9 @@ export function AdminCards() {
                 />
               </div>
               <div className="card-value mt-1">
+                <div className="card-meta-row">
+                  <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                </div>
                 <small>Author: {card.author || 'Unknown'}</small>
               </div>
               <div className="deck-controls mt-2">

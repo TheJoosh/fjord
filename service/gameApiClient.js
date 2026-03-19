@@ -768,6 +768,8 @@ export const gameApiClient = {
   },
 
   async loadAdminCardDesigns() {
+    await this.loadCardValues();
+
     const response = await requestTradeApi(`/api/admin/cards/designs?t=${Date.now()}`, {
       method: 'GET',
       cache: 'no-store',
@@ -779,11 +781,11 @@ export const gameApiClient = {
         if (!entry?.name || !entry?.card) return null;
         return {
           name: entry.name,
-          card: {
+          card: hydrateCard({
             ...entry.card,
             name: entry.name,
             displayname: entry.card.displayname || entry.name,
-          },
+          }),
         };
       })
       .filter(Boolean)
