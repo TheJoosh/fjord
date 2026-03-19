@@ -8,6 +8,22 @@ function normalizeWalletValue(value) {
   return Math.max(0, Number(parsed.toFixed(2)));
 }
 
+function matchesCardSearch(card, searchTerm) {
+  const normalizedQuery = String(searchTerm || '').trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  const searchableFields = [
+    card?.name,
+    card?.displayname,
+    card?.rarity,
+    card?.cardType,
+    card?.description,
+    card?.author,
+  ];
+
+  return searchableFields.some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
+}
+
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   const sortOptions = ['Value', 'Rarity', 'Name'];
@@ -15,6 +31,7 @@ export function Deck({ userName }) {
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState('Rarity');
+  const [searchTerm, setSearchTerm] = React.useState('');
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [walletBalance, setWalletBalance] = React.useState(0);
   const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
@@ -51,7 +68,9 @@ export function Deck({ userName }) {
     }))
     .filter((x) => x.qty > 0 && x.card?.name);
 
-  const sortedOwned = [...owned].sort((a, b) => {
+  const filteredOwned = owned.filter((entry) => matchesCardSearch(entry.card, searchTerm));
+
+  const sortedOwned = [...filteredOwned].sort((a, b) => {
     const aCard = a.card;
     const bCard = b.card;
 
@@ -218,7 +237,7 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [showDuplicates, sortBy, userName]);
+  }, [showDuplicates, sortBy, userName, searchTerm]);
 
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -250,6 +269,16 @@ export function Deck({ userName }) {
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
+            </label>
+            <label className="search-control">
+              <span>Search</span>
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Name, rarity, class..."
+                aria-label="Search cards"
+              />
             </label>
             <label className="show-duplicates-control">
               <input

@@ -8,6 +8,22 @@ function normalizeWalletValue(value) {
   return Math.max(0, Number(parsed.toFixed(2)));
 }
 
+function matchesCardSearch(card, searchTerm) {
+  const normalizedQuery = String(searchTerm || '').trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  const searchableFields = [
+    card?.name,
+    card?.displayname,
+    card?.rarity,
+    card?.cardType,
+    card?.description,
+    card?.author,
+  ];
+
+  return searchableFields.some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
+}
+
 export function Bank({ userName }) {
   const sortOptions = ['Value', 'Rarity', 'Name'];
   const cardsPerPage = 40;
@@ -17,6 +33,7 @@ export function Bank({ userName }) {
   const [isSellMode, setIsSellMode] = React.useState(false);
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [sortBy, setSortBy] = React.useState('Rarity');
+  const [searchTerm, setSearchTerm] = React.useState('');
   const [walletBalance, setWalletBalance] = React.useState(0);
   const [pendingAction, setPendingAction] = React.useState(null);
   const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
@@ -40,7 +57,9 @@ export function Bank({ userName }) {
       .filter(Boolean);
   }, []);
 
-  const sortedOwned = [...bankCards].sort((a, b) => {
+  const filteredBankCards = bankCards.filter((entry) => matchesCardSearch(entry?.card, searchTerm));
+
+  const sortedOwned = [...filteredBankCards].sort((a, b) => {
     const aCard = a.card;
     const bCard = b.card;
 
@@ -65,7 +84,9 @@ export function Bank({ userName }) {
   });
 
   const sortedOwnedDeckCards = React.useMemo(() => {
-    return [...ownedDeckCards].sort((a, b) => {
+    return [...ownedDeckCards]
+      .filter((card) => matchesCardSearch(card, searchTerm))
+      .sort((a, b) => {
       if (sortBy === 'Value') {
         const av = typeof a?.value === 'number' ? a.value : 0;
         const bv = typeof b?.value === 'number' ? b.value : 0;
@@ -85,7 +106,7 @@ export function Bank({ userName }) {
 
       return (a?.name || '').localeCompare(b?.name || '');
     });
-  }, [ownedDeckCards, sortBy]);
+  }, [ownedDeckCards, sortBy, searchTerm]);
 
   const renderedSellDeckCards = React.useMemo(() => {
     return sortedOwnedDeckCards.flatMap((card) => {
@@ -251,7 +272,7 @@ export function Bank({ userName }) {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [sortBy, isSellMode, showDuplicates]);
+  }, [sortBy, isSellMode, showDuplicates, searchTerm]);
   
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -329,6 +350,16 @@ export function Bank({ userName }) {
                   <option key={option} value={option}>{option}</option>
                 ))}
               </select>
+            </label>
+            <label className="search-control">
+              <span>Search</span>
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Name, rarity, class..."
+                aria-label="Search cards"
+              />
             </label>
             {isSellMode && (
               <label className="show-duplicates-control">
