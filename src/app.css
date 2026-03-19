@@ -69,7 +69,6 @@ body {
   height: 140px;
   width: 300px;
   bottom: 0%;
-  border-radius: 0px 0px 15px 15px;
   background-color: rgb(0, 0, 0, 0.8);
   position: absolute;
   overflow: hidden;
@@ -1063,7 +1062,6 @@ button {
   .card-content {
     height: 70px;
     width: 150px;
-    border-radius: 0px 0px 7px 7px;
   }
 
   .card-name {
@@ -1136,7 +1134,6 @@ button {
   .designer .card-content {
     height: 140px;
     width: 300px;
-    border-radius: 0px 0px 15px 15px;
   }
 
   .designer .card-name {
