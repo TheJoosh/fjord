@@ -241,6 +241,11 @@ export function Designer({ userName }) {
 
     function handleBoundedValueChange(e, setter, options = {}) {
         const value = e.target.value;
+        setter(value);
+    }
+
+    function handleBoundedValueBlur(e, setter, options = {}) {
+        const value = e.target.value;
         const max = options.maxOverride ?? (options.coupled ? getCommandFieldMax(options.otherValue) : getValueMax());
 
         if (value === '') {
@@ -259,24 +264,40 @@ export function Designer({ userName }) {
 
     useEffect(() => {
         const max = getValueMax();
-        let nextPassive = parseInt(passiveValue, 10);
-        let nextCommand = parseInt(commandValue, 10);
+        let nextPassive = passiveValue;
+        let nextCommand = commandValue;
 
-        nextPassive = isNaN(nextPassive) ? 1 : Math.min(max, Math.max(1, nextPassive));
-        nextCommand = isNaN(nextCommand) ? 1 : Math.min(max, Math.max(1, nextCommand));
-
-        if (abilities === 'Command' && nextPassive + nextCommand > max) {
-            nextCommand = Math.max(1, max - nextPassive);
-            if (nextPassive + nextCommand > max) {
-                nextPassive = Math.max(1, max - nextCommand);
+        // Only validate non-empty values; allow empty strings so users can type new values
+        if (passiveValue !== '') {
+            const parsed = parseInt(passiveValue, 10);
+            if (!isNaN(parsed)) {
+                nextPassive = Math.min(max, Math.max(1, parsed)).toString();
             }
         }
 
-        if (nextPassive.toString() !== passiveValue) {
-            setPassiveValue(nextPassive.toString());
+        if (commandValue !== '') {
+            const parsed = parseInt(commandValue, 10);
+            if (!isNaN(parsed)) {
+                nextCommand = Math.min(max, Math.max(1, parsed)).toString();
+            }
         }
-        if (nextCommand.toString() !== commandValue) {
-            setCommandValue(nextCommand.toString());
+
+        if (abilities === 'Command' && nextPassive !== '' && nextCommand !== '') {
+            const p = parseInt(nextPassive, 10);
+            const c = parseInt(nextCommand, 10);
+            if (!isNaN(p) && !isNaN(c) && p + c > max) {
+                nextCommand = Math.max(1, max - p).toString();
+                if (p + parseInt(nextCommand, 10) > max) {
+                    nextPassive = Math.max(1, max - parseInt(nextCommand, 10)).toString();
+                }
+            }
+        }
+
+        if (nextPassive !== passiveValue) {
+            setPassiveValue(nextPassive);
+        }
+        if (nextCommand !== commandValue) {
+            setCommandValue(nextCommand);
         }
     }, [cost, balance, abilities, passiveValue, commandValue]);
 
@@ -735,26 +756,26 @@ export function Designer({ userName }) {
 
                     {abilities === 'Flight' && (
                         <div>
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} onBlur={e => handleBoundedValueBlur(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
                         </div>
                     )}
 
                     {abilities === 'Forge' && (
                         <div>
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} onBlur={e => handleBoundedValueBlur(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
                         </div>
                     )}
 
                     {abilities === 'Berserk' && (
                         <div>
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} onBlur={e => handleBoundedValueBlur(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" />
                         </div>
                     )}
 
                     {abilities === 'Command' && (
                         <div className="design-row design-row-command">
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" className="design-inline-input" />
-                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" className="design-inline-input" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} onBlur={e => handleBoundedValueBlur(e, setPassiveValue, { coupled: true, otherValue: commandValue, maxOverride: getCommandInputMax(passiveValue, commandValue) })} type="number" min="1" max={getCommandInputMax(passiveValue, commandValue)} placeholder="0" className="design-inline-input" />
+                            <input value={commandValue} onChange={e => handleBoundedValueChange(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} onBlur={e => handleBoundedValueBlur(e, setCommandValue, { coupled: true, otherValue: passiveValue, maxOverride: getCommandInputMax(commandValue, passiveValue) })} type="number" min="1" max={getCommandInputMax(commandValue, passiveValue)} placeholder="0" className="design-inline-input" />
                             <select id="command_passive_type" name="command_passive_type" onChange={e => {
                                 const selectedType = e.target.value;
                                 setPassiveModifierType(selectedType);
@@ -770,7 +791,7 @@ export function Designer({ userName }) {
 
                     {abilities === 'Passive' && (
                         <div className="design-row design-row-passive">
-                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" className="design-inline-input" />
+                            <input value={passiveValue} onChange={e => handleBoundedValueChange(e, setPassiveValue)} onBlur={e => handleBoundedValueBlur(e, setPassiveValue)} type="number" min="1" max={stats.strength !== '-' && stats.endurance !== '-' ? Math.max(1, stats.strength + stats.endurance - 2) : 1} placeholder="0" className="design-inline-input" />
                             <select id="passive_type" name="passive_type" onChange={e => {
                                 const selectedType = e.target.options[e.target.selectedIndex].text;
                                 setPassiveModifierType(selectedType);
