@@ -445,6 +445,7 @@ export function Bank({ userName }) {
                           <small className="card-quantity">Quantity: {qty}</small>
                         )}
                       </div>
+                      <small>Author: {card.author || 'Unknown'}</small>
                     </div>
                     <button
                       type="button"
