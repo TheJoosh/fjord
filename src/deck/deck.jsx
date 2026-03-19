@@ -109,6 +109,22 @@ export function Deck({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const renderPaginationControls = () => {
+    if (!showPagination) return null;
+
+    return (
+      <div className="deck-pagination">
+        {showPreviousPageArrow && (
+          <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
+        )}
+        <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
+        {showNextPageArrow && (
+          <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+        )}
+      </div>
+    );
+  };
+
   React.useEffect(() => {
     if (!userName) {
       setOwnedDeckCards([]);
@@ -255,17 +271,7 @@ export function Deck({ userName }) {
             <div className="deck-value">
             </div>
             <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
-              {showPagination && (
-                <div className="deck-pagination">
-                  {showPreviousPageArrow && (
-                    <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
-                  )}
-                  <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
-                  {showNextPageArrow && (
-                    <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
-                  )}
-                </div>
-              )}
+              {renderPaginationControls()}
             </div>
           </div>
         )}
@@ -275,6 +281,7 @@ export function Deck({ userName }) {
         {userName && paginatedCards.length === 0 ? (
           <div className="deck-value">Open card packs to get cards!</div>
         ) : (
+        <>
         <div className="row deck-row">
           {paginatedCards.map(({ entry, card, qty, copyIndex, showStack }) => (
               <div className="col deck-col" key={`${entry.name}-${copyIndex}`}>
@@ -320,6 +327,10 @@ export function Deck({ userName }) {
               </div>
             ))}
         </div>
+        <div className="deck-pagination-bottom-slot" aria-hidden={!showPagination}>
+          {renderPaginationControls()}
+        </div>
+        </>
         )}
       </div>
     </main>

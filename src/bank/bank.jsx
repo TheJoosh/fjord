@@ -121,6 +121,22 @@ export function Bank({ userName }) {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const renderPaginationControls = () => {
+    if (isSellMode || !showPagination) return null;
+
+    return (
+      <div className="deck-pagination">
+        {showPreviousPageArrow && (
+          <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
+        )}
+        <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
+        {showNextPageArrow && (
+          <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+        )}
+      </div>
+    );
+  };
+
   const handleBuyCard = async (cardName) => {
     if (!userName || !cardName || pendingAction) return;
 
@@ -332,17 +348,7 @@ export function Bank({ userName }) {
               Wallet: ${walletValue.toFixed(2)}
             </div>
             <div className="deck-value-pagination-slot" aria-hidden={isSellMode || !showPagination}>
-              {!isSellMode && showPagination && (
-                <div className="deck-pagination">
-                  {showPreviousPageArrow && (
-                    <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
-                  )}
-                  <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
-                  {showNextPageArrow && (
-                    <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
-                  )}
-                </div>
-              )}
+              {renderPaginationControls()}
             </div>
             <button className="picker" onClick={() => setIsSellMode((prev) => !prev)}>
               {isSellMode ? 'Buy Cards!' : 'Sell Cards!'}
@@ -393,6 +399,9 @@ export function Bank({ userName }) {
                 </div>
               );
             })}
+          </div>
+          <div className="deck-pagination-bottom-slot" aria-hidden={!showPagination}>
+            {renderPaginationControls()}
           </div>
         </div>
       )}

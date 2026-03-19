@@ -34,6 +34,22 @@ export function AdminCards() {
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 
+  const renderPaginationControls = () => {
+    if (!showPagination) return null;
+
+    return (
+      <div className="deck-pagination">
+        {showPreviousPageArrow && (
+          <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
+        )}
+        <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
+        {showNextPageArrow && (
+          <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
+        )}
+      </div>
+    );
+  };
+
   const loadCatalogCards = React.useCallback(async () => {
     setCatalogCards(await gameApiClient.loadAdminCardDesigns());
   }, []);
@@ -158,17 +174,7 @@ export function AdminCards() {
         </div>
         <div className="deck-value-row">
           <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
-            {showPagination && (
-              <div className="deck-pagination">
-                {showPreviousPageArrow && (
-                  <button type="button" className="deck-pagination-arrow" onClick={goToPreviousPage} aria-label="Previous page">←</button>
-                )}
-                <span>{startIndex}-{endIndex} of {totalRenderedCards}</span>
-                {showNextPageArrow && (
-                  <button type="button" className="deck-pagination-arrow" onClick={goToNextPage} aria-label="Next page">→</button>
-                )}
-              </div>
-            )}
+            {renderPaginationControls()}
           </div>
         </div>
       </div>
@@ -204,6 +210,9 @@ export function AdminCards() {
               </div>
             </div>
           ))}
+        </div>
+        <div className="deck-pagination-bottom-slot" aria-hidden={!showPagination}>
+          {renderPaginationControls()}
         </div>
       </div>
 
