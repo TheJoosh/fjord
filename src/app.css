@@ -320,6 +320,16 @@ li {
   justify-content: flex-end;
 }
 
+.deck-pagination-bottom-slot {
+  min-height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  margin-top: 12px;
+  margin-bottom: 8px;
+}
+
 .deck-pagination {
   display: flex;
   align-items: center;
