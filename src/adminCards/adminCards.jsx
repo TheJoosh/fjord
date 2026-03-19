@@ -2,8 +2,25 @@ import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
 
+function matchesCardSearch(card, searchTerm) {
+  const normalizedQuery = String(searchTerm || '').trim().toLowerCase();
+  if (!normalizedQuery) return true;
+
+  const searchableFields = [
+    card?.name,
+    card?.displayname,
+    card?.rarity,
+    card?.cardType,
+    card?.description,
+    card?.author,
+  ];
+
+  return searchableFields.some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
+}
+
 export function AdminCards() {
   const title = 'Card Catalog';
+  const sortOptions = ['Name', 'Rarity', 'Author'];
   const cardsPerPage = 40;
   const [catalogVersion, setCatalogVersion] = React.useState(0);
   const [isEditOverlayOpen, setIsEditOverlayOpen] = React.useState(false);
@@ -11,9 +28,29 @@ export function AdminCards() {
   const [editingDraft, setEditingDraft] = React.useState(null);
   const [editError, setEditError] = React.useState('');
   const [catalogCards, setCatalogCards] = React.useState([]);
+  const [sortBy, setSortBy] = React.useState('Name');
+  const [searchTerm, setSearchTerm] = React.useState('');
   const renderedCards = React.useMemo(
-    () => [...catalogCards].sort((a, b) => a.name.localeCompare(b.name)),
-    [catalogCards]
+    () => {
+      const filteredCards = catalogCards.filter((entry) => matchesCardSearch(entry?.card, searchTerm));
+
+      return [...filteredCards].sort((a, b) => {
+        if (sortBy === 'Rarity') {
+          const rarityDiff = String(a?.card?.rarity || '').localeCompare(String(b?.card?.rarity || ''));
+          if (rarityDiff !== 0) return rarityDiff;
+          return a.name.localeCompare(b.name);
+        }
+
+        if (sortBy === 'Author') {
+          const authorDiff = String(a?.card?.author || '').localeCompare(String(b?.card?.author || ''));
+          if (authorDiff !== 0) return authorDiff;
+          return a.name.localeCompare(b.name);
+        }
+
+        return a.name.localeCompare(b.name);
+      });
+    },
+    [catalogCards, sortBy, searchTerm]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -156,7 +193,7 @@ export function AdminCards() {
 
   React.useEffect(() => {
     setCurrentPage(1);
-  }, [catalogVersion]);
+  }, [catalogVersion, sortBy, searchTerm]);
 
   React.useEffect(() => {
     if (currentPage > totalPages) {
@@ -170,6 +207,24 @@ export function AdminCards() {
         <div className="user-header-row">
           <h2>{title}</h2>
           <div className="deck-controls">
+            <label className="sort-by-control">
+              <span>Sort By</span>
+              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+                {sortOptions.map((option) => (
+                  <option key={option} value={option}>{option}</option>
+                ))}
+              </select>
+            </label>
+            <label className="search-control">
+              <span>Search</span>
+              <input
+                type="search"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Name, rarity, class..."
+                aria-label="Search catalog cards"
+              />
+            </label>
           </div>
         </div>
         <div className="deck-value-row">
