@@ -283,6 +283,7 @@ export function Packs({ userName }) {
                                 />
                                 <div className="card-value mt-1">
                                     <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                                    {card.author && <small> &middot; Author: {card.author}</small>}
                                 </div>
                             </div>
                         ))}
