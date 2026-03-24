@@ -14,14 +14,48 @@ import { Approve } from './approve/approve';
 import { AdminCards } from './adminCards/adminCards';
 import { getMe, getProfile, logoutAuth } from './login/authService';
 import { gameApiClient } from '../service/gameApiClient';
+import { tradeRealtimeClient } from '../service/tradeRealtimeClient';
 
 export default function App() {
 
         const [userName, setUserName] = React.useState('');
     const [authState, setAuthState] = React.useState(AuthState.Unknown);
     const [profile, setProfile] = React.useState({ username: '', admin: false, wallet: 0 });
+        const [incomingTradeRequest, setIncomingTradeRequest] = React.useState({ fromUserName: '', fromUserLabel: '' });
     const isAdminUser = Boolean(profile?.admin);
   const navigate = useNavigate();
+
+        const clearIncomingTradeRequest = React.useCallback(() => {
+            setIncomingTradeRequest({ fromUserName: '', fromUserLabel: '' });
+        }, []);
+
+        const refreshIncomingTradeRequest = React.useCallback(async () => {
+            if (!userName) {
+                clearIncomingTradeRequest();
+                return;
+            }
+
+            const pendingTrade = await gameApiClient.loadPendingTrade(userName);
+            if (!pendingTrade?.otherUserName) {
+                clearIncomingTradeRequest();
+                return;
+            }
+
+            setIncomingTradeRequest((prev) => {
+                if (!prev.fromUserName) {
+                    return prev;
+                }
+
+                if (prev.fromUserName !== pendingTrade.otherUserName) {
+                    return {
+                        fromUserName: pendingTrade.otherUserName,
+                        fromUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName,
+                    };
+                }
+
+                return prev;
+            });
+        }, [userName, clearIncomingTradeRequest]);
 
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
@@ -38,9 +72,11 @@ export default function App() {
         const logoutUserName = userName;
         await restoreTradedCardsOnLogout(logoutUserName);
         await logoutAuth();
+    tradeRealtimeClient.disconnect();
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
     setProfile({ username: '', admin: false, wallet: 0 });
+    clearIncomingTradeRequest();
     navigate('/');
   };
 
@@ -83,6 +119,49 @@ export default function App() {
         })();
     }, [authState, userName, refreshProfile]);
 
+    React.useEffect(() => {
+        if (authState !== AuthState.Authenticated || !userName) {
+            tradeRealtimeClient.disconnect();
+            clearIncomingTradeRequest();
+            return;
+        }
+
+        tradeRealtimeClient.connect(userName);
+        refreshIncomingTradeRequest();
+
+        const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+            if (!event || event.channel !== 'trade') return;
+
+            if (event.type === 'trade_request_received') {
+                const fromUserName = String(event.fromUserName || '').trim();
+                const fromUserLabel = String(event.fromUserLabel || fromUserName || '').trim();
+                if (!fromUserName) return;
+
+                setIncomingTradeRequest({
+                    fromUserName,
+                    fromUserLabel: fromUserLabel || fromUserName,
+                });
+                return;
+            }
+
+            if (event.type === 'trade_cancelled' || event.type === 'trade_completed') {
+                clearIncomingTradeRequest();
+                return;
+            }
+
+            if (event.type === 'trade_state_updated') {
+                refreshIncomingTradeRequest();
+            }
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, [authState, userName, clearIncomingTradeRequest, refreshIncomingTradeRequest]);
+
+    const incomingTradeLabel = incomingTradeRequest.fromUserLabel || incomingTradeRequest.fromUserName;
+    const hasIncomingTradeRequest = Boolean(incomingTradeRequest.fromUserName);
+
   return (
     <div className="body bg-dark text-light">
         <header>
@@ -123,6 +202,19 @@ export default function App() {
                 </nav>
                 
             </header>
+
+            {authState === AuthState.Authenticated && hasIncomingTradeRequest && (
+                <div className="global-trade-notice" role="status" aria-live="polite">
+                    <span>{incomingTradeLabel} wants to trade with you</span>
+                    <button
+                        type="button"
+                        className="global-trade-notice-action"
+                        onClick={() => navigate('/trades')}
+                    >
+                        Open Trade
+                    </button>
+                </div>
+            )}
 
             <Routes>
                 <Route path='/' element={<Login 

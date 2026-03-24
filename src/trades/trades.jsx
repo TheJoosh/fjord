@@ -66,12 +66,8 @@ export function Trades({ userName }) {
     }, [refreshTradeStateFromServer]);
 
     React.useEffect(() => {
-        if (!userName) {
-            tradeRealtimeClient.disconnect();
-            return;
-        }
+        if (!userName) return;
 
-        tradeRealtimeClient.connect(userName);
         const unsubscribe = tradeRealtimeClient.subscribe((event) => {
             if (!event || event.channel !== 'trade') return;
 
@@ -116,7 +112,6 @@ export function Trades({ userName }) {
 
         return () => {
             unsubscribe();
-            tradeRealtimeClient.disconnect();
         };
     }, [userName, refreshTradeStateFromServer]);
 
