@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 function matchesCardSearch(card, searchTerm) {
   const normalizedQuery = String(searchTerm || '').trim().toLowerCase();
@@ -30,6 +31,8 @@ export function AdminCards({ isAdmin }) {
   const [catalogCards, setCatalogCards] = React.useState([]);
   const [sortBy, setSortBy] = React.useState('Name');
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [valuesRefreshNonce, setValuesRefreshNonce] = React.useState(0);
+  const valuesRefreshTimerRef = React.useRef(null);
   const renderedCards = React.useMemo(
     () => {
       const filteredCards = catalogCards.filter((entry) => {
@@ -206,7 +209,31 @@ export function AdminCards({ isAdmin }) {
     (async () => {
       await loadCatalogCards();
     })();
-  }, [loadCatalogCards]);
+  }, [loadCatalogCards, valuesRefreshNonce]);
+
+  React.useEffect(() => {
+    const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+      if (!event || event.channel !== 'trade') return;
+      if (event.type !== 'card_values_updated') return;
+
+      if (valuesRefreshTimerRef.current) {
+        window.clearTimeout(valuesRefreshTimerRef.current);
+      }
+
+      valuesRefreshTimerRef.current = window.setTimeout(() => {
+        setValuesRefreshNonce((current) => current + 1);
+        valuesRefreshTimerRef.current = null;
+      }, 120);
+    });
+
+    return () => {
+      unsubscribe();
+      if (valuesRefreshTimerRef.current) {
+        window.clearTimeout(valuesRefreshTimerRef.current);
+        valuesRefreshTimerRef.current = null;
+      }
+    };
+  }, []);
 
   React.useEffect(() => {
     setCurrentPage(1);
