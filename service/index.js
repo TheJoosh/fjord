@@ -948,6 +948,7 @@ app.post('/api/packs/open', async (req, res) => {
 
   await persistence.setUserPacks(userName, packs);
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await persistence.addDiscoveredCards(userName, generatedCardNames);
   await persistence.incrementCardsPopulation(generatedCards);
   const nextState = await recalculateCardValuesInDb();
   emitLeaderboardUpdated({
@@ -1166,6 +1167,19 @@ app.post('/api/approvals/approve', async (req, res) => {
       },
     },
   });
+});
+
+app.get('/api/catalog/designs', async (req, res) => {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return;
+  }
+
+  const cards = await persistence.listAllCardDesigns();
+  const discoveredCards = await persistence.getDiscoveredCards(authUser.username);
+
+  res.send({ cards, discoveredCards });
 });
 
 app.get('/api/admin/cards/designs', async (req, res) => {
