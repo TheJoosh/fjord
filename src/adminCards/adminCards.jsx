@@ -274,6 +274,7 @@ export function AdminCards({ isAdmin }) {
                     description={isVisible ? card.description : ''}
                     strength={isVisible ? card.strength : '-'}
                     endurance={isVisible ? card.endurance : '-'}
+                    imageOnly={!isVisible}
                   />
                 </div>
                 {isVisible && (

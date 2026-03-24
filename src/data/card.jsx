@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function Card({ className = '', image, name, displayname, cost, rarity, cardType, description, strength, endurance }) {
+export function Card({ className = '', image, name, displayname, cost, rarity, cardType, description, strength, endurance, imageOnly = false }) {
   const stats = strength === '-' && endurance === '-' ? '-/-' : `${strength}/${endurance}`;
   const title = (typeof displayname === 'string' && displayname.trim()) ? displayname.trim() : name;
 
@@ -27,13 +27,17 @@ export function Card({ className = '', image, name, displayname, cost, rarity, c
           height="420"
         />
       </div>
-      <div className="card-cost">{cost}</div>
-      <div className="card-content">
-        <h1 className="card-name">{title}</h1>
-        <span className="card-type">{rarity} {cardType}</span>
-        <span className="card-description">{description}</span>
-      </div>
-      <div className="card-stats">{stats}</div>
+      {!imageOnly && (
+        <>
+          <div className="card-cost">{cost}</div>
+          <div className="card-content">
+            <h1 className="card-name">{title}</h1>
+            <span className="card-type">{rarity} {cardType}</span>
+            <span className="card-description">{description}</span>
+          </div>
+          <div className="card-stats">{stats}</div>
+        </>
+      )}
     </div>
   );
 }
