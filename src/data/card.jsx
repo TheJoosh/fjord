@@ -1,6 +1,6 @@
 import React from 'react';
 
-export function Card({ image, name, displayname, cost, rarity, cardType, description, strength, endurance }) {
+export function Card({ className = '', image, name, displayname, cost, rarity, cardType, description, strength, endurance }) {
   const stats = strength === '-' && endurance === '-' ? '-/-' : `${strength}/${endurance}`;
   const title = (typeof displayname === 'string' && displayname.trim()) ? displayname.trim() : name;
 
@@ -15,7 +15,7 @@ export function Card({ image, name, displayname, cost, rarity, cardType, descrip
     : '';
 
   return (
-    <div className="fj-card">
+    <div className={`fj-card ${className}`.trim()}>
       <div className="card-image">
         <img
           src={src}

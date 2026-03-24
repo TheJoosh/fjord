@@ -79,7 +79,6 @@ export function Leaderboard({ userName }) {
         </div>
         <div className="leaderboard-meta">
           <span>{rangeStart}-{rangeEnd} of {totalUsers}</span>
-          <span>20 users per page</span>
         </div>
       </section>
 
