@@ -36,6 +36,17 @@ body {
   transition: transform 50ms ease, box-shadow 200ms ease;
   will-change: transform;
   transform: perspective(1000px) translateY(var(--ty,0)) scale(var(--scale,1)) rotateX(var(--rx,0)) rotateY(var(--ry,0));
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.fj-card * {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .fj-card:hover {
