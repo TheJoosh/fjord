@@ -22,6 +22,7 @@ function matchesCardSearch(card, searchTerm) {
 export function AdminCards({ isAdmin }) {
   const title = 'Card Catalog';
   const sortOptions = ['Name', 'Rarity', 'Author', 'Value'];
+  const getDefaultSortDirection = React.useCallback((option) => (option === 'Value' ? 'desc' : 'asc'), []);
   const cardsPerPage = 40;
   const [catalogVersion, setCatalogVersion] = React.useState(0);
   const [isEditOverlayOpen, setIsEditOverlayOpen] = React.useState(false);
@@ -30,6 +31,8 @@ export function AdminCards({ isAdmin }) {
   const [editError, setEditError] = React.useState('');
   const [catalogCards, setCatalogCards] = React.useState([]);
   const [sortBy, setSortBy] = React.useState('Name');
+  const [sortDirection, setSortDirection] = React.useState('asc');
+  const [sortSelectValue, setSortSelectValue] = React.useState('Name');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [valuesRefreshNonce, setValuesRefreshNonce] = React.useState(0);
   const valuesRefreshTimerRef = React.useRef(null);
@@ -41,30 +44,36 @@ export function AdminCards({ isAdmin }) {
       });
 
       return [...filteredCards].sort((a, b) => {
+        const applyDirection = (comparison) => (sortDirection === 'asc' ? comparison : -comparison);
+
         if (sortBy === 'Value') {
           const aValue = typeof a?.card?.value === 'number' ? a.card.value : 0;
           const bValue = typeof b?.card?.value === 'number' ? b.card.value : 0;
-          const valueDiff = bValue - aValue;
+          const valueDiff = applyDirection(aValue - bValue);
           if (valueDiff !== 0) return valueDiff;
           return a.name.localeCompare(b.name);
         }
 
         if (sortBy === 'Rarity') {
-          const rarityDiff = String(a?.card?.rarity || '').localeCompare(String(b?.card?.rarity || ''));
+          const rarityDiff = applyDirection(
+            String(a?.card?.rarity || '').localeCompare(String(b?.card?.rarity || ''))
+          );
           if (rarityDiff !== 0) return rarityDiff;
           return a.name.localeCompare(b.name);
         }
 
         if (sortBy === 'Author') {
-          const authorDiff = String(a?.card?.author || '').localeCompare(String(b?.card?.author || ''));
+          const authorDiff = applyDirection(
+            String(a?.card?.author || '').localeCompare(String(b?.card?.author || ''))
+          );
           if (authorDiff !== 0) return authorDiff;
           return a.name.localeCompare(b.name);
         }
 
-        return a.name.localeCompare(b.name);
+        return applyDirection(a.name.localeCompare(b.name));
       });
     },
-    [catalogCards, sortBy, searchTerm, isAdmin]
+    [catalogCards, sortBy, searchTerm, isAdmin, sortDirection]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -110,6 +119,26 @@ export function AdminCards({ isAdmin }) {
       setCatalogCards(await gameApiClient.loadCatalogDesigns());
     }
   }, [isAdmin]);
+
+  const handleSortByChange = React.useCallback((nextSortBy) => {
+    if (!nextSortBy) return;
+
+    if (nextSortBy === sortBy) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(nextSortBy);
+    setSortDirection(getDefaultSortDirection(nextSortBy));
+  }, [sortBy, getDefaultSortDirection]);
+
+  const armSortSelect = React.useCallback(() => {
+    setSortSelectValue('');
+  }, []);
+
+  React.useEffect(() => {
+    setSortSelectValue(sortBy);
+  }, [sortBy]);
 
   const handleEdit = (name, card) => {
     if (!name || !card) return;
@@ -252,8 +281,29 @@ export function AdminCards({ isAdmin }) {
           <h2>{title}</h2>
           <div className="deck-controls">
             <label className="sort-by-control">
-              <span>Sort By</span>
-              <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+              <span>Sort By {sortDirection === 'asc' ? '↑' : '↓'}</span>
+              <select
+                value={sortSelectValue}
+                onMouseDown={armSortSelect}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+                    armSortSelect();
+                  }
+                }}
+                onBlur={() => {
+                  if (!sortSelectValue) setSortSelectValue(sortBy);
+                }}
+                onChange={(event) => {
+                  const nextSortBy = event.target.value;
+                  if (!nextSortBy) {
+                    setSortSelectValue(sortBy);
+                    return;
+                  }
+                  handleSortByChange(nextSortBy);
+                  setSortSelectValue(nextSortBy);
+                }}
+              >
+                <option value="" disabled hidden>Sort By</option>
                 {sortOptions.map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
