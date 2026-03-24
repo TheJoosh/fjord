@@ -612,6 +612,143 @@ main {
   padding: 8px 0;
 }
 
+.leaderboard-page {
+  padding-left: 14px;
+  padding-right: 14px;
+}
+
+.leaderboard-header {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.leaderboard-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.leaderboard-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  font-size: 14px;
+  opacity: 0.92;
+}
+
+.leaderboard-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leaderboard-empty {
+  font-size: 16px;
+  opacity: 0.9;
+  padding: 10px 6px;
+}
+
+.leaderboard-row {
+  display: grid;
+  grid-template-columns: 70px minmax(180px, 1fr) 170px minmax(340px, 2fr);
+  gap: 10px;
+  align-items: start;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.2);
+}
+
+.leaderboard-rank {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.leaderboard-user {
+  font-size: 17px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.leaderboard-value {
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.leaderboard-top-cards {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.leaderboard-card-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  max-width: 130px;
+  text-align: center;
+}
+
+.leaderboard-card-viewport {
+  width: 116px;
+  height: 168px;
+  overflow: hidden;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
+.leaderboard-card-viewport .leaderboard-mini-card {
+  --scale: 0.386;
+  --ty: 0;
+  width: 300px;
+  height: 420px;
+  margin-top: 0;
+  pointer-events: none;
+  transition: none;
+}
+
+.leaderboard-card-viewport .leaderboard-mini-card:hover {
+  --scale: 0.386;
+  --ty: 0;
+  box-shadow: none;
+}
+
+.leaderboard-card-item small {
+  line-height: 1.2;
+}
+
+@media (max-width: 1100px) {
+  .leaderboard-row {
+    grid-template-columns: 70px minmax(150px, 1fr) 170px;
+  }
+
+  .leaderboard-top-cards {
+    grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 640px) {
+  .leaderboard-row {
+    grid-template-columns: 1fr;
+  }
+
+  .leaderboard-meta {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .leaderboard-top-cards {
+    width: 100%;
+  }
+}
+
 .remove-trade-card-btn {
   font-size: 0.85rem;
   padding: 4px 8px;
