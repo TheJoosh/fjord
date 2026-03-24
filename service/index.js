@@ -68,6 +68,13 @@ function emitLeaderboardUpdated(payload = {}) {
   }
 }
 
+function emitCardValuesUpdated(payload = {}) {
+  const connectedUsers = Array.from(wsClientsByUser.keys());
+  for (const connectedUserName of connectedUsers) {
+    emitTradeEvent(connectedUserName, 'card_values_updated', payload);
+  }
+}
+
 function parseCookieHeader(cookieHeader) {
   const source = String(cookieHeader || '').trim();
   if (!source) return {};
@@ -1575,7 +1582,11 @@ async function ensureDeckShowDuplicatesPreference(userName, fallbackShowDuplicat
 }
 
 async function recalculateCardValuesInDb() {
-  return await persistence.recalculateAndStoreCardValues();
+  const nextState = await persistence.recalculateAndStoreCardValues();
+  emitCardValuesUpdated({
+    reason: 'card_values_recalculated',
+  });
+  return nextState;
 }
 
 function getRewardPackKeyForDesignCount(designCount) {
