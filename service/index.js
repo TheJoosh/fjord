@@ -262,13 +262,16 @@ app.get('/api/trades/pending', async (req, res) => {
 
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
+  const hasReciprocalPair = await isReciprocalPendingTradePair(userName, otherUserName);
   const [otherUserSelectedTradeCards, otherPendingTrade] = await Promise.all([
-    persistence.getSelectedTradeCards(otherUserName),
-    otherUserName ? persistence.getPendingTrade(otherUserName) : Promise.resolve(null),
+    hasReciprocalPair ? persistence.getSelectedTradeCards(otherUserName) : Promise.resolve([]),
+    hasReciprocalPair ? persistence.getPendingTrade(otherUserName) : Promise.resolve(null),
   ]);
-  const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(otherUserSelectedTradeCards);
+  const hydratedOtherTradeCards = hasReciprocalPair
+    ? await hydrateTradeCardsForResponse(otherUserSelectedTradeCards)
+    : [];
   const iAccepted = Boolean(pendingTrade?.accepted);
-  const otherAccepted = Boolean(otherPendingTrade?.accepted);
+  const otherAccepted = hasReciprocalPair ? Boolean(otherPendingTrade?.accepted) : false;
   res.send({
     pendingTrade: pendingTrade
       ? {
@@ -313,14 +316,18 @@ app.put('/api/trades/pending', async (req, res) => {
     otherTradeCards: [],
   });
 
+  const hasReciprocalPair = await isReciprocalPendingTradePair(userName, nextOtherUserName);
+
   emitTradeEvent(userName, 'trade_state_updated', {
     reason: 'pending_updated',
     actorUserName: userName,
   });
-  emitTradeEvent(nextOtherUserName, 'trade_state_updated', {
-    reason: 'counterparty_pending_updated',
-    actorUserName: userName,
-  });
+  if (hasReciprocalPair) {
+    emitTradeEvent(nextOtherUserName, 'trade_state_updated', {
+      reason: 'counterparty_pending_updated',
+      actorUserName: userName,
+    });
+  }
 
   res.send({ ok: true });
 });
@@ -347,14 +354,17 @@ app.put('/api/trades/selection', async (req, res) => {
 
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
+  const hasReciprocalPair = await isReciprocalPendingTradePair(userName, otherUserName);
   emitTradeEvent(userName, 'trade_state_updated', {
     reason: 'selection_updated',
     actorUserName: userName,
   });
-  emitTradeEvent(otherUserName, 'trade_state_updated', {
-    reason: 'counterparty_selection_updated',
-    actorUserName: userName,
-  });
+  if (hasReciprocalPair) {
+    emitTradeEvent(otherUserName, 'trade_state_updated', {
+      reason: 'counterparty_selection_updated',
+      actorUserName: userName,
+    });
+  }
 
   res.send({ ok: true });
 });
@@ -383,20 +393,15 @@ app.post('/api/trades/request-user', async (req, res) => {
 
   const currentUserLabel = currentUserName || 'User';
 
-  // Initialize a fresh trade context for both users to avoid stale offers.
+  // Initialize requester-side trade context only.
+  // Requested user state is not mutated until they explicitly open/accept the trade request.
   await Promise.all([
     persistence.setPendingTrade(currentUserName, {
       otherUserName: matchedUserName,
       otherUserLabel: matchedUserName,
       otherTradeCards: [],
     }),
-    persistence.setPendingTrade(matchedUserName, {
-      otherUserName: currentUserName,
-      otherUserLabel: currentUserLabel,
-      otherTradeCards: [],
-    }),
     persistence.setSelectedTradeCards(currentUserName, []),
-    persistence.setSelectedTradeCards(matchedUserName, []),
   ]);
 
   emitTradeEvent(currentUserName, 'trade_state_updated', {
@@ -453,21 +458,24 @@ app.post('/api/trades/cancel', async (req, res) => {
 
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
+  const hasReciprocalPair = await isReciprocalPendingTradePair(userName, otherUserName);
   const profile = await ensureTradeProfile(userName, {});
 
   await Promise.all([
     persistence.setSelectedTradeCards(userName, []),
     persistence.deletePendingTrade(userName),
-    otherUserName ? persistence.setSelectedTradeCards(otherUserName, []) : Promise.resolve(),
-    otherUserName ? persistence.deletePendingTrade(otherUserName) : Promise.resolve(),
+    hasReciprocalPair ? persistence.setSelectedTradeCards(otherUserName, []) : Promise.resolve(),
+    hasReciprocalPair ? persistence.deletePendingTrade(otherUserName) : Promise.resolve(),
   ]);
 
   emitTradeEvent(userName, 'trade_cancelled', {
     actorUserName: userName,
   });
-  emitTradeEvent(otherUserName, 'trade_cancelled', {
-    actorUserName: userName,
-  });
+  if (hasReciprocalPair) {
+    emitTradeEvent(otherUserName, 'trade_cancelled', {
+      actorUserName: userName,
+    });
+  }
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -1249,6 +1257,21 @@ async function getTradeAuthUserName(req, res) {
   }
 
   return sanitizeUsername(authUser.username);
+}
+
+async function isReciprocalPendingTradePair(userName, otherUserName) {
+  const currentUserName = sanitizeUsername(userName);
+  const targetUserName = sanitizeUsername(otherUserName);
+  if (!currentUserName || !targetUserName) return false;
+
+  const [currentPendingTrade, targetPendingTrade] = await Promise.all([
+    persistence.getPendingTrade(currentUserName),
+    persistence.getPendingTrade(targetUserName),
+  ]);
+
+  const currentTarget = sanitizeUsername(currentPendingTrade?.otherUserName);
+  const targetCurrent = sanitizeUsername(targetPendingTrade?.otherUserName);
+  return currentTarget === targetUserName && targetCurrent === currentUserName;
 }
 
 function sanitizeUsername(username) {
