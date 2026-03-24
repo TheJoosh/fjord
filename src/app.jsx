@@ -18,6 +18,7 @@ import { tradeRealtimeClient } from '../service/tradeRealtimeClient';
 
 const EMPTY_TRADE_REQUEST = { fromUserName: '', fromUserLabel: '' };
 const TRADE_REQUEST_STORAGE_KEY = 'fjord:incomingTradeRequest';
+const TRADE_REQUEST_DISMISS_STORAGE_KEY = 'fjord:incomingTradeDismissed';
 
 export default function App() {
 
@@ -25,12 +26,36 @@ export default function App() {
     const [authState, setAuthState] = React.useState(AuthState.Unknown);
     const [profile, setProfile] = React.useState({ username: '', admin: false, wallet: 0 });
         const [incomingTradeRequest, setIncomingTradeRequest] = React.useState(EMPTY_TRADE_REQUEST);
+        const [dismissedTradeFromUserName, setDismissedTradeFromUserName] = React.useState('');
     const isAdminUser = Boolean(profile?.admin);
   const navigate = useNavigate();
 
         const clearIncomingTradeRequestStateOnly = React.useCallback(() => {
             setIncomingTradeRequest(EMPTY_TRADE_REQUEST);
         }, []);
+
+        const clearDismissedTradeNoticeStateOnly = React.useCallback(() => {
+            setDismissedTradeFromUserName('');
+        }, []);
+
+        const setDismissedTradeNoticeAndPersist = React.useCallback((fromUserName) => {
+            const normalized = String(fromUserName || '').trim();
+            setDismissedTradeFromUserName(normalized);
+
+            if (!userName) {
+                return;
+            }
+
+            if (!normalized) {
+                window.localStorage.removeItem(TRADE_REQUEST_DISMISS_STORAGE_KEY);
+                return;
+            }
+
+            window.localStorage.setItem(TRADE_REQUEST_DISMISS_STORAGE_KEY, JSON.stringify({
+                forUserName: userName,
+                fromUserName: normalized,
+            }));
+        }, [userName]);
 
         const setIncomingTradeRequestAndPersist = React.useCallback((nextRequest) => {
             const normalized = {
@@ -46,6 +71,8 @@ export default function App() {
 
             if (!normalized.fromUserName) {
                 window.localStorage.removeItem(TRADE_REQUEST_STORAGE_KEY);
+                window.localStorage.removeItem(TRADE_REQUEST_DISMISS_STORAGE_KEY);
+                setDismissedTradeFromUserName('');
                 return;
             }
 
@@ -92,9 +119,38 @@ export default function App() {
             }
         }, [userName, clearIncomingTradeRequestStateOnly]);
 
+        const restoreDismissedTradeNoticeForUser = React.useCallback(() => {
+            if (!userName) {
+                clearDismissedTradeNoticeStateOnly();
+                return;
+            }
+
+            try {
+                const raw = window.localStorage.getItem(TRADE_REQUEST_DISMISS_STORAGE_KEY);
+                if (!raw) {
+                    clearDismissedTradeNoticeStateOnly();
+                    return;
+                }
+
+                const parsed = JSON.parse(raw);
+                const storedForUser = String(parsed?.forUserName || '').trim();
+                const fromUserName = String(parsed?.fromUserName || '').trim();
+
+                if (!storedForUser || storedForUser !== userName || !fromUserName) {
+                    clearDismissedTradeNoticeStateOnly();
+                    return;
+                }
+
+                setDismissedTradeFromUserName(fromUserName);
+            } catch {
+                clearDismissedTradeNoticeStateOnly();
+            }
+        }, [userName, clearDismissedTradeNoticeStateOnly]);
+
         const refreshIncomingTradeRequest = React.useCallback(async () => {
             if (!userName) {
                 clearIncomingTradeRequestStateOnly();
+                clearDismissedTradeNoticeStateOnly();
                 return;
             }
 
@@ -118,7 +174,7 @@ export default function App() {
 
                 return prev;
             });
-        }, [userName, clearIncomingTradeRequest, clearIncomingTradeRequestStateOnly]);
+        }, [userName, clearIncomingTradeRequest, clearIncomingTradeRequestStateOnly, clearDismissedTradeNoticeStateOnly]);
 
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
@@ -140,6 +196,7 @@ export default function App() {
     setUserName('');
     setProfile({ username: '', admin: false, wallet: 0 });
     clearIncomingTradeRequestStateOnly();
+        clearDismissedTradeNoticeStateOnly();
     navigate('/');
   };
 
@@ -186,11 +243,13 @@ export default function App() {
         if (authState !== AuthState.Authenticated || !userName) {
             tradeRealtimeClient.disconnect();
             clearIncomingTradeRequestStateOnly();
+            clearDismissedTradeNoticeStateOnly();
             return;
         }
 
         tradeRealtimeClient.connect(userName);
         restoreIncomingTradeRequestForUser();
+        restoreDismissedTradeNoticeForUser();
         refreshIncomingTradeRequest();
 
         const unsubscribe = tradeRealtimeClient.subscribe((event) => {
@@ -205,6 +264,8 @@ export default function App() {
                     fromUserName,
                     fromUserLabel: fromUserLabel || fromUserName,
                 });
+                // New request should be visible even if an older one was dismissed.
+                setDismissedTradeNoticeAndPersist('');
                 return;
             }
 
@@ -226,13 +287,18 @@ export default function App() {
         userName,
         clearIncomingTradeRequest,
         clearIncomingTradeRequestStateOnly,
+        clearDismissedTradeNoticeStateOnly,
         refreshIncomingTradeRequest,
+        restoreDismissedTradeNoticeForUser,
         restoreIncomingTradeRequestForUser,
+        setDismissedTradeNoticeAndPersist,
         setIncomingTradeRequestAndPersist,
     ]);
 
     const incomingTradeLabel = incomingTradeRequest.fromUserLabel || incomingTradeRequest.fromUserName;
     const hasIncomingTradeRequest = Boolean(incomingTradeRequest.fromUserName);
+    const isIncomingTradeDismissed =
+        hasIncomingTradeRequest && dismissedTradeFromUserName === incomingTradeRequest.fromUserName;
 
   return (
     <div className="body bg-dark text-light">
@@ -275,16 +341,25 @@ export default function App() {
                 
             </header>
 
-            {authState === AuthState.Authenticated && hasIncomingTradeRequest && (
+            {authState === AuthState.Authenticated && hasIncomingTradeRequest && !isIncomingTradeDismissed && (
                 <div className="global-trade-notice" role="status" aria-live="polite">
                     <span>{incomingTradeLabel} wants to trade with you</span>
-                    <button
-                        type="button"
-                        className="global-trade-notice-action"
-                        onClick={() => navigate('/trades')}
-                    >
-                        Open Trade
-                    </button>
+                    <div className="global-trade-notice-actions">
+                        <button
+                            type="button"
+                            className="global-trade-notice-action"
+                            onClick={() => navigate('/trades')}
+                        >
+                            Open Trade
+                        </button>
+                        <button
+                            type="button"
+                            className="global-trade-notice-dismiss"
+                            onClick={() => setDismissedTradeNoticeAndPersist(incomingTradeRequest.fromUserName)}
+                        >
+                            Dismiss
+                        </button>
+                    </div>
                 </div>
             )}
 

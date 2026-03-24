@@ -528,6 +528,27 @@ main {
   background-color: rgba(0, 0, 0, 0.5);
 }
 
+.global-trade-notice-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.global-trade-notice-dismiss {
+  font-family: "Cinzel";
+  color: #fff8e8;
+  background-color: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.global-trade-notice-dismiss:hover {
+  background-color: rgba(0, 0, 0, 0.25);
+}
+
 @media (max-width: 640px) {
   .global-trade-notice {
     flex-direction: column;
@@ -535,6 +556,14 @@ main {
   }
 
   .global-trade-notice-action {
+    width: 100%;
+  }
+
+  .global-trade-notice-actions {
+    width: 100%;
+  }
+
+  .global-trade-notice-dismiss {
     width: 100%;
   }
 }
