@@ -300,6 +300,17 @@ export default function App() {
     const isIncomingTradeDismissed =
         hasIncomingTradeRequest && dismissedTradeFromUserName === incomingTradeRequest.fromUserName;
 
+    const handleOpenTradeFromBanner = async () => {
+        if (!userName || !incomingTradeRequest.fromUserName) {
+            navigate('/trades');
+            return;
+        }
+
+        // Ensure the pending trade is actively aligned to the requesting user before opening Trades.
+        await gameApiClient.requestTradeUser(userName, incomingTradeRequest.fromUserName);
+        navigate('/trades');
+    };
+
   return (
     <div className="body bg-dark text-light">
         <header>
@@ -348,7 +359,7 @@ export default function App() {
                         <button
                             type="button"
                             className="global-trade-notice-action"
-                            onClick={() => navigate('/trades')}
+                            onClick={handleOpenTradeFromBanner}
                         >
                             Open Trade
                         </button>
