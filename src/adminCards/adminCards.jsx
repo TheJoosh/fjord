@@ -299,6 +299,9 @@ export function AdminCards({ isAdmin }) {
                   />
                 </div>
                 <div className="card-value mt-1">
+                  <h6>{isVisible ? (card.displayname || card.name || 'Unknown') : 'Locked'}</h6>
+                </div>
+                <div className="card-value mt-1">
                   <div className="card-meta-row">
                     <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
                   </div>
