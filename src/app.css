@@ -500,6 +500,45 @@ main {
   font-weight: 700;
 }
 
+.global-trade-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  font-family: "Cinzel";
+  color: #fff8e8;
+  background: linear-gradient(90deg, #5a300f 0%, #8e4f1b 55%, #b66a2a 100%);
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.35);
+}
+
+.global-trade-notice-action {
+  font-family: "Cinzel";
+  color: whitesmoke;
+  background-color: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+  border-radius: 8px;
+  padding: 6px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.global-trade-notice-action:hover {
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+@media (max-width: 640px) {
+  .global-trade-notice {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .global-trade-notice-action {
+    width: 100%;
+  }
+}
+
 .trades-page .deck-col {
   padding-left: 4px;
   padding-right: 4px;
