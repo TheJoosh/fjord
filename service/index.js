@@ -225,13 +225,9 @@ app.get('/api/card-images/:id', async (req, res) => {
 });
 
 app.post('/api/trades/owned', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const profile = await ensureTradeProfile(userName, {});
   const ownedEntries = toOwnedEntries(profile.cards);
   const detailsByName = await persistence.getCardDetailsByNames(ownedEntries.map((entry) => entry.name));
@@ -659,19 +655,19 @@ app.post('/api/bank/inventory', async (req, res) => {
 });
 
 app.post('/api/bank/buy', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
-  const cardName = req.body?.cardName;
-  const buyPrice = normalizeWalletValue(req.body?.buyPrice);
-  const profile = await ensureTradeProfile(userName, {});
-  const currentWallet = await ensureBankWallet(userName, 0);
-  const bankInventory = await persistence.getBankInventory();
+  const cardName = sanitizeCardName(req.body?.cardName);
+  const [profile, currentWallet, bankInventory, cardState] = await Promise.all([
+    ensureTradeProfile(userName, {}),
+    ensureBankWallet(userName, 0),
+    persistence.getBankInventory(),
+    persistence.getCardValuesMap(),
+  ]);
   const availableQty = normalizeQty(bankInventory[cardName]);
+  const currentCardValue = normalizeWalletValue(cardState?.valuesByName?.[cardName]?.value);
+  const buyPrice = normalizeWalletValue(currentCardValue * BANK_BUY_MULTIPLIER);
 
   if (!userName || !cardName || availableQty <= 0 || currentWallet < buyPrice) {
     res.send({
@@ -707,19 +703,19 @@ app.post('/api/bank/buy', async (req, res) => {
 });
 
 app.post('/api/bank/sell', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
-  const cardName = req.body?.cardName;
-  const payoutAmount = normalizeWalletValue(req.body?.payoutAmount);
-  const profile = await ensureTradeProfile(userName, {});
-  const currentWallet = await ensureBankWallet(userName, 0);
-  const bankInventory = await persistence.getBankInventory();
+  const cardName = sanitizeCardName(req.body?.cardName);
+  const [profile, currentWallet, bankInventory, cardState] = await Promise.all([
+    ensureTradeProfile(userName, {}),
+    ensureBankWallet(userName, 0),
+    persistence.getBankInventory(),
+    persistence.getCardValuesMap(),
+  ]);
   const ownedQty = normalizeQty(profile.cards[cardName]);
+  const currentCardValue = normalizeWalletValue(cardState?.valuesByName?.[cardName]?.value);
+  const payoutAmount = normalizeWalletValue(currentCardValue * BANK_SELL_MULTIPLIER);
 
   if (!userName || !cardName || ownedQty <= 0) {
     res.send({
@@ -755,13 +751,9 @@ app.post('/api/bank/sell', async (req, res) => {
 });
 
 app.post('/api/packs/state', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   if (!userName) {
     res.send({ ok: false, packs: normalizePacksMap({}), wallet: 0 });
     return;
@@ -774,15 +766,11 @@ app.post('/api/packs/state', async (req, res) => {
 });
 
 app.post('/api/packs/buy', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const packName = req.body?.packName;
-  const packPrice = normalizeWalletValue(req.body?.packPrice);
+  const packPrice = getPackPurchasePrice(packName);
   if (!userName || !isKnownPackName(packName)) {
     res.send({ ok: false, packs: normalizePacksMap({}), wallet: 0 });
     return;
@@ -805,13 +793,9 @@ app.post('/api/packs/buy', async (req, res) => {
 });
 
 app.post('/api/packs/open', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const packName = req.body?.packName;
   if (!userName || !isKnownPackName(packName)) {
     res.send({ ok: false, packs: normalizePacksMap({}) });
@@ -879,13 +863,9 @@ app.post('/api/packs/open', async (req, res) => {
 });
 
 app.post('/api/packs/claim', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   if (!userName) {
     res.send({ ok: false, ownedEntries: [] });
     return;
@@ -896,13 +876,9 @@ app.post('/api/packs/claim', async (req, res) => {
 });
 
 app.post('/api/designer/submit', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   if (!userName) {
     res.send({ ok: false, nextDesigned: 0, rewardPackKey: 'Default Pack', packs: normalizePacksMap({}) });
     return;
@@ -926,11 +902,8 @@ app.post('/api/designer/submit', async (req, res) => {
 });
 
 app.get('/api/approvals/pending', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const authUser = await requireAdminUser(req, res);
+  if (!authUser) return;
 
   const pendingCards = (await persistence.listPendingApprovals())
     .map((entry) => ({ name: entry._id, card: { ...(entry.card || {}) } }))
@@ -990,11 +963,8 @@ app.post('/api/approvals/pending', async (req, res) => {
 });
 
 app.put('/api/approvals/pending', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const authUser = await requireAdminUser(req, res);
+  if (!authUser) return;
 
   const originalName = sanitizeCardName(req.body?.originalName);
   const nextName = sanitizeCardName(req.body?.nextName);
@@ -1023,11 +993,8 @@ app.put('/api/approvals/pending', async (req, res) => {
 });
 
 app.delete('/api/approvals/pending', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const authUser = await requireAdminUser(req, res);
+  if (!authUser) return;
 
   const name = sanitizeCardName(req.query?.name);
   if (!name) {
@@ -1040,11 +1007,8 @@ app.delete('/api/approvals/pending', async (req, res) => {
 });
 
 app.post('/api/approvals/approve', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const authUser = await requireAdminUser(req, res);
+  if (!authUser) return;
 
   const name = sanitizeCardName(req.body?.name);
   const pending = await persistence.getPendingApproval(name);
@@ -1152,25 +1116,17 @@ app.put('/api/admin/cards/designs', async (req, res) => {
 });
 
 app.get('/api/preferences/deck-sort', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.query?.userName);
   const current = await ensureDeckSortPreference(userName, 'Rarity');
   res.send({ sortBy: current });
 });
 
 app.put('/api/preferences/deck-sort', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const sortBy = normalizeDeckSort(req.body?.sortBy);
   await persistence.setDeckSortPreference(userName, sortBy);
   const current = await ensureDeckSortPreference(userName, sortBy);
@@ -1178,25 +1134,17 @@ app.put('/api/preferences/deck-sort', async (req, res) => {
 });
 
 app.get('/api/preferences/deck-duplicates', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.query?.userName);
   const current = await ensureDeckShowDuplicatesPreference(userName, true);
   res.send({ showDuplicates: current });
 });
 
 app.put('/api/preferences/deck-duplicates', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const showDuplicates = normalizeShowDuplicates(req.body?.showDuplicates);
   await persistence.setDeckShowDuplicatesPreference(userName, showDuplicates);
   const current = await ensureDeckShowDuplicatesPreference(userName, showDuplicates);
@@ -1276,7 +1224,7 @@ async function getAuthUser(req) {
   return await getUser('token', token);
 }
 
-async function getTradeAuthUserName(req, res) {
+async function getAuthUserName(req, res) {
   const authUser = await getAuthUser(req);
   if (!authUser) {
     res.status(401).send({ msg: 'Unauthorized' });
@@ -1284,6 +1232,25 @@ async function getTradeAuthUserName(req, res) {
   }
 
   return sanitizeUsername(authUser.username);
+}
+
+async function getTradeAuthUserName(req, res) {
+  return await getAuthUserName(req, res);
+}
+
+async function requireAdminUser(req, res) {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return null;
+  }
+
+  if (!Boolean(authUser.admin)) {
+    res.status(403).send({ msg: 'Forbidden' });
+    return null;
+  }
+
+  return authUser;
 }
 
 async function isReciprocalPendingTradePair(userName, otherUserName) {
@@ -1355,6 +1322,16 @@ function normalizeWalletValue(value) {
   if (!Number.isFinite(parsed)) return 0;
   return Math.max(0, Number(parsed.toFixed(2)));
 }
+
+const BANK_BUY_MULTIPLIER = 1.15;
+const BANK_SELL_MULTIPLIER = 0.85;
+
+const PACK_PRICES = {
+  'Default Pack': 3.5,
+  'Saga Pack': 4.5,
+  'Heroic Pack': 8,
+  'Mythbound Pack': 11.5,
+};
 
 function normalizeCardMap(cards) {
   const result = {};
@@ -1507,6 +1484,10 @@ function getRewardPackKeyForDesignCount(designCount) {
   }
 
   return selectedPack;
+}
+
+function getPackPurchasePrice(packName) {
+  return normalizeWalletValue(PACK_PRICES[String(packName || '').trim()] || 0);
 }
 
 const PACK_OPEN_RULES = {

@@ -210,7 +210,7 @@ export const gameApiClient = {
 
     const response = await requestTradeApi('/api/trades/owned', {
       method: 'POST',
-      body: JSON.stringify({ userName }),
+      body: JSON.stringify({}),
     });
 
     const sourceCards = Array.isArray(response?.ownedCards) ? response.ownedCards : [];
@@ -503,9 +503,7 @@ export const gameApiClient = {
     const response = await requestTradeApi('/api/bank/buy', {
       method: 'POST',
       body: JSON.stringify({
-        userName,
         cardName,
-        buyPrice,
       }),
     });
 
@@ -529,9 +527,7 @@ export const gameApiClient = {
     const response = await requestTradeApi('/api/bank/sell', {
       method: 'POST',
       body: JSON.stringify({
-        userName,
         cardName,
-        payoutAmount,
       }),
     });
 
@@ -554,9 +550,7 @@ export const gameApiClient = {
 
     const response = await requestTradeApi('/api/packs/state', {
       method: 'POST',
-      body: JSON.stringify({
-        userName,
-      }),
+      body: JSON.stringify({}),
     });
 
     if (!response) {
@@ -578,9 +572,7 @@ export const gameApiClient = {
     const response = await requestTradeApi('/api/packs/buy', {
       method: 'POST',
       body: JSON.stringify({
-        userName,
         packName,
-        packPrice,
       }),
     });
 
@@ -603,9 +595,7 @@ export const gameApiClient = {
     const response = await requestTradeApi('/api/packs/open', {
       method: 'POST',
       body: JSON.stringify({
-        userName,
         packName,
-        openedCards: Array.isArray(fallbackOpenedCards) ? fallbackOpenedCards : [],
       }),
     });
 
@@ -637,7 +627,6 @@ export const gameApiClient = {
     const response = await requestTradeApi('/api/packs/claim', {
       method: 'POST',
       body: JSON.stringify({
-        userName,
         openedCards: Array.isArray(openedCards) ? openedCards : [],
       }),
     });
@@ -661,9 +650,7 @@ export const gameApiClient = {
 
     const response = await requestTradeApi('/api/designer/submit', {
       method: 'POST',
-      body: JSON.stringify({
-        userName,
-      }),
+      body: JSON.stringify({}),
     });
 
     if (!response) {
@@ -793,10 +780,7 @@ export const gameApiClient = {
   async loadDeckSortPreference(userName, fallbackSort = 'Rarity') {
     if (!userName) return fallbackSort;
 
-    const response = await requestTradeApi(
-      `/api/preferences/deck-sort?userName=${encodeURIComponent(userName)}`,
-      { method: 'GET' }
-    );
+    const response = await requestTradeApi('/api/preferences/deck-sort', { method: 'GET' });
 
     const sortBy = String(response?.sortBy || fallbackSort);
     return sortBy === 'Value' || sortBy === 'Name' || sortBy === 'Rarity' ? sortBy : 'Rarity';
@@ -806,17 +790,14 @@ export const gameApiClient = {
     if (!userName) return;
     await requestTradeApi('/api/preferences/deck-sort', {
       method: 'PUT',
-      body: JSON.stringify({ userName, sortBy }),
+      body: JSON.stringify({ sortBy }),
     });
   },
 
   async loadDeckShowDuplicatesPreference(userName, fallbackShowDuplicates = true) {
     if (!userName) return Boolean(fallbackShowDuplicates);
 
-    const response = await requestTradeApi(
-      `/api/preferences/deck-duplicates?userName=${encodeURIComponent(userName)}`,
-      { method: 'GET' }
-    );
+    const response = await requestTradeApi('/api/preferences/deck-duplicates', { method: 'GET' });
 
     if (typeof response?.showDuplicates === 'boolean') {
       return response.showDuplicates;
@@ -829,7 +810,7 @@ export const gameApiClient = {
     if (!userName) return;
     await requestTradeApi('/api/preferences/deck-duplicates', {
       method: 'PUT',
-      body: JSON.stringify({ userName, showDuplicates: Boolean(showDuplicates) }),
+      body: JSON.stringify({ showDuplicates: Boolean(showDuplicates) }),
     });
   },
 };
