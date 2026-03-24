@@ -325,9 +325,20 @@ async function setPendingTrade(userName, pendingTrade) {
         otherUserName: pendingTrade?.otherUserName || '',
         otherUserLabel: pendingTrade?.otherUserLabel || pendingTrade?.otherUserName || '',
         otherTradeCards: Array.isArray(pendingTrade?.otherTradeCards) ? pendingTrade.otherTradeCards : [],
+        accepted: false,
       },
     },
     { upsert: true }
+  );
+}
+
+async function setTradeAccepted(userName, accepted) {
+  if (!userName) return;
+  const db = await getDb();
+  // Only update existing pending trade records; never upsert.
+  await db.collection('pending_trades').updateOne(
+    { _id: userName },
+    { $set: { accepted: Boolean(accepted) } }
   );
 }
 
@@ -1403,6 +1414,7 @@ module.exports = {
   deletePendingTrade,
   getSelectedTradeCards,
   setSelectedTradeCards,
+  setTradeAccepted,
   getBankInventory,
   setBankInventory,
   ensureBankWallet,
