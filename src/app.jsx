@@ -16,22 +16,85 @@ import { getMe, getProfile, logoutAuth } from './login/authService';
 import { gameApiClient } from '../service/gameApiClient';
 import { tradeRealtimeClient } from '../service/tradeRealtimeClient';
 
+const EMPTY_TRADE_REQUEST = { fromUserName: '', fromUserLabel: '' };
+const TRADE_REQUEST_STORAGE_KEY = 'fjord:incomingTradeRequest';
+
 export default function App() {
 
         const [userName, setUserName] = React.useState('');
     const [authState, setAuthState] = React.useState(AuthState.Unknown);
     const [profile, setProfile] = React.useState({ username: '', admin: false, wallet: 0 });
-        const [incomingTradeRequest, setIncomingTradeRequest] = React.useState({ fromUserName: '', fromUserLabel: '' });
+        const [incomingTradeRequest, setIncomingTradeRequest] = React.useState(EMPTY_TRADE_REQUEST);
     const isAdminUser = Boolean(profile?.admin);
   const navigate = useNavigate();
 
-        const clearIncomingTradeRequest = React.useCallback(() => {
-            setIncomingTradeRequest({ fromUserName: '', fromUserLabel: '' });
+        const clearIncomingTradeRequestStateOnly = React.useCallback(() => {
+            setIncomingTradeRequest(EMPTY_TRADE_REQUEST);
         }, []);
+
+        const setIncomingTradeRequestAndPersist = React.useCallback((nextRequest) => {
+            const normalized = {
+                fromUserName: String(nextRequest?.fromUserName || '').trim(),
+                fromUserLabel: String(nextRequest?.fromUserLabel || nextRequest?.fromUserName || '').trim(),
+            };
+
+            setIncomingTradeRequest(normalized);
+
+            if (!userName) {
+                return;
+            }
+
+            if (!normalized.fromUserName) {
+                window.localStorage.removeItem(TRADE_REQUEST_STORAGE_KEY);
+                return;
+            }
+
+            window.localStorage.setItem(TRADE_REQUEST_STORAGE_KEY, JSON.stringify({
+                forUserName: userName,
+                fromUserName: normalized.fromUserName,
+                fromUserLabel: normalized.fromUserLabel || normalized.fromUserName,
+            }));
+        }, [userName]);
+
+        const clearIncomingTradeRequest = React.useCallback(() => {
+            setIncomingTradeRequestAndPersist(EMPTY_TRADE_REQUEST);
+        }, [setIncomingTradeRequestAndPersist]);
+
+        const restoreIncomingTradeRequestForUser = React.useCallback(() => {
+            if (!userName) {
+                clearIncomingTradeRequestStateOnly();
+                return;
+            }
+
+            try {
+                const raw = window.localStorage.getItem(TRADE_REQUEST_STORAGE_KEY);
+                if (!raw) {
+                    clearIncomingTradeRequestStateOnly();
+                    return;
+                }
+
+                const parsed = JSON.parse(raw);
+                const storedForUser = String(parsed?.forUserName || '').trim();
+                const fromUserName = String(parsed?.fromUserName || '').trim();
+                const fromUserLabel = String(parsed?.fromUserLabel || fromUserName || '').trim();
+
+                if (!storedForUser || storedForUser !== userName || !fromUserName) {
+                    clearIncomingTradeRequestStateOnly();
+                    return;
+                }
+
+                setIncomingTradeRequest({
+                    fromUserName,
+                    fromUserLabel: fromUserLabel || fromUserName,
+                });
+            } catch {
+                clearIncomingTradeRequestStateOnly();
+            }
+        }, [userName, clearIncomingTradeRequestStateOnly]);
 
         const refreshIncomingTradeRequest = React.useCallback(async () => {
             if (!userName) {
-                clearIncomingTradeRequest();
+                clearIncomingTradeRequestStateOnly();
                 return;
             }
 
@@ -55,7 +118,7 @@ export default function App() {
 
                 return prev;
             });
-        }, [userName, clearIncomingTradeRequest]);
+        }, [userName, clearIncomingTradeRequest, clearIncomingTradeRequestStateOnly]);
 
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
@@ -76,7 +139,7 @@ export default function App() {
     setAuthState(AuthState.Unauthenticated);
     setUserName('');
     setProfile({ username: '', admin: false, wallet: 0 });
-    clearIncomingTradeRequest();
+    clearIncomingTradeRequestStateOnly();
     navigate('/');
   };
 
@@ -122,11 +185,12 @@ export default function App() {
     React.useEffect(() => {
         if (authState !== AuthState.Authenticated || !userName) {
             tradeRealtimeClient.disconnect();
-            clearIncomingTradeRequest();
+            clearIncomingTradeRequestStateOnly();
             return;
         }
 
         tradeRealtimeClient.connect(userName);
+        restoreIncomingTradeRequestForUser();
         refreshIncomingTradeRequest();
 
         const unsubscribe = tradeRealtimeClient.subscribe((event) => {
@@ -137,7 +201,7 @@ export default function App() {
                 const fromUserLabel = String(event.fromUserLabel || fromUserName || '').trim();
                 if (!fromUserName) return;
 
-                setIncomingTradeRequest({
+                setIncomingTradeRequestAndPersist({
                     fromUserName,
                     fromUserLabel: fromUserLabel || fromUserName,
                 });
@@ -157,7 +221,15 @@ export default function App() {
         return () => {
             unsubscribe();
         };
-    }, [authState, userName, clearIncomingTradeRequest, refreshIncomingTradeRequest]);
+    }, [
+        authState,
+        userName,
+        clearIncomingTradeRequest,
+        clearIncomingTradeRequestStateOnly,
+        refreshIncomingTradeRequest,
+        restoreIncomingTradeRequestForUser,
+        setIncomingTradeRequestAndPersist,
+    ]);
 
     const incomingTradeLabel = incomingTradeRequest.fromUserLabel || incomingTradeRequest.fromUserName;
     const hasIncomingTradeRequest = Boolean(incomingTradeRequest.fromUserName);
