@@ -664,6 +664,7 @@ app.post('/api/trades/accept', async (req, res) => {
 
   const activeProfile = await ensureTradeProfile(activeUserName, {});
   const otherProfile = await ensureTradeProfile(otherUserName, {});
+  const activeReceivedNames = [];
 
   const selectedCounts = {};
   for (const card of activeSelectedCards) {
@@ -689,6 +690,7 @@ app.post('/api/trades/accept', async (req, res) => {
       delete otherProfile.cards[card.name];
     }
     activeProfile.cards[card.name] = normalizeQty(activeProfile.cards[card.name]) + 1;
+    activeReceivedNames.push(card.name);
   }
 
   for (const [name, qty] of Object.entries(selectedCounts)) {
@@ -702,6 +704,8 @@ app.post('/api/trades/accept', async (req, res) => {
     otherProfile.cards[name] = normalizeQty(otherProfile.cards[name]) + qty;
   }
 
+  const otherReceivedNames = Object.keys(selectedCounts).filter((name) => normalizeQty(selectedCounts[name]) > 0);
+
   await Promise.all([
     persistence.setSelectedTradeCards(activeUserName, []),
     persistence.setSelectedTradeCards(otherUserName, []),
@@ -709,6 +713,8 @@ app.post('/api/trades/accept', async (req, res) => {
     persistence.deletePendingTrade(otherUserName),
     persistence.setTradeProfileCards(activeUserName, activeProfile.cards),
     persistence.setTradeProfileCards(otherUserName, otherProfile.cards),
+    persistence.addDiscoveredCards(activeUserName, activeReceivedNames),
+    persistence.addDiscoveredCards(otherUserName, otherReceivedNames),
   ]);
   await recalculateCardValuesInDb();
   emitLeaderboardUpdated({

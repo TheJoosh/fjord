@@ -1449,8 +1449,33 @@ async function incrementCardsPopulation(cardEntries) {
 async function getDiscoveredCards(userName) {
   if (!userName) return [];
   const db = await getDb();
-  const doc = await db.collection('discovered_cards').findOne({ _id: userName });
-  return Array.isArray(doc?.cards) ? doc.cards : [];
+  const [doc, profileDoc] = await Promise.all([
+    db.collection('discovered_cards').findOne({ _id: userName }),
+    db.collection('trade_profiles').findOne({ _id: userName }, { projection: { cards: 1 } }),
+  ]);
+
+  const discoveredFromDoc = Array.isArray(doc?.cards)
+    ? doc.cards.map((name) => String(name || '').trim()).filter(Boolean)
+    : [];
+  const ownedNames = Object.keys(normalizeCardMap(profileDoc?.cards || {}));
+
+  const merged = Array.from(new Set([...discoveredFromDoc, ...ownedNames]))
+    .sort((a, b) => a.localeCompare(b));
+
+  // Keep discovered collection self-healing in case older users are missing entries.
+  if (
+    !doc ||
+    discoveredFromDoc.length !== merged.length ||
+    discoveredFromDoc.some((name, index) => merged[index] !== name)
+  ) {
+    await db.collection('discovered_cards').updateOne(
+      { _id: userName },
+      { $set: { cards: merged } },
+      { upsert: true }
+    );
+  }
+
+  return merged;
 }
 
 async function addDiscoveredCards(userName, cardNames) {
