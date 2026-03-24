@@ -271,17 +271,10 @@ export const gameApiClient = {
       .sort((a, b) => a.name.localeCompare(b.name));
   },
 
-  async loadPendingTrade(userName) {
-    if (!userName) {
-      return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [], iAccepted: false, otherAccepted: false };
-    }
-
+  async loadPendingTrade() {
     await this.loadCardValues();
 
-    const parsedResponse = await requestTradeApi(
-      `/api/trades/pending?userName=${encodeURIComponent(userName)}`,
-      { method: 'GET' }
-    );
+    const parsedResponse = await requestTradeApi('/api/trades/pending', { method: 'GET' });
 
     const parsed = parsedResponse?.pendingTrade;
     if (!parsed || typeof parsed !== 'object') {
@@ -297,11 +290,10 @@ export const gameApiClient = {
     };
   },
 
-  async savePendingTrade(userName, pendingTrade) {
+  async savePendingTrade(pendingTrade) {
     await requestTradeApi('/api/trades/pending', {
       method: 'PUT',
       body: JSON.stringify({
-        userName,
         pendingTrade: {
           otherUserName: pendingTrade?.otherUserName || '',
           otherUserLabel: pendingTrade?.otherUserLabel || pendingTrade?.otherUserName || '',
@@ -313,34 +305,27 @@ export const gameApiClient = {
     });
   },
 
-  async loadSelectedTradeCards(userName) {
-    if (!userName) return [];
-
+  async loadSelectedTradeCards() {
     await this.loadCardValues();
 
-    const parsedResponse = await requestTradeApi(
-      `/api/trades/selection?userName=${encodeURIComponent(userName)}`,
-      { method: 'GET' }
-    );
+    const parsedResponse = await requestTradeApi('/api/trades/selection', { method: 'GET' });
     const parsed = parsedResponse?.selectedTradeCards;
     return Array.isArray(parsed) ? hydrateCards(parsed) : [];
   },
 
-  async saveSelectedTradeCards(userName, selectedTradeCards) {
+  async saveSelectedTradeCards(selectedTradeCards) {
     await requestTradeApi('/api/trades/selection', {
       method: 'PUT',
       body: JSON.stringify({
-        userName,
         selectedTradeCards: Array.isArray(selectedTradeCards) ? selectedTradeCards : [],
       }),
     });
   },
 
-  async requestTradeUser(currentUserName, requestUserInput) {
+  async requestTradeUser(requestUserInput) {
     const response = await requestTradeApi('/api/trades/request-user', {
       method: 'POST',
       body: JSON.stringify({
-        currentUserName,
         requestUserInput,
       }),
     });
@@ -388,13 +373,10 @@ export const gameApiClient = {
     if (!response) return;
   },
 
-  async cancelTrade(userName, selectedTradeCards) {
-    if (!userName) return;
-
+  async cancelTrade(selectedTradeCards) {
     const response = await requestTradeApi('/api/trades/cancel', {
       method: 'POST',
       body: JSON.stringify({
-        userName,
         selectedTradeCards: Array.isArray(selectedTradeCards) ? selectedTradeCards : [],
       }),
     });
@@ -402,14 +384,14 @@ export const gameApiClient = {
     if (!response) return;
   },
 
-  async acceptTrade(activeUserName, otherUserName) {
-    if (!activeUserName || !otherUserName) {
+  async acceptTrade(otherUserName) {
+    if (!otherUserName) {
       return { ok: false, waiting: false, error: 'Missing trade users', nextActiveOwned: [], nextTargetOwned: [] };
     }
 
     const response = await requestTradeApi('/api/trades/accept', {
       method: 'POST',
-      body: JSON.stringify({ activeUserName, otherUserName }),
+      body: JSON.stringify({ otherUserName }),
     });
 
     if (!response) {
