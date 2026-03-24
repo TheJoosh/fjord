@@ -20,6 +20,8 @@ export function Card({ className = '', image, name, displayname, cost, rarity, c
         <img
           src={src}
           alt={title}
+          draggable={false}
+          onDragStart={(event) => event.preventDefault()}
           loading="lazy"
           decoding="async"
           fetchPriority="low"
