@@ -172,6 +172,108 @@ app.get('/api/user/profile', async (req, res) => {
   });
 });
 
+app.get('/api/leaderboard', async (req, res) => {
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
+
+  const search = String(req.query?.search || '').trim();
+  const requestedPage = Math.max(1, parseInt(req.query?.page, 10) || 1);
+  const pageSize = 20;
+
+  const allUserNames = await persistence.listAuthUserNames(search);
+
+  const [profilesByUserName, cardValuesState] = await Promise.all([
+    persistence.getTradeProfilesByUserNames(allUserNames),
+    persistence.getCardValuesMap(),
+  ]);
+
+  const valuesByName = cardValuesState?.valuesByName || {};
+
+  const allRows = allUserNames.map((targetUserName) => {
+    const cardsMap = profilesByUserName[targetUserName] || {};
+    const ownedEntries = Object.entries(cardsMap)
+      .map(([name, qty]) => ({ name: sanitizeCardName(name), qty: normalizeQty(qty) }))
+      .filter((entry) => entry.name && entry.qty > 0);
+
+    let deckValue = 0;
+    const cardValueRows = ownedEntries
+      .map((entry) => {
+        const unitValue = normalizeWalletValue(valuesByName?.[entry.name]?.value);
+        const totalValue = normalizeWalletValue(unitValue * entry.qty);
+        deckValue += totalValue;
+
+        return {
+          name: entry.name,
+          qty: entry.qty,
+          unitValue,
+          totalValue,
+        };
+      })
+      .sort((a, b) => {
+        const valueDiff = b.unitValue - a.unitValue;
+        if (valueDiff !== 0) return valueDiff;
+        const qtyDiff = b.qty - a.qty;
+        if (qtyDiff !== 0) return qtyDiff;
+        return a.name.localeCompare(b.name);
+      });
+
+    return {
+      userName: targetUserName,
+      deckValue: normalizeWalletValue(deckValue),
+      topCards: cardValueRows.slice(0, 3),
+    };
+  });
+
+  allRows.sort((a, b) => {
+    const valueDiff = b.deckValue - a.deckValue;
+    if (valueDiff !== 0) return valueDiff;
+    return a.userName.localeCompare(b.userName);
+  });
+
+  const totalUsers = allRows.length;
+  const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
+  const page = Math.min(requestedPage, totalPages);
+  const pageStart = (page - 1) * pageSize;
+  const pagedRows = allRows.slice(pageStart, pageStart + pageSize);
+
+  const topCardNames = Array.from(new Set(
+    pagedRows.flatMap((row) => (row.topCards || []).map((card) => card.name).filter(Boolean))
+  ));
+  const detailsByName = await persistence.getCardDetailsByNames(topCardNames);
+
+  const rows = pagedRows.map((row) => ({
+    userName: row.userName,
+    deckValue: normalizeWalletValue(row.deckValue),
+    topCards: (row.topCards || []).map((card) => {
+      const details = detailsByName[card.name] || {};
+      const displayname = String(details.displayname || card.name || '').trim() || card.name;
+      return {
+        name: card.name,
+        displayname,
+        image: details.image || 'Default.png',
+        cost: details.cost != null ? details.cost : '-',
+        rarity: details.rarity || 'Common',
+        cardType: details.cardType || 'Type',
+        description: details.description || '',
+        strength: details.strength != null ? details.strength : '-',
+        endurance: details.endurance != null ? details.endurance : '-',
+        author: details.author || 'Unknown',
+        value: normalizeWalletValue(card.unitValue),
+        qty: normalizeQty(card.qty),
+      };
+    }),
+  }));
+
+  res.send({
+    search,
+    page,
+    pageSize,
+    totalUsers,
+    totalPages,
+    rows,
+  });
+});
+
 app.post('/api/cards/catalog', async (req, res) => {
   const authUser = await getAuthUser(req);
   if (!authUser) {
