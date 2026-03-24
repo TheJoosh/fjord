@@ -61,6 +61,13 @@ function emitTradeEvent(userName, type, payload = {}) {
   }
 }
 
+function emitLeaderboardUpdated(payload = {}) {
+  const connectedUsers = Array.from(wsClientsByUser.keys());
+  for (const connectedUserName of connectedUsers) {
+    emitTradeEvent(connectedUserName, 'leaderboard_updated', payload);
+  }
+}
+
 function parseCookieHeader(cookieHeader) {
   const source = String(cookieHeader || '').trim();
   if (!source) return {};
@@ -697,6 +704,10 @@ app.post('/api/trades/accept', async (req, res) => {
     persistence.setTradeProfileCards(otherUserName, otherProfile.cards),
   ]);
   await recalculateCardValuesInDb();
+  emitLeaderboardUpdated({
+    actorUserName: activeUserName,
+    reason: 'trade_completed',
+  });
 
   emitTradeEvent(activeUserName, 'trade_completed', {
     actorUserName: activeUserName,
@@ -795,6 +806,10 @@ app.post('/api/bank/buy', async (req, res) => {
   await persistence.setBankInventory(bankInventory);
   await persistence.setTradeProfileCards(userName, profile.cards);
   await recalculateCardValuesInDb();
+  emitLeaderboardUpdated({
+    actorUserName: userName,
+    reason: 'bank_buy',
+  });
 
   res.send({
     ok: true,
@@ -843,6 +858,10 @@ app.post('/api/bank/sell', async (req, res) => {
   await persistence.setBankInventory(bankInventory);
   await persistence.setTradeProfileCards(userName, profile.cards);
   await recalculateCardValuesInDb();
+  emitLeaderboardUpdated({
+    actorUserName: userName,
+    reason: 'bank_sell',
+  });
 
   res.send({
     ok: true,
@@ -931,6 +950,10 @@ app.post('/api/packs/open', async (req, res) => {
   await persistence.setTradeProfileCards(userName, profile.cards);
   await persistence.incrementCardsPopulation(generatedCards);
   const nextState = await recalculateCardValuesInDb();
+  emitLeaderboardUpdated({
+    actorUserName: userName,
+    reason: 'packs_opened',
+  });
   const detailsByName = await persistence.getCardDetailsByNames(generatedCardNames);
 
   const openedCards = generatedCards.map((entry) => {

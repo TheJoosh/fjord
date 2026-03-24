@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 function normalizeWalletValue(value) {
   const parsed = Number(value);
@@ -17,6 +18,8 @@ export function Leaderboard({ userName }) {
   const [totalPages, setTotalPages] = React.useState(1);
   const [rows, setRows] = React.useState([]);
   const [isLoading, setIsLoading] = React.useState(false);
+  const [refreshNonce, setRefreshNonce] = React.useState(0);
+  const refreshTimerRef = React.useRef(null);
 
   React.useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -54,7 +57,33 @@ export function Leaderboard({ userName }) {
     return () => {
       isActive = false;
     };
-  }, [userName, page, searchTerm]);
+  }, [userName, page, searchTerm, refreshNonce]);
+
+  React.useEffect(() => {
+    if (!userName) return () => {};
+
+    const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+      if (!event || event.channel !== 'trade') return;
+      if (event.type !== 'leaderboard_updated') return;
+
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+      }
+
+      refreshTimerRef.current = window.setTimeout(() => {
+        setRefreshNonce((current) => current + 1);
+        refreshTimerRef.current = null;
+      }, 120);
+    });
+
+    return () => {
+      unsubscribe();
+      if (refreshTimerRef.current) {
+        window.clearTimeout(refreshTimerRef.current);
+        refreshTimerRef.current = null;
+      }
+    };
+  }, [userName]);
 
   const canGoPrevious = page > 1;
   const canGoNext = page < totalPages;
