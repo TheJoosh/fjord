@@ -18,7 +18,7 @@ function matchesCardSearch(card, searchTerm) {
   return searchableFields.some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
 }
 
-export function AdminCards() {
+export function AdminCards({ isAdmin }) {
   const title = 'Card Catalog';
   const sortOptions = ['Name', 'Rarity', 'Author', 'Value'];
   const cardsPerPage = 40;
@@ -32,9 +32,18 @@ export function AdminCards() {
   const [searchTerm, setSearchTerm] = React.useState('');
   const renderedCards = React.useMemo(
     () => {
-      const filteredCards = catalogCards.filter((entry) => matchesCardSearch(entry?.card, searchTerm));
+      const filteredCards = catalogCards.filter((entry) => {
+        if (!isAdmin && !entry.discovered) return true; // always include undiscovered (shown as unknown)
+        return matchesCardSearch(entry?.card, searchTerm);
+      });
 
       return [...filteredCards].sort((a, b) => {
+        // Undiscovered cards always sort to the end for non-admins
+        if (!isAdmin) {
+          if (!a.discovered && b.discovered) return 1;
+          if (a.discovered && !b.discovered) return -1;
+        }
+
         if (sortBy === 'Value') {
           const aValue = typeof a?.card?.value === 'number' ? a.card.value : 0;
           const bValue = typeof b?.card?.value === 'number' ? b.card.value : 0;
@@ -58,7 +67,7 @@ export function AdminCards() {
         return a.name.localeCompare(b.name);
       });
     },
-    [catalogCards, sortBy, searchTerm]
+    [catalogCards, sortBy, searchTerm, isAdmin]
   );
 
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -96,8 +105,14 @@ export function AdminCards() {
   };
 
   const loadCatalogCards = React.useCallback(async () => {
-    setCatalogCards(await gameApiClient.loadAdminCardDesigns());
-  }, []);
+    if (isAdmin) {
+      const adminCards = await gameApiClient.loadAdminCardDesigns();
+      // Admin sees all cards as discovered
+      setCatalogCards(adminCards.map((entry) => ({ ...entry, discovered: true })));
+    } else {
+      setCatalogCards(await gameApiClient.loadCatalogDesigns());
+    }
+  }, [isAdmin]);
 
   const handleEdit = (name, card) => {
     if (!name || !card) return;
@@ -244,45 +259,52 @@ export function AdminCards() {
 
       <div className="container-fluid">
         <div className="row deck-row">
-          {paginatedCards.map(({ name, card }) => (
-            <div className="col deck-col" key={name}>
-              <div>
-                <Card
-                  image={card.image}
-                  name={card.name}
-                  displayname={card.displayname}
-                  cost={card.cost}
-                  rarity={card.rarity}
-                  cardType={card.cardType}
-                  description={card.description}
-                  strength={card.strength}
-                  endurance={card.endurance}
-                />
-              </div>
-              <div className="card-value mt-1">
-                <div className="card-meta-row">
-                  <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+          {paginatedCards.map(({ name, card, discovered }) => {
+            const isVisible = isAdmin || discovered;
+            return (
+              <div className="col deck-col" key={name}>
+                <div>
+                  <Card
+                    image={isVisible ? card.image : 'Unknown.png'}
+                    name={isVisible ? card.name : '???'}
+                    displayname={isVisible ? card.displayname : '???'}
+                    cost={isVisible ? card.cost : '-'}
+                    rarity={isVisible ? card.rarity : 'Common'}
+                    cardType={isVisible ? card.cardType : '???'}
+                    description={isVisible ? card.description : ''}
+                    strength={isVisible ? card.strength : '-'}
+                    endurance={isVisible ? card.endurance : '-'}
+                  />
                 </div>
-                <small>Author: {card.author || 'Unknown'}</small>
+                {isVisible && (
+                  <div className="card-value mt-1">
+                    <div className="card-meta-row">
+                      <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                    </div>
+                    <small>Author: {card.author || 'Unknown'}</small>
+                  </div>
+                )}
+                {isAdmin && (
+                  <div className="deck-controls mt-2">
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-primary"
+                      onClick={() => handleEdit(name, card)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                )}
               </div>
-              <div className="deck-controls mt-2">
-                <button
-                  type="button"
-                  className="btn btn-sm btn-primary"
-                  onClick={() => handleEdit(name, card)}
-                >
-                  Edit
-                </button>
-              </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="deck-pagination-bottom-slot" aria-hidden={!showPagination}>
           {renderPaginationControls()}
         </div>
       </div>
 
-      {isEditOverlayOpen && editingDraft && (
+      {isAdmin && isEditOverlayOpen && editingDraft && (
         <div className="pexels-overlay" onClick={closeEditOverlay}>
           <div className="pexels-overlay-panel" onClick={(event) => event.stopPropagation()}>
             <div className="pexels-overlay-header">
@@ -366,3 +388,5 @@ export function AdminCards() {
     </main>
   );
 }
+
+
