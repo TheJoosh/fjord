@@ -64,7 +64,7 @@ export function Leaderboard({ userName }) {
 
     const unsubscribe = tradeRealtimeClient.subscribe((event) => {
       if (!event || event.channel !== 'trade') return;
-      if (event.type !== 'leaderboard_updated') return;
+      if (event.type !== 'leaderboard_updated' && event.type !== 'card_values_updated') return;
 
       if (refreshTimerRef.current) {
         window.clearTimeout(refreshTimerRef.current);

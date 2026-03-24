@@ -83,6 +83,11 @@ export function Trades({ userName }) {
                     return;
                 }
 
+                if (event.type === 'card_values_updated') {
+                    await refreshTradeStateFromServer();
+                    return;
+                }
+
                 if (event.type === 'trade_cancelled') {
                     setTradeSuccessMessage('Trade was cancelled.');
                     setTradeErrorMessage('');

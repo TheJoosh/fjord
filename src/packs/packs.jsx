@@ -4,6 +4,7 @@ import '../app.css';
 import { drawWeightedCards } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
 import { Card } from '../data/card';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 function normalizeWalletValue(value) {
     const parsed = Number(value);
@@ -56,6 +57,30 @@ export function Packs({ userName }) {
             applyPackState(response.packs, response.wallet);
         })();
     }, [applyPackState, userName]);
+
+    React.useEffect(() => {
+        if (!userName) return () => {};
+
+        const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+            if (!event || event.channel !== 'trade') return;
+            if (event.type !== 'card_values_updated') return;
+
+            (async () => {
+                await gameApiClient.loadCardValues();
+                setOpenedCards((previous) => previous.map((card) => {
+                    if (!card?.name) return card;
+                    return {
+                        ...card,
+                        value: gameApiClient.getCurrentCardValue({ name: card.name, value: card.value }),
+                    };
+                }));
+            })();
+        });
+
+        return () => {
+            unsubscribe();
+        };
+    }, [userName]);
 
     const showOpenedCards = (cards) => {
         setOpenedCards(cards || []);
