@@ -27,8 +27,8 @@ function matchesCardSearch(card, searchTerm) {
 
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
-  const sortOptions = ['Value', 'Rarity', 'Name'];
-  const getDefaultSortDirection = React.useCallback((option) => (option === 'Name' ? 'asc' : 'desc'), []);
+  const sortOptions = ['Value', 'Rarity', 'Name', 'Author'];
+  const getDefaultSortDirection = React.useCallback((option) => (option === 'Name' || option === 'Author' ? 'asc' : 'desc'), []);
   const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
@@ -91,6 +91,14 @@ export function Deck({ userName }) {
 
     if (sortBy === 'Name') {
       return applyDirection(a.name.localeCompare(b.name));
+    }
+
+    if (sortBy === 'Author') {
+      const aAuthor = (aCard?.author || '').toLowerCase();
+      const bAuthor = (bCard?.author || '').toLowerCase();
+      const authorDiff = applyDirection(aAuthor.localeCompare(bAuthor));
+      if (authorDiff !== 0) return authorDiff;
+      return a.name.localeCompare(b.name);
     }
 
     const aScarcity = gameApiClient.getCurrentCardScarcity({ name: a.name });
@@ -229,9 +237,9 @@ export function Deck({ userName }) {
   React.useEffect(() => {
     (async () => {
       if (!userName || !hasLoadedSortPreference) return;
-      await gameApiClient.saveDeckSortPreference(userName, sortBy);
+      await gameApiClient.saveDeckSortPreference(userName, sortBy, sortDirection);
     })();
-  }, [userName, sortBy, hasLoadedSortPreference]);
+  }, [userName, sortBy, sortDirection, hasLoadedSortPreference]);
 
   React.useEffect(() => {
     let isActive = true;
@@ -245,12 +253,12 @@ export function Deck({ userName }) {
         return;
       }
 
-      const saved = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
+      const { sortBy: savedSortBy, sortDirection: savedSortDirection } = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
       if (!isActive) return;
 
-      const resolvedSort = sortOptions.includes(saved) ? saved : 'Rarity';
+      const resolvedSort = sortOptions.includes(savedSortBy) ? savedSortBy : 'Rarity';
       setSortBy(resolvedSort);
-      setSortDirection(getDefaultSortDirection(resolvedSort));
+      setSortDirection(savedSortDirection || getDefaultSortDirection(resolvedSort));
       setHasLoadedSortPreference(true);
     })();
 
