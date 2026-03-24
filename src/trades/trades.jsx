@@ -35,8 +35,8 @@ export function Trades({ userName }) {
         if (!userName) return;
 
         const [nextPendingTrade, nextSelectedTradeCards] = await Promise.all([
-            gameApiClient.loadPendingTrade(userName),
-            gameApiClient.loadSelectedTradeCards(userName),
+            gameApiClient.loadPendingTrade(),
+            gameApiClient.loadSelectedTradeCards(),
         ]);
 
         suppressNextTradeSavesRef.current = 2;
@@ -116,7 +116,7 @@ export function Trades({ userName }) {
         setIAccepted(false);
 
         (async () => {
-            await gameApiClient.saveSelectedTradeCards(userName, selectedTradeCards);
+            await gameApiClient.saveSelectedTradeCards(selectedTradeCards);
         })();
     }, [userName, selectedTradeCards]);
 
@@ -127,7 +127,7 @@ export function Trades({ userName }) {
         }
 
         (async () => {
-            await gameApiClient.savePendingTrade(userName, {
+            await gameApiClient.savePendingTrade({
                 otherUserName,
                 otherUserLabel,
                 otherTradeCards,
@@ -185,7 +185,7 @@ export function Trades({ userName }) {
     }, [ownedDeckCards, selectedCountsByName]);
 
     const handleRequestTradeUser = async () => {
-        const response = await gameApiClient.requestTradeUser(userName, requestUserInput);
+        const response = await gameApiClient.requestTradeUser(requestUserInput);
         if (response.error) {
             setRequestUserError(response.error);
             return;
@@ -236,7 +236,7 @@ export function Trades({ userName }) {
     }, 0);
 
     const handleCancelTrade = async () => {
-        await gameApiClient.cancelTrade(userName, selectedTradeCards);
+        await gameApiClient.cancelTrade(selectedTradeCards);
 
         setSelectedTradeCards([]);
         setOtherTradeCards([]);
@@ -251,7 +251,7 @@ export function Trades({ userName }) {
     const handleAcceptTrade = async () => {
         if (!userName || !otherUserName) return;
 
-        const result = await gameApiClient.acceptTrade(userName, otherUserName);
+        const result = await gameApiClient.acceptTrade(otherUserName);
         if (!result?.ok) {
             setTradeErrorMessage(result?.error || 'Unable to accept trade. Please try again.');
             setTradeSuccessMessage('');

@@ -154,7 +154,7 @@ export default function App() {
                 return;
             }
 
-            const pendingTrade = await gameApiClient.loadPendingTrade(userName);
+                const pendingTrade = await gameApiClient.loadPendingTrade();
             if (!pendingTrade?.otherUserName) {
                 clearIncomingTradeRequest();
                 return;
@@ -179,12 +179,12 @@ export default function App() {
     const restoreTradedCardsOnLogout = async (activeUserName) => {
         if (!activeUserName) return;
 
-        const selectedTradeCards = await gameApiClient.loadSelectedTradeCards(activeUserName);
+        const selectedTradeCards = await gameApiClient.loadSelectedTradeCards();
         if (!Array.isArray(selectedTradeCards) || selectedTradeCards.length === 0) {
             return;
         }
 
-        await gameApiClient.cancelTrade(activeUserName, selectedTradeCards);
+        await gameApiClient.cancelTrade(selectedTradeCards);
     };
 
     const logout = async () => {
@@ -310,7 +310,7 @@ export default function App() {
         setDismissedTradeNoticeAndPersist(incomingTradeRequest.fromUserName);
 
         // Align local pending trade metadata without sending a new trade request event.
-        await gameApiClient.savePendingTrade(userName, {
+        await gameApiClient.savePendingTrade({
             otherUserName: incomingTradeRequest.fromUserName,
             otherUserLabel: incomingTradeRequest.fromUserLabel || incomingTradeRequest.fromUserName,
             otherTradeCards: [],
