@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 function normalizeWalletValue(value) {
   const parsed = Number(value);
@@ -38,6 +39,8 @@ export function Bank({ userName }) {
   const [pendingAction, setPendingAction] = React.useState(null);
   const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
   const [hasLoadedShowDuplicatesPreference, setHasLoadedShowDuplicatesPreference] = React.useState(false);
+  const [valuesRefreshNonce, setValuesRefreshNonce] = React.useState(0);
+  const valuesRefreshTimerRef = React.useRef(null);
   const walletValue = normalizeWalletValue(walletBalance);
 
   const loadBankCards = React.useCallback(async () => {
@@ -292,6 +295,44 @@ export function Bank({ userName }) {
       setOwnedDeckCards(await buildOwnedDeckCards());
     })();
   }, [userName, buildOwnedDeckCards]);
+
+  React.useEffect(() => {
+    if (!userName) return;
+
+    (async () => {
+      await gameApiClient.loadCardValues();
+      setBankCards(await loadBankCards());
+      if (isSellMode) {
+        setOwnedDeckCards(await buildOwnedDeckCards());
+      }
+    })();
+  }, [userName, isSellMode, loadBankCards, buildOwnedDeckCards, valuesRefreshNonce]);
+
+  React.useEffect(() => {
+    if (!userName) return () => {};
+
+    const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+      if (!event || event.channel !== 'trade') return;
+      if (event.type !== 'card_values_updated') return;
+
+      if (valuesRefreshTimerRef.current) {
+        window.clearTimeout(valuesRefreshTimerRef.current);
+      }
+
+      valuesRefreshTimerRef.current = window.setTimeout(() => {
+        setValuesRefreshNonce((current) => current + 1);
+        valuesRefreshTimerRef.current = null;
+      }, 120);
+    });
+
+    return () => {
+      unsubscribe();
+      if (valuesRefreshTimerRef.current) {
+        window.clearTimeout(valuesRefreshTimerRef.current);
+        valuesRefreshTimerRef.current = null;
+      }
+    };
+  }, [userName]);
 
   React.useEffect(() => {
     let isActive = true;
