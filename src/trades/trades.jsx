@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 export function Trades({ userName }) {
     const currentUserLabel = userName || 'User';
@@ -16,6 +17,7 @@ export function Trades({ userName }) {
     const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
     const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
     const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
+    const suppressNextTradeSavesRef = React.useRef(0);
     const hasValidTradePartner = Boolean(otherUserName);
 
     const getDisplayCardValue = React.useCallback((cardLike) => {
@@ -27,6 +29,25 @@ export function Trades({ userName }) {
         return await gameApiClient.buildOwnedDeckCards(userName);
     }, [userName]);
 
+    const refreshTradeStateFromServer = React.useCallback(async () => {
+        if (!userName) return;
+
+        const [nextPendingTrade, nextSelectedTradeCards] = await Promise.all([
+            gameApiClient.loadPendingTrade(userName),
+            gameApiClient.loadSelectedTradeCards(userName),
+        ]);
+
+        suppressNextTradeSavesRef.current = 2;
+        setOtherUserLabel(nextPendingTrade.otherUserLabel);
+        setOtherUserName(nextPendingTrade.otherUserName);
+        setOtherTradeCards(nextPendingTrade.otherTradeCards);
+        setSelectedTradeCards(nextSelectedTradeCards);
+
+        if (isDeckOverlayOpen) {
+            setOwnedDeckCards(await buildOwnedDeckCards());
+        }
+    }, [userName, isDeckOverlayOpen, buildOwnedDeckCards]);
+
     React.useEffect(() => {
         if (!isDeckOverlayOpen) return;
         (async () => {
@@ -36,27 +57,78 @@ export function Trades({ userName }) {
 
     React.useEffect(() => {
         (async () => {
-            const initialPendingTrade = await gameApiClient.loadPendingTrade(userName);
-            setOtherUserLabel(initialPendingTrade.otherUserLabel);
-            setOtherUserName(initialPendingTrade.otherUserName);
-            setOtherTradeCards(initialPendingTrade.otherTradeCards);
+            await refreshTradeStateFromServer();
         })();
-    }, [userName]);
+    }, [refreshTradeStateFromServer]);
 
     React.useEffect(() => {
-        (async () => {
-            const parsed = await gameApiClient.loadSelectedTradeCards(userName);
-            setSelectedTradeCards(parsed);
-        })();
-    }, [userName]);
+        if (!userName) {
+            tradeRealtimeClient.disconnect();
+            return;
+        }
+
+        tradeRealtimeClient.connect(userName);
+        const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+            if (!event || event.channel !== 'trade') return;
+
+            (async () => {
+                if (event.type === 'trade_request_received') {
+                    const fromUserName = String(event.fromUserName || '').trim();
+                    if (fromUserName) {
+                        suppressNextTradeSavesRef.current = 2;
+                        setOtherUserLabel(event.fromUserLabel || fromUserName);
+                        setOtherUserName(fromUserName);
+                    }
+
+                    setTradeSuccessMessage(`Trade request received from ${event.fromUserLabel || fromUserName || 'another user'}`);
+                    setTradeErrorMessage('');
+                    await refreshTradeStateFromServer();
+                    return;
+                }
+
+                if (event.type === 'trade_state_updated') {
+                    await refreshTradeStateFromServer();
+                    return;
+                }
+
+                if (event.type === 'trade_cancelled') {
+                    setTradeSuccessMessage('Trade was cancelled.');
+                    setTradeErrorMessage('');
+                    await refreshTradeStateFromServer();
+                    return;
+                }
+
+                if (event.type === 'trade_completed') {
+                    setTradeSuccessMessage('Trade completed successfully.');
+                    setTradeErrorMessage('');
+                    await refreshTradeStateFromServer();
+                }
+            })();
+        });
+
+        return () => {
+            unsubscribe();
+            tradeRealtimeClient.disconnect();
+        };
+    }, [userName, refreshTradeStateFromServer]);
 
     React.useEffect(() => {
+        if (suppressNextTradeSavesRef.current > 0) {
+            suppressNextTradeSavesRef.current -= 1;
+            return;
+        }
+
         (async () => {
             await gameApiClient.saveSelectedTradeCards(userName, selectedTradeCards);
         })();
     }, [userName, selectedTradeCards]);
 
     React.useEffect(() => {
+        if (suppressNextTradeSavesRef.current > 0) {
+            suppressNextTradeSavesRef.current -= 1;
+            return;
+        }
+
         (async () => {
             await gameApiClient.savePendingTrade(userName, {
                 otherUserName,
