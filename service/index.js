@@ -494,8 +494,12 @@ app.post('/api/trades/cancel', async (req, res) => {
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
   const profile = await ensureTradeProfile(userName, {});
 
-  await persistence.setSelectedTradeCards(userName, []);
-  await persistence.deletePendingTrade(userName);
+  await Promise.all([
+    persistence.setSelectedTradeCards(userName, []),
+    persistence.deletePendingTrade(userName),
+    otherUserName ? persistence.setSelectedTradeCards(otherUserName, []) : Promise.resolve(),
+    otherUserName ? persistence.deletePendingTrade(otherUserName) : Promise.resolve(),
+  ]);
 
   emitTradeEvent(userName, 'trade_cancelled', {
     actorUserName: userName,
