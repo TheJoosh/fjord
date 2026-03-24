@@ -273,7 +273,7 @@ export const gameApiClient = {
 
   async loadPendingTrade(userName) {
     if (!userName) {
-      return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
+      return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [], iAccepted: false, otherAccepted: false };
     }
 
     await this.loadCardValues();
@@ -285,13 +285,15 @@ export const gameApiClient = {
 
     const parsed = parsedResponse?.pendingTrade;
     if (!parsed || typeof parsed !== 'object') {
-      return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [] };
+      return { otherUserLabel: 'Other User', otherUserName: '', otherTradeCards: [], iAccepted: false, otherAccepted: false };
     }
 
     return {
       otherUserLabel: parsed.otherUserLabel || parsed.otherUserName || 'Other User',
       otherUserName: parsed.otherUserName || '',
       otherTradeCards: Array.isArray(parsed.otherTradeCards) ? hydrateCards(parsed.otherTradeCards) : [],
+      iAccepted: Boolean(parsed.iAccepted),
+      otherAccepted: Boolean(parsed.otherAccepted),
     };
   },
 
@@ -400,23 +402,18 @@ export const gameApiClient = {
     if (!response) return;
   },
 
-  async acceptTrade(activeUserName, otherUserName, selectedTradeCards, otherTradeCards) {
+  async acceptTrade(activeUserName, otherUserName) {
     if (!activeUserName || !otherUserName) {
-      return { ok: false, error: 'Missing trade users', nextActiveOwned: [], nextTargetOwned: [] };
+      return { ok: false, waiting: false, error: 'Missing trade users', nextActiveOwned: [], nextTargetOwned: [] };
     }
 
     const response = await requestTradeApi('/api/trades/accept', {
       method: 'POST',
-      body: JSON.stringify({
-        activeUserName,
-        otherUserName,
-        selectedTradeCards: Array.isArray(selectedTradeCards) ? selectedTradeCards : [],
-        otherTradeCards: Array.isArray(otherTradeCards) ? otherTradeCards : [],
-      }),
+      body: JSON.stringify({ activeUserName, otherUserName }),
     });
 
     if (!response) {
-      return { ok: false, error: 'Unable to accept trade', nextActiveOwned: [], nextTargetOwned: [] };
+      return { ok: false, waiting: false, error: 'Unable to accept trade', nextActiveOwned: [], nextTargetOwned: [] };
     }
 
     const nextActiveOwned = Array.isArray(response?.nextActiveOwned) ? response.nextActiveOwned : [];
@@ -424,6 +421,7 @@ export const gameApiClient = {
 
     return {
       ok: Boolean(response?.ok ?? true),
+      waiting: Boolean(response?.waiting),
       error: response?.error || '',
       nextActiveOwned: hydrateCards(nextActiveOwned),
       nextTargetOwned: hydrateCards(nextTargetOwned),
