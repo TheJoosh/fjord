@@ -38,12 +38,6 @@ export function AdminCards({ isAdmin }) {
       });
 
       return [...filteredCards].sort((a, b) => {
-        // Undiscovered cards always sort to the end for non-admins
-        if (!isAdmin) {
-          if (!a.discovered && b.discovered) return 1;
-          if (a.discovered && !b.discovered) return -1;
-        }
-
         if (sortBy === 'Value') {
           const aValue = typeof a?.card?.value === 'number' ? a.card.value : 0;
           const bValue = typeof b?.card?.value === 'number' ? b.card.value : 0;
@@ -277,14 +271,12 @@ export function AdminCards({ isAdmin }) {
                     imageOnly={!isVisible}
                   />
                 </div>
-                {isVisible && (
-                  <div className="card-value mt-1">
-                    <div className="card-meta-row">
-                      <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
-                    </div>
-                    <small>Author: {card.author || 'Unknown'}</small>
+                <div className="card-value mt-1">
+                  <div className="card-meta-row">
+                    <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
                   </div>
-                )}
+                  <small>Author: {card.author || 'Unknown'}</small>
+                </div>
                 {isAdmin && (
                   <div className="deck-controls mt-2">
                     <button
