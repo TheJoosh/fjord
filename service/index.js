@@ -257,13 +257,9 @@ app.post('/api/trades/owned', async (req, res) => {
 });
 
 app.get('/api/trades/pending', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.query?.userName);
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
   const [otherUserSelectedTradeCards, otherPendingTrade] = await Promise.all([
@@ -293,13 +289,9 @@ app.get('/api/trades/pending', async (req, res) => {
 });
 
 app.put('/api/trades/pending', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const pendingTrade = req.body?.pendingTrade;
 
   if (!userName || !pendingTrade || !pendingTrade.otherUserName) {
@@ -334,25 +326,17 @@ app.put('/api/trades/pending', async (req, res) => {
 });
 
 app.get('/api/trades/selection', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.query?.userName);
   const selectedTradeCards = await persistence.getSelectedTradeCards(userName);
   res.send({ selectedTradeCards: await hydrateTradeCardsForResponse(selectedTradeCards) });
 });
 
 app.put('/api/trades/selection', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const selectedTradeCards = Array.isArray(req.body?.selectedTradeCards)
     ? req.body.selectedTradeCards
     : [];
@@ -376,13 +360,9 @@ app.put('/api/trades/selection', async (req, res) => {
 });
 
 app.post('/api/trades/request-user', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const currentUserName = await getTradeAuthUserName(req, res);
+  if (!currentUserName) return;
 
-  const currentUserName = sanitizeUsername(req.body?.currentUserName);
   const target = sanitizeUsername(req.body?.requestUserInput);
   const matchedUserName = await resolveTradeUserName(target);
 
@@ -438,13 +418,9 @@ app.post('/api/trades/request-user', async (req, res) => {
 });
 
 app.post('/api/trades/owned/decrement', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
   const profile = await ensureTradeProfile(userName, {});
 
@@ -457,13 +433,9 @@ app.post('/api/trades/owned/decrement', async (req, res) => {
 });
 
 app.post('/api/trades/owned/increment', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
   const cardName = req.body?.cardName;
   const profile = await ensureTradeProfile(userName, {});
 
@@ -476,16 +448,9 @@ app.post('/api/trades/owned/increment', async (req, res) => {
 });
 
 app.post('/api/trades/cancel', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
 
-  const userName = sanitizeUsername(req.body?.userName);
-  const selectedTradeCards = Array.isArray(req.body?.selectedTradeCards)
-    ? req.body.selectedTradeCards
-    : [];
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
   const profile = await ensureTradeProfile(userName, {});
@@ -508,17 +473,24 @@ app.post('/api/trades/cancel', async (req, res) => {
 });
 
 app.post('/api/trades/accept', async (req, res) => {
-  const authUser = await getAuthUser(req);
-  if (!authUser) {
-    res.status(401).send({ msg: 'Unauthorized' });
-    return;
-  }
+  const activeUserName = await getTradeAuthUserName(req, res);
+  if (!activeUserName) return;
 
-  const activeUserName = sanitizeUsername(req.body?.activeUserName);
   const otherUserName = sanitizeUsername(req.body?.otherUserName);
 
   if (!activeUserName || !otherUserName) {
     res.send({ ok: false, error: 'Missing trade users' });
+    return;
+  }
+
+  const [activePendingTrade, otherPendingTradeSnapshot] = await Promise.all([
+    persistence.getPendingTrade(activeUserName),
+    persistence.getPendingTrade(otherUserName),
+  ]);
+  const activeTradeTarget = sanitizeUsername(activePendingTrade?.otherUserName);
+  const otherTradeTarget = sanitizeUsername(otherPendingTradeSnapshot?.otherUserName);
+  if (!activeTradeTarget || activeTradeTarget !== otherUserName || !otherTradeTarget || otherTradeTarget !== activeUserName) {
+    res.send({ ok: false, error: 'Trade state mismatch. Please refresh and try again.' });
     return;
   }
 
@@ -1267,6 +1239,16 @@ async function getUser(field, value) {
 async function getAuthUser(req) {
   const token = req.cookies['token'];
   return await getUser('token', token);
+}
+
+async function getTradeAuthUserName(req, res) {
+  const authUser = await getAuthUser(req);
+  if (!authUser) {
+    res.status(401).send({ msg: 'Unauthorized' });
+    return null;
+  }
+
+  return sanitizeUsername(authUser.username);
 }
 
 function sanitizeUsername(username) {
