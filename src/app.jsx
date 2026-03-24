@@ -306,8 +306,15 @@ export default function App() {
             return;
         }
 
-        // Ensure the pending trade is actively aligned to the requesting user before opening Trades.
-        await gameApiClient.requestTradeUser(userName, incomingTradeRequest.fromUserName);
+        // Opening the trade should hide this banner locally.
+        setDismissedTradeNoticeAndPersist(incomingTradeRequest.fromUserName);
+
+        // Align local pending trade metadata without sending a new trade request event.
+        await gameApiClient.savePendingTrade(userName, {
+            otherUserName: incomingTradeRequest.fromUserName,
+            otherUserLabel: incomingTradeRequest.fromUserLabel || incomingTradeRequest.fromUserName,
+            otherTradeCards: [],
+        });
         navigate('/trades');
     };
 
