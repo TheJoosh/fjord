@@ -309,6 +309,33 @@ app.put('/api/trades/pending', async (req, res) => {
 
   const nextOtherUserName = sanitizeUsername(pendingTrade.otherUserName);
 
+  // If user is switching to a new trade partner, cancel any existing trade with a different user.
+  const currentPendingTrade = await persistence.getPendingTrade(userName);
+  const currentOtherUserName = sanitizeUsername(currentPendingTrade?.otherUserName);
+  
+  if (currentOtherUserName && currentOtherUserName !== nextOtherUserName) {
+    // User is switching trade partners. Cancel the previous trade.
+    const hasReciprocalPair = await isReciprocalPendingTradePair(userName, currentOtherUserName);
+    
+    // Clear both sides if reciprocal
+    await Promise.all([
+      persistence.setSelectedTradeCards(userName, []),
+      persistence.deletePendingTrade(userName),
+      hasReciprocalPair ? persistence.setSelectedTradeCards(currentOtherUserName, []) : Promise.resolve(),
+      hasReciprocalPair ? persistence.deletePendingTrade(currentOtherUserName) : Promise.resolve(),
+    ]);
+
+    // Notify both users of the cancellation
+    emitTradeEvent(userName, 'trade_cancelled', {
+      actorUserName: userName,
+    });
+    if (hasReciprocalPair) {
+      emitTradeEvent(currentOtherUserName, 'trade_cancelled', {
+        actorUserName: userName,
+      });
+    }
+  }
+
   await persistence.setPendingTrade(userName, {
     otherUserName: nextOtherUserName,
     otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName,
