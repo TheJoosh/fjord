@@ -10,6 +10,7 @@ import { Designer } from './designer/designer';
 import { Packs } from './packs/packs';
 import { Trades } from './trades/trades';
 import { Bank } from './bank/bank';
+import { Leaderboard } from './leaderboard/leaderboard';
 import { Approve } from './approve/approve';
 import { AdminCards } from './adminCards/adminCards';
 import { getMe, getProfile, logoutAuth } from './login/authService';
@@ -343,6 +344,10 @@ export default function App() {
                         <li><NavLink to="/bank">Bank</NavLink></li>
                     )}
 
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/leaderboard">Leaderboard</NavLink></li>
+                    )}
+
                     {authState === AuthState.Authenticated && isAdminUser && (
                         <li><NavLink to="/approve">Approve</NavLink></li>
                     )}
@@ -397,6 +402,7 @@ export default function App() {
                 <Route path='/trades' element={<Trades userName={userName} />} />
                 <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='/bank' element={<Bank userName={userName} />} />
+                <Route path='/leaderboard' element={authState === AuthState.Authenticated ? <Leaderboard userName={userName} /> : <Navigate to='/' replace />} />
                 <Route path='/approve' element={isAdminUser ? <Approve userName={userName} /> : <Navigate to='/' replace />} />
                 <Route path='/admin-cards' element={isAdminUser ? <AdminCards /> : <Navigate to='/' replace />} />
                 <Route path='*' element={<NotFound />} />
