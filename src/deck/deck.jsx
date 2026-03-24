@@ -1,6 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 function normalizeWalletValue(value) {
   const parsed = Number(value);
@@ -36,6 +37,8 @@ export function Deck({ userName }) {
   const [walletBalance, setWalletBalance] = React.useState(0);
   const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
   const [hasLoadedShowDuplicatesPreference, setHasLoadedShowDuplicatesPreference] = React.useState(false);
+  const [valuesRefreshNonce, setValuesRefreshNonce] = React.useState(0);
+  const valuesRefreshTimerRef = React.useRef(null);
 
   const combinedCardsByName = {};
   for (const entry of ownedDeckCards) {
@@ -154,12 +157,38 @@ export function Deck({ userName }) {
       const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(userName);
       setOwnedDeckCards(nextOwnedDeckCards);
     })();
-  }, [userName]);
+  }, [userName, valuesRefreshNonce]);
 
   React.useEffect(() => {
     (async () => {
       await gameApiClient.loadCardValues();
     })();
+  }, [userName, valuesRefreshNonce]);
+
+  React.useEffect(() => {
+    if (!userName) return () => {};
+
+    const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+      if (!event || event.channel !== 'trade') return;
+      if (event.type !== 'card_values_updated') return;
+
+      if (valuesRefreshTimerRef.current) {
+        window.clearTimeout(valuesRefreshTimerRef.current);
+      }
+
+      valuesRefreshTimerRef.current = window.setTimeout(() => {
+        setValuesRefreshNonce((current) => current + 1);
+        valuesRefreshTimerRef.current = null;
+      }, 120);
+    });
+
+    return () => {
+      unsubscribe();
+      if (valuesRefreshTimerRef.current) {
+        window.clearTimeout(valuesRefreshTimerRef.current);
+        valuesRefreshTimerRef.current = null;
+      }
+    };
   }, [userName]);
 
   React.useEffect(() => {
