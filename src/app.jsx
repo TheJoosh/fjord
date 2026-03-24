@@ -352,7 +352,7 @@ export default function App() {
                         <li><NavLink to="/approve">Approve</NavLink></li>
                     )}
 
-                    {authState === AuthState.Authenticated && isAdminUser && (
+                    {authState === AuthState.Authenticated && (
                         <li><NavLink to="/admin-cards">Card Catalog</NavLink></li>
                     )}
 
@@ -404,7 +404,7 @@ export default function App() {
                 <Route path='/bank' element={<Bank userName={userName} />} />
                 <Route path='/leaderboard' element={authState === AuthState.Authenticated ? <Leaderboard userName={userName} /> : <Navigate to='/' replace />} />
                 <Route path='/approve' element={isAdminUser ? <Approve userName={userName} /> : <Navigate to='/' replace />} />
-                <Route path='/admin-cards' element={isAdminUser ? <AdminCards /> : <Navigate to='/' replace />} />
+                <Route path='/admin-cards' element={authState === AuthState.Authenticated ? <AdminCards isAdmin={isAdminUser} /> : <Navigate to='/' replace />} />
                 <Route path='*' element={<NotFound />} />
             </Routes>
 
