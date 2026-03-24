@@ -1,14 +1,100 @@
 const express = require('express');
 const app = express();
+const http = require('http');
 const path = require('path');
 const fs = require('fs');
 const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const persistence = require('./persistence');
+const { WebSocketServer, WebSocket } = require('ws');
 
 app.use(express.json({ limit: '50mb' }));
 app.use(cookieParser());
+
+const wsClientsByUser = new Map();
+
+function addWsClientForUser(userName, socket) {
+  if (!userName || !socket) return;
+
+  const existing = wsClientsByUser.get(userName);
+  if (existing) {
+    existing.add(socket);
+    return;
+  }
+
+  wsClientsByUser.set(userName, new Set([socket]));
+}
+
+function removeWsClientForUser(userName, socket) {
+  if (!userName || !socket) return;
+
+  const existing = wsClientsByUser.get(userName);
+  if (!existing) return;
+
+  existing.delete(socket);
+  if (existing.size === 0) {
+    wsClientsByUser.delete(userName);
+  }
+}
+
+function emitTradeEvent(userName, type, payload = {}) {
+  if (!userName || !type) return;
+
+  const sockets = wsClientsByUser.get(userName);
+  if (!sockets || sockets.size === 0) return;
+
+  const message = JSON.stringify({
+    channel: 'trade',
+    type,
+    serverTimestamp: Date.now(),
+    ...payload,
+  });
+
+  for (const socket of sockets) {
+    if (socket.readyState !== WebSocket.OPEN) continue;
+    try {
+      socket.send(message);
+    } catch {
+      // Ignore send failures for stale sockets.
+    }
+  }
+}
+
+function parseCookieHeader(cookieHeader) {
+  const source = String(cookieHeader || '').trim();
+  if (!source) return {};
+
+  return source
+    .split(';')
+    .map((entry) => entry.trim())
+    .filter(Boolean)
+    .reduce((acc, entry) => {
+      const separatorIndex = entry.indexOf('=');
+      if (separatorIndex <= 0) return acc;
+
+      const key = entry.slice(0, separatorIndex).trim();
+      const value = entry.slice(separatorIndex + 1).trim();
+      if (!key) return acc;
+
+      acc[key] = decodeURIComponent(value);
+      return acc;
+    }, {});
+}
+
+function rejectUpgrade(socket, statusCode, statusText) {
+  try {
+    socket.write(`HTTP/1.1 ${statusCode} ${statusText}\r\nConnection: close\r\n\r\n`);
+  } catch {
+    // Ignore write failures while closing upgrade sockets.
+  }
+
+  try {
+    socket.destroy();
+  } catch {
+    // Ignore destroy failures.
+  }
+}
 
 app.post('/api/auth', async (req, res) => {
   const username = sanitizeUsername(req.body?.username);
@@ -207,14 +293,29 @@ app.put('/api/trades/pending', async (req, res) => {
 
   if (!userName || !pendingTrade || !pendingTrade.otherUserName) {
     await persistence.deletePendingTrade(userName);
+    emitTradeEvent(userName, 'trade_state_updated', {
+      reason: 'pending_cleared',
+      actorUserName: userName,
+    });
     res.send({ ok: true });
     return;
   }
 
+  const nextOtherUserName = sanitizeUsername(pendingTrade.otherUserName);
+
   await persistence.setPendingTrade(userName, {
-    otherUserName: sanitizeUsername(pendingTrade.otherUserName),
+    otherUserName: nextOtherUserName,
     otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName,
     otherTradeCards: Array.isArray(pendingTrade.otherTradeCards) ? pendingTrade.otherTradeCards : [],
+  });
+
+  emitTradeEvent(userName, 'trade_state_updated', {
+    reason: 'pending_updated',
+    actorUserName: userName,
+  });
+  emitTradeEvent(nextOtherUserName, 'trade_state_updated', {
+    reason: 'counterparty_pending_updated',
+    actorUserName: userName,
   });
 
   res.send({ ok: true });
@@ -245,6 +346,18 @@ app.put('/api/trades/selection', async (req, res) => {
     : [];
 
   await persistence.setSelectedTradeCards(userName, selectedTradeCards);
+
+  const pendingTrade = await persistence.getPendingTrade(userName);
+  const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
+  emitTradeEvent(userName, 'trade_state_updated', {
+    reason: 'selection_updated',
+    actorUserName: userName,
+  });
+  emitTradeEvent(otherUserName, 'trade_state_updated', {
+    reason: 'counterparty_selection_updated',
+    actorUserName: userName,
+  });
+
   res.send({ ok: true });
 });
 
@@ -286,6 +399,12 @@ app.post('/api/trades/request-user', async (req, res) => {
     otherTradeEntryId: `${name}-${now}-${index}-${Math.random()}`,
   }));
   const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(otherTradeCards);
+
+  emitTradeEvent(matchedUserName, 'trade_request_received', {
+    actorUserName: currentUserName,
+    fromUserName: currentUserName,
+    fromUserLabel: currentUserName || 'User',
+  });
 
   res.send({
     otherUserLabel: matchedUserName,
@@ -343,10 +462,19 @@ app.post('/api/trades/cancel', async (req, res) => {
   const selectedTradeCards = Array.isArray(req.body?.selectedTradeCards)
     ? req.body.selectedTradeCards
     : [];
+  const pendingTrade = await persistence.getPendingTrade(userName);
+  const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
   const profile = await ensureTradeProfile(userName, {});
 
   await persistence.setSelectedTradeCards(userName, []);
   await persistence.deletePendingTrade(userName);
+
+  emitTradeEvent(userName, 'trade_cancelled', {
+    actorUserName: userName,
+  });
+  emitTradeEvent(otherUserName, 'trade_cancelled', {
+    actorUserName: userName,
+  });
 
   res.send({ ownedEntries: toOwnedEntries(profile.cards) });
 });
@@ -413,6 +541,15 @@ app.post('/api/trades/accept', async (req, res) => {
   await persistence.setTradeProfileCards(activeUserName, activeProfile.cards);
   await persistence.setTradeProfileCards(otherUserName, otherProfile.cards);
   await recalculateCardValuesInDb();
+
+  emitTradeEvent(activeUserName, 'trade_completed', {
+    actorUserName: activeUserName,
+    withUserName: otherUserName,
+  });
+  emitTradeEvent(otherUserName, 'trade_completed', {
+    actorUserName: activeUserName,
+    withUserName: activeUserName,
+  });
 
   res.send({
     nextActiveOwned: toOwnedEntries(activeProfile.cards),
@@ -1440,12 +1577,58 @@ if (distPath) {
 }
 
 const port = 4000;
+const server = http.createServer(app);
+const wss = new WebSocketServer({ noServer: true });
+
+server.on('upgrade', async (req, socket, head) => {
+  if (!req.url || !req.url.startsWith('/ws')) {
+    rejectUpgrade(socket, 404, 'Not Found');
+    return;
+  }
+
+  try {
+    const cookies = parseCookieHeader(req.headers?.cookie || '');
+    const token = cookies.token;
+    if (!token) {
+      rejectUpgrade(socket, 401, 'Unauthorized');
+      return;
+    }
+
+    const user = await getUser('token', token);
+    const userName = sanitizeUsername(user?.username);
+    if (!userName) {
+      rejectUpgrade(socket, 401, 'Unauthorized');
+      return;
+    }
+
+    wss.handleUpgrade(req, socket, head, (ws) => {
+      wss.emit('connection', ws, req, userName);
+    });
+  } catch (error) {
+    console.error('Failed websocket upgrade', error);
+    rejectUpgrade(socket, 500, 'Server Error');
+  }
+});
+
+wss.on('connection', (ws, req, userName) => {
+  addWsClientForUser(userName, ws);
+
+  ws.on('close', () => {
+    removeWsClientForUser(userName, ws);
+  });
+
+  ws.on('error', () => {
+    removeWsClientForUser(userName, ws);
+  });
+
+  emitTradeEvent(userName, 'trade_connected', { actorUserName: userName });
+});
 
 (async () => {
   await persistence.initPersistence();
   await recalculateCardValuesInDb();
 
-  app.listen(port, function () {
+  server.listen(port, function () {
     console.log(`Listening on port ${port}`);
   });
 })().catch((error) => {
