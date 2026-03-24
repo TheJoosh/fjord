@@ -217,9 +217,10 @@ export function Trades({ userName }) {
         const cardName = clickedCard?.name;
         if (!userName || !cardName) return;
 
-        const ownedQty = Math.max(0, parseInt(clickedCard?.qty, 10) || 0);
-        const selectedQty = Math.max(0, parseInt(selectedCountsByName[cardName], 10) || 0);
-        if (selectedQty >= ownedQty) return;
+    // clickedCard.qty is already the remaining selectable quantity (owned minus already selected),
+    // computed by availableDeckCards — no need to subtract selectedCountsByName again.
+    const remainingQty = Math.max(0, parseInt(clickedCard?.qty, 10) || 0);
+    if (remainingQty <= 0) return;
 
         setSelectedTradeCards((prev) => ([
             ...prev,
