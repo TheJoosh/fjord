@@ -28,10 +28,13 @@ function matchesCardSearch(card, searchTerm) {
 export function Deck({ userName }) {
   const title = userName ? `${userName}'s Deck` : "User's Deck";
   const sortOptions = ['Value', 'Rarity', 'Name'];
+  const getDefaultSortDirection = React.useCallback((option) => (option === 'Name' ? 'asc' : 'desc'), []);
   const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [sortBy, setSortBy] = React.useState('Rarity');
+  const [sortDirection, setSortDirection] = React.useState('desc');
+  const [sortSelectValue, setSortSelectValue] = React.useState('Rarity');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
   const [walletBalance, setWalletBalance] = React.useState(0);
@@ -76,26 +79,47 @@ export function Deck({ userName }) {
   const sortedOwned = [...filteredOwned].sort((a, b) => {
     const aCard = a.card;
     const bCard = b.card;
+    const applyDirection = (comparison) => (sortDirection === 'asc' ? comparison : -comparison);
 
     if (sortBy === 'Value') {
       const av = aCard && typeof aCard.value === 'number' ? aCard.value : 0;
       const bv = bCard && typeof bCard.value === 'number' ? bCard.value : 0;
-      const vDiff = bv - av;
+      const vDiff = applyDirection(av - bv);
       if (vDiff !== 0) return vDiff;
       return a.name.localeCompare(b.name);
     }
 
     if (sortBy === 'Name') {
-      return a.name.localeCompare(b.name);
+      return applyDirection(a.name.localeCompare(b.name));
     }
 
     const aScarcity = gameApiClient.getCurrentCardScarcity({ name: a.name });
     const bScarcity = gameApiClient.getCurrentCardScarcity({ name: b.name });
-    const scarcityDiff = bScarcity - aScarcity;
+    const scarcityDiff = applyDirection(aScarcity - bScarcity);
     if (scarcityDiff !== 0) return scarcityDiff;
 
     return a.name.localeCompare(b.name);
   });
+
+  const handleSortByChange = React.useCallback((nextSortBy) => {
+    if (!nextSortBy) return;
+
+    if (nextSortBy === sortBy) {
+      setSortDirection((current) => (current === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+
+    setSortBy(nextSortBy);
+    setSortDirection(getDefaultSortDirection(nextSortBy));
+  }, [sortBy, getDefaultSortDirection]);
+
+  const armSortSelect = React.useCallback(() => {
+    setSortSelectValue('');
+  }, []);
+
+  React.useEffect(() => {
+    setSortSelectValue(sortBy);
+  }, [sortBy]);
 
   const renderedCards = sortedOwned.flatMap((entry) => {
     const card = entry.card;
@@ -224,7 +248,9 @@ export function Deck({ userName }) {
       const saved = await gameApiClient.loadDeckSortPreference(userName, 'Rarity');
       if (!isActive) return;
 
-      setSortBy(sortOptions.includes(saved) ? saved : 'Rarity');
+      const resolvedSort = sortOptions.includes(saved) ? saved : 'Rarity';
+      setSortBy(resolvedSort);
+      setSortDirection(getDefaultSortDirection(resolvedSort));
       setHasLoadedSortPreference(true);
     })();
 
@@ -292,8 +318,29 @@ export function Deck({ userName }) {
           <h2>{title}</h2>
           <div className="deck-controls">
             <label className="sort-by-control">
-              <span>Sort By</span>
-              <select value={sortBy} onChange={(e) => setSortBy(e.target.value)}>
+              <span>Sort By {sortDirection === 'asc' ? '↑' : '↓'}</span>
+              <select
+                value={sortSelectValue}
+                onMouseDown={armSortSelect}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter' || event.key === ' ' || event.key === 'ArrowDown') {
+                    armSortSelect();
+                  }
+                }}
+                onBlur={() => {
+                  if (!sortSelectValue) setSortSelectValue(sortBy);
+                }}
+                onChange={(event) => {
+                  const nextSortBy = event.target.value;
+                  if (!nextSortBy) {
+                    setSortSelectValue(sortBy);
+                    return;
+                  }
+                  handleSortByChange(nextSortBy);
+                  setSortSelectValue(nextSortBy);
+                }}
+              >
+                <option value="" disabled hidden>Sort By</option>
                 {sortOptions.map((option) => (
                   <option key={option} value={option}>{option}</option>
                 ))}
