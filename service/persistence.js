@@ -1446,6 +1446,25 @@ async function incrementCardsPopulation(cardEntries) {
   );
 }
 
+async function getDiscoveredCards(userName) {
+  if (!userName) return [];
+  const db = await getDb();
+  const doc = await db.collection('discovered_cards').findOne({ _id: userName });
+  return Array.isArray(doc?.cards) ? doc.cards : [];
+}
+
+async function addDiscoveredCards(userName, cardNames) {
+  if (!userName || !Array.isArray(cardNames) || cardNames.length === 0) return;
+  const validNames = cardNames.map((n) => String(n || '').trim()).filter(Boolean);
+  if (validNames.length === 0) return;
+  const db = await getDb();
+  await db.collection('discovered_cards').updateOne(
+    { _id: userName },
+    { $addToSet: { cards: { $each: validNames } } },
+    { upsert: true }
+  );
+}
+
 module.exports = {
   initPersistence,
   createUser,
@@ -1493,4 +1512,6 @@ module.exports = {
   getCardDetailsByNames,
   recalculateAndStoreCardValues,
   incrementCardsPopulation,
+  getDiscoveredCards,
+  addDiscoveredCards,
 };
