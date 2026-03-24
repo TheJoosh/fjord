@@ -73,6 +73,7 @@ body {
   object-fit: cover;
   object-position: top;
   border-radius: inherit;
+  -webkit-user-drag: none;
 }
 
 .card-content {
