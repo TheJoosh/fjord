@@ -696,32 +696,50 @@ main {
 }
 
 .leaderboard-card-viewport {
+  position: relative;
   width: 116px;
   height: 168px;
-  overflow: hidden;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
-  background-color: rgba(0, 0, 0, 0.25);
+  overflow: visible;
+  border-radius: 0;
+  border: none;
+  background-color: transparent;
 }
 
 .leaderboard-card-viewport .leaderboard-mini-card {
+  position: absolute;
+  top: 0;
+  left: 0;
   --scale: 0.386;
   --ty: 0;
   width: 300px;
   height: 420px;
   margin-top: 0;
-  pointer-events: none;
+  transform-origin: top left;
+  pointer-events: auto;
   transition: none;
+  box-shadow: none;
 }
 
 .leaderboard-card-viewport .leaderboard-mini-card:hover {
-  --scale: 0.386;
   --ty: 0;
   box-shadow: none;
 }
 
+.leaderboard-card-viewport .leaderboard-mini-card .card-description {
+  text-align: left;
+}
+
 .leaderboard-card-item small {
   line-height: 1.2;
+}
+
+.leaderboard-card-item .leaderboard-card-title {
+  font-size: 12px;
+}
+
+.leaderboard-card-item .leaderboard-card-value {
+  font-size: 10px;
+  opacity: 0.92;
 }
 
 @media (max-width: 1100px) {
