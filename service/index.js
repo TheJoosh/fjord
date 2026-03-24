@@ -266,19 +266,28 @@ app.get('/api/trades/pending', async (req, res) => {
   const userName = sanitizeUsername(req.query?.userName);
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
-  const otherUserSelectedTradeCards = await persistence.getSelectedTradeCards(otherUserName);
+  const [otherUserSelectedTradeCards, otherPendingTrade] = await Promise.all([
+    persistence.getSelectedTradeCards(otherUserName),
+    otherUserName ? persistence.getPendingTrade(otherUserName) : Promise.resolve(null),
+  ]);
   const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(otherUserSelectedTradeCards);
+  const iAccepted = Boolean(pendingTrade?.accepted);
+  const otherAccepted = Boolean(otherPendingTrade?.accepted);
   res.send({
     pendingTrade: pendingTrade
       ? {
           otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName || 'Other User',
           otherUserName: pendingTrade.otherUserName || '',
           otherTradeCards: hydratedOtherTradeCards,
+          iAccepted,
+          otherAccepted,
         }
       : {
       otherUserLabel: 'Other User',
       otherUserName: '',
       otherTradeCards: [],
+      iAccepted: false,
+      otherAccepted: false,
     },
   });
 });
@@ -349,6 +358,8 @@ app.put('/api/trades/selection', async (req, res) => {
     : [];
 
   await persistence.setSelectedTradeCards(userName, selectedTradeCards);
+  // Changing your offer revokes your acceptance.
+  await persistence.setTradeAccepted(userName, false);
 
   const pendingTrade = await persistence.getPendingTrade(userName);
   const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
@@ -505,17 +516,38 @@ app.post('/api/trades/accept', async (req, res) => {
 
   const activeUserName = sanitizeUsername(req.body?.activeUserName);
   const otherUserName = sanitizeUsername(req.body?.otherUserName);
-  const selectedTradeCards = Array.isArray(req.body?.selectedTradeCards)
-    ? req.body.selectedTradeCards
-    : [];
-  const otherTradeCards = Array.isArray(req.body?.otherTradeCards)
-    ? req.body.otherTradeCards
-    : [];
+
+  if (!activeUserName || !otherUserName) {
+    res.send({ ok: false, error: 'Missing trade users' });
+    return;
+  }
+
+  // Mark this player as accepting.
+  await persistence.setTradeAccepted(activeUserName, true);
+
+  // Notify both players that this player has accepted.
+  emitTradeEvent(activeUserName, 'trade_accepted', { actorUserName: activeUserName });
+  emitTradeEvent(otherUserName, 'trade_accepted', { actorUserName: activeUserName });
+
+  // Check if the other player has also accepted.
+  const otherPendingTrade = await persistence.getPendingTrade(otherUserName);
+  if (!Boolean(otherPendingTrade?.accepted)) {
+    // Waiting — only one side has accepted so far.
+    res.send({ ok: true, waiting: true });
+    return;
+  }
+
+  // Both players have accepted — execute the trade using server-stored selections.
+  const [activeSelectedCards, otherSelectedCards] = await Promise.all([
+    persistence.getSelectedTradeCards(activeUserName),
+    persistence.getSelectedTradeCards(otherUserName),
+  ]);
+
   const activeProfile = await ensureTradeProfile(activeUserName, {});
   const otherProfile = await ensureTradeProfile(otherUserName, {});
 
   const selectedCounts = {};
-  for (const card of selectedTradeCards) {
+  for (const card of activeSelectedCards) {
     if (!card?.name) continue;
     selectedCounts[card.name] = normalizeQty(selectedCounts[card.name]) + 1;
   }
@@ -523,12 +555,12 @@ app.post('/api/trades/accept', async (req, res) => {
   for (const [name, qty] of Object.entries(selectedCounts)) {
     const available = normalizeQty(activeProfile.cards[name]);
     if (available < qty) {
-      res.send({ ok: false, error: 'Insufficient selected cards to complete trade' });
+      res.send({ ok: false, error: 'Insufficient cards in your deck to complete trade' });
       return;
     }
   }
 
-  for (const card of otherTradeCards) {
+  for (const card of otherSelectedCards) {
     if (!card?.name) continue;
     const available = normalizeQty(otherProfile.cards[card.name]);
     if (available <= 0) continue;
@@ -537,7 +569,6 @@ app.post('/api/trades/accept', async (req, res) => {
     if (otherProfile.cards[card.name] <= 0) {
       delete otherProfile.cards[card.name];
     }
-
     activeProfile.cards[card.name] = normalizeQty(activeProfile.cards[card.name]) + 1;
   }
 
@@ -549,14 +580,17 @@ app.post('/api/trades/accept', async (req, res) => {
     } else {
       delete activeProfile.cards[name];
     }
-
     otherProfile.cards[name] = normalizeQty(otherProfile.cards[name]) + qty;
   }
 
-  await persistence.setSelectedTradeCards(activeUserName, []);
-  await persistence.deletePendingTrade(activeUserName);
-  await persistence.setTradeProfileCards(activeUserName, activeProfile.cards);
-  await persistence.setTradeProfileCards(otherUserName, otherProfile.cards);
+  await Promise.all([
+    persistence.setSelectedTradeCards(activeUserName, []),
+    persistence.setSelectedTradeCards(otherUserName, []),
+    persistence.deletePendingTrade(activeUserName),
+    persistence.deletePendingTrade(otherUserName),
+    persistence.setTradeProfileCards(activeUserName, activeProfile.cards),
+    persistence.setTradeProfileCards(otherUserName, otherProfile.cards),
+  ]);
   await recalculateCardValuesInDb();
 
   emitTradeEvent(activeUserName, 'trade_completed', {
@@ -569,6 +603,8 @@ app.post('/api/trades/accept', async (req, res) => {
   });
 
   res.send({
+    ok: true,
+    waiting: false,
     nextActiveOwned: toOwnedEntries(activeProfile.cards),
     nextTargetOwned: toOwnedEntries(otherProfile.cards),
   });
