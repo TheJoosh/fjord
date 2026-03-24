@@ -112,8 +112,8 @@ export function Leaderboard({ userName }) {
                         endurance={card.endurance}
                       />
                     </div>
-                    <small>{card.displayname || card.name}</small>
-                    <small>Value: ${normalizeWalletValue(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
+                    <small className="leaderboard-card-title">{card.displayname || card.name}</small>
+                    <small className="leaderboard-card-value">Value: ${normalizeWalletValue(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
                   </div>
                 ))}
               </div>
