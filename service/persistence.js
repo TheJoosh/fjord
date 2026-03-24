@@ -309,6 +309,53 @@ async function listTradeProfileNames() {
   return docs.map((doc) => doc._id).filter(Boolean);
 }
 
+function escapeRegexLiteral(value) {
+  return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+async function listAuthUserNames(search = '') {
+  const db = await getDb();
+  const normalizedSearch = String(search || '').trim();
+  const query = normalizedSearch
+    ? { username: { $regex: escapeRegexLiteral(normalizedSearch), $options: 'i' } }
+    : {};
+
+  const docs = await db
+    .collection('users_auth')
+    .find(query, { projection: { username: 1, _id: 0 } })
+    .sort({ username: 1 })
+    .toArray();
+
+  return docs
+    .map((doc) => String(doc?.username || '').trim())
+    .filter(Boolean);
+}
+
+async function getTradeProfilesByUserNames(userNames) {
+  const names = Array.isArray(userNames)
+    ? userNames.map((name) => String(name || '').trim()).filter(Boolean)
+    : [];
+
+  if (names.length === 0) {
+    return {};
+  }
+
+  const db = await getDb();
+  const docs = await db
+    .collection('trade_profiles')
+    .find({ _id: { $in: names } }, { projection: { _id: 1, cards: 1 } })
+    .toArray();
+
+  const profilesByUserName = {};
+  for (const doc of docs) {
+    const userName = String(doc?._id || '').trim();
+    if (!userName) continue;
+    profilesByUserName[userName] = normalizeCardMap(doc?.cards || {});
+  }
+
+  return profilesByUserName;
+}
+
 async function getPendingTrade(userName) {
   if (!userName) return null;
   const db = await getDb();
@@ -1409,6 +1456,8 @@ module.exports = {
   ensureTradeProfile,
   setTradeProfileCards,
   listTradeProfileNames,
+  listAuthUserNames,
+  getTradeProfilesByUserNames,
   getPendingTrade,
   setPendingTrade,
   deletePendingTrade,
