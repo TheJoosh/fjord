@@ -73,16 +73,8 @@ export function Trades({ userName }) {
 
             (async () => {
                 if (event.type === 'trade_request_received') {
-                    const fromUserName = String(event.fromUserName || '').trim();
-                    if (fromUserName) {
-                        suppressNextTradeSavesRef.current = 2;
-                        setOtherUserLabel(event.fromUserLabel || fromUserName);
-                        setOtherUserName(fromUserName);
-                    }
-
-                    setTradeSuccessMessage(`Trade request received from ${event.fromUserLabel || fromUserName || 'another user'}`);
-                    setTradeErrorMessage('');
-                    await refreshTradeStateFromServer();
+                    // New incoming requests are surfaced by the global app banner.
+                    // Do not auto-open on the trades page.
                     return;
                 }
 
@@ -199,6 +191,9 @@ export function Trades({ userName }) {
             return;
         }
 
+        // Server already persisted both users' pending trades; skip one local pending-save cycle
+        // to avoid emitting a redundant counterparty update that can auto-open their Trades page.
+        suppressNextTradeSavesRef.current = 1;
         setRequestUserError('');
         setTradeSuccessMessage('');
         setTradeErrorMessage('');
