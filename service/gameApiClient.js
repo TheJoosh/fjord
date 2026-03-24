@@ -188,6 +188,37 @@ export const gameApiClient = {
     };
   },
 
+  async loadLeaderboard({ page = 1, search = '' } = {}) {
+    const normalizedPage = Math.max(1, parseInt(page, 10) || 1);
+    const normalizedSearch = String(search || '').trim();
+    const params = new URLSearchParams({
+      page: String(normalizedPage),
+      search: normalizedSearch,
+    });
+
+    const response = await requestTradeApi(`/api/leaderboard?${params.toString()}`, {
+      method: 'GET',
+    });
+
+    const rows = Array.isArray(response?.rows) ? response.rows : [];
+
+    return {
+      page: Math.max(1, parseInt(response?.page, 10) || normalizedPage),
+      pageSize: Math.max(1, parseInt(response?.pageSize, 10) || 20),
+      totalUsers: Math.max(0, parseInt(response?.totalUsers, 10) || 0),
+      totalPages: Math.max(1, parseInt(response?.totalPages, 10) || 1),
+      rows: rows.map((row) => ({
+        userName: String(row?.userName || '').trim(),
+        deckValue: normalizeWalletValue(row?.deckValue),
+        topCards: hydrateCards(Array.isArray(row?.topCards) ? row.topCards : []).slice(0, 3).map((card) => ({
+          ...card,
+          qty: normalizeQty(card?.qty),
+          value: normalizeWalletValue(card?.value),
+        })),
+      })),
+    };
+  },
+
   getCurrentCardValue(cardLike) {
     if (cardLike?.name) {
       const liveValue = Number(liveCardValuesByName?.[cardLike.name]?.value);
