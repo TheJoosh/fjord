@@ -17,6 +17,8 @@ export function Trades({ userName }) {
     const [isDeckOverlayOpen, setIsDeckOverlayOpen] = React.useState(false);
     const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
     const [selectedTradeCards, setSelectedTradeCards] = React.useState([]);
+    const [iAccepted, setIAccepted] = React.useState(false);
+    const [otherAccepted, setOtherAccepted] = React.useState(false);
     const suppressNextTradeSavesRef = React.useRef(0);
     const hasValidTradePartner = Boolean(otherUserName);
 
@@ -42,6 +44,8 @@ export function Trades({ userName }) {
         setOtherUserName(nextPendingTrade.otherUserName);
         setOtherTradeCards(nextPendingTrade.otherTradeCards);
         setSelectedTradeCards(nextSelectedTradeCards);
+        setIAccepted(Boolean(nextPendingTrade.iAccepted));
+        setOtherAccepted(Boolean(nextPendingTrade.otherAccepted));
 
         if (isDeckOverlayOpen) {
             setOwnedDeckCards(await buildOwnedDeckCards());
@@ -103,6 +107,10 @@ export function Trades({ userName }) {
                     setTradeErrorMessage('');
                     await refreshTradeStateFromServer();
                 }
+
+                if (event.type === 'trade_accepted') {
+                    await refreshTradeStateFromServer();
+                }
             })();
         });
 
@@ -117,6 +125,8 @@ export function Trades({ userName }) {
             suppressNextTradeSavesRef.current -= 1;
             return;
         }
+
+        setIAccepted(false);
 
         (async () => {
             await gameApiClient.saveSelectedTradeCards(userName, selectedTradeCards);
@@ -241,25 +251,36 @@ export function Trades({ userName }) {
         setOtherTradeCards([]);
         setOtherUserName('');
         setOtherUserLabel('Other User');
+        setIAccepted(false);
+        setOtherAccepted(false);
         setTradeSuccessMessage('');
         setTradeErrorMessage('');
     };
 
     const handleAcceptTrade = async () => {
-        if (!selectedTradeCards.length && !otherTradeCards.length) return;
-
         if (!userName || !otherUserName) return;
-        const result = await gameApiClient.acceptTrade(userName, otherUserName, selectedTradeCards, otherTradeCards);
+
+        const result = await gameApiClient.acceptTrade(userName, otherUserName);
         if (!result?.ok) {
-            setTradeErrorMessage(result?.error || 'Unable to complete trade. Please try again.');
+            setTradeErrorMessage(result?.error || 'Unable to accept trade. Please try again.');
             setTradeSuccessMessage('');
             return;
         }
 
+        if (result.waiting) {
+            setIAccepted(true);
+            setTradeSuccessMessage('Waiting for the other player to accept...');
+            setTradeErrorMessage('');
+            return;
+        }
+
+        // Both players accepted — trade is complete.
         setSelectedTradeCards([]);
         setOtherTradeCards([]);
         setOtherUserName('');
         setOtherUserLabel('Other User');
+        setIAccepted(false);
+        setOtherAccepted(false);
         setTradeSuccessMessage('Your trade was successful!');
         setTradeErrorMessage('');
         if (isDeckOverlayOpen) {
@@ -302,8 +323,11 @@ export function Trades({ userName }) {
                         <h3 className="value">Trade Value: ${otherTradeValue.toFixed(2)}</h3>
                     </section>
 
-                    <button className="accept" onClick={handleAcceptTrade}>
-                        <h2>Accept Trade</h2>
+                    {otherAccepted && (
+                        <div className="trade-success-message">{otherUserLabel} has accepted the trade!</div>
+                    )}
+                    <button className="accept" onClick={handleAcceptTrade} disabled={iAccepted}>
+                        <h2>{iAccepted ? 'Waiting for other player...' : 'Accept Trade'}</h2>
                     </button>
 
                     <button className="cancel" onClick={handleCancelTrade}>
