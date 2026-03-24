@@ -423,10 +423,6 @@ app.post('/api/trades/request-user', async (req, res) => {
     reason: 'trade_requested',
     actorUserName: currentUserName,
   });
-  emitTradeEvent(matchedUserName, 'trade_state_updated', {
-    reason: 'trade_requested',
-    actorUserName: currentUserName,
-  });
 
   emitTradeEvent(matchedUserName, 'trade_request_received', {
     actorUserName: currentUserName,
