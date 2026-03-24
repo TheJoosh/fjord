@@ -765,6 +765,36 @@ export const gameApiClient = {
     };
   },
 
+  async loadCatalogDesigns() {
+    await this.loadCardValues();
+
+    const response = await requestTradeApi(`/api/catalog/designs?t=${Date.now()}`, {
+      method: 'GET',
+      cache: 'no-store',
+    });
+
+    const cards = Array.isArray(response?.cards) ? response.cards : [];
+    const discoveredCards = new Set(Array.isArray(response?.discoveredCards) ? response.discoveredCards : []);
+
+    const hydratedCards = cards
+      .map((entry) => {
+        if (!entry?.name || !entry?.card) return null;
+        return {
+          name: entry.name,
+          card: hydrateCard({
+            ...entry.card,
+            name: entry.name,
+            displayname: entry.card.displayname || entry.name,
+          }),
+          discovered: discoveredCards.has(entry.name),
+        };
+      })
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+    return hydratedCards;
+  },
+
   async loadAdminCardDesigns() {
     await this.loadCardValues();
 
