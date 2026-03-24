@@ -265,7 +265,9 @@ app.get('/api/trades/pending', async (req, res) => {
 
   const userName = sanitizeUsername(req.query?.userName);
   const pendingTrade = await persistence.getPendingTrade(userName);
-  const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(pendingTrade?.otherTradeCards);
+  const otherUserName = sanitizeUsername(pendingTrade?.otherUserName);
+  const otherUserSelectedTradeCards = await persistence.getSelectedTradeCards(otherUserName);
+  const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(otherUserSelectedTradeCards);
   res.send({
     pendingTrade: pendingTrade
       ? {
@@ -306,7 +308,8 @@ app.put('/api/trades/pending', async (req, res) => {
   await persistence.setPendingTrade(userName, {
     otherUserName: nextOtherUserName,
     otherUserLabel: pendingTrade.otherUserLabel || pendingTrade.otherUserName,
-    otherTradeCards: Array.isArray(pendingTrade.otherTradeCards) ? pendingTrade.otherTradeCards : [],
+    // Keep pending trade metadata only; live offer cards come from selected-trade state.
+    otherTradeCards: [],
   });
 
   emitTradeEvent(userName, 'trade_state_updated', {
@@ -382,34 +385,48 @@ app.post('/api/trades/request-user', async (req, res) => {
     return;
   }
 
-  const profile = await ensureTradeProfile(matchedUserName, {});
-  const pool = [];
-  for (const [name, qty] of Object.entries(profile.cards || {})) {
-    const count = normalizeQty(qty);
-    for (let i = 0; i < count; i += 1) {
-      pool.push(name);
-    }
+  if (!currentUserName) {
+    res.send({ error: 'Current user is required' });
+    return;
   }
 
-  const shuffled = [...pool].sort(() => Math.random() - 0.5);
-  const pickCount = Math.min(shuffled.length, Math.max(1, Math.floor(Math.random() * 5) + 1));
-  const now = Date.now();
-  const otherTradeCards = shuffled.slice(0, pickCount).map((name, index) => ({
-    name,
-    otherTradeEntryId: `${name}-${now}-${index}-${Math.random()}`,
-  }));
-  const hydratedOtherTradeCards = await hydrateTradeCardsForResponse(otherTradeCards);
+  const currentUserLabel = currentUserName || 'User';
+
+  // Initialize a fresh trade context for both users to avoid stale offers.
+  await Promise.all([
+    persistence.setPendingTrade(currentUserName, {
+      otherUserName: matchedUserName,
+      otherUserLabel: matchedUserName,
+      otherTradeCards: [],
+    }),
+    persistence.setPendingTrade(matchedUserName, {
+      otherUserName: currentUserName,
+      otherUserLabel: currentUserLabel,
+      otherTradeCards: [],
+    }),
+    persistence.setSelectedTradeCards(currentUserName, []),
+    persistence.setSelectedTradeCards(matchedUserName, []),
+  ]);
+
+  emitTradeEvent(currentUserName, 'trade_state_updated', {
+    reason: 'trade_requested',
+    actorUserName: currentUserName,
+  });
+  emitTradeEvent(matchedUserName, 'trade_state_updated', {
+    reason: 'trade_requested',
+    actorUserName: currentUserName,
+  });
 
   emitTradeEvent(matchedUserName, 'trade_request_received', {
     actorUserName: currentUserName,
     fromUserName: currentUserName,
-    fromUserLabel: currentUserName || 'User',
+    fromUserLabel: currentUserLabel,
   });
 
   res.send({
     otherUserLabel: matchedUserName,
     otherUserName: matchedUserName,
-    otherTradeCards: hydratedOtherTradeCards,
+    otherTradeCards: [],
   });
 });
 
