@@ -818,6 +818,7 @@ app.post('/api/bank/buy', async (req, res) => {
   profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
   await persistence.setBankInventory(bankInventory);
   await persistence.setTradeProfileCards(userName, profile.cards);
+  await persistence.addDiscoveredCards(userName, [cardName]);
   await recalculateCardValuesInDb();
   emitLeaderboardUpdated({
     actorUserName: userName,
