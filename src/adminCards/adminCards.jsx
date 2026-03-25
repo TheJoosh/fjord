@@ -38,10 +38,8 @@ export function AdminCards({ isAdmin }) {
   const valuesRefreshTimerRef = React.useRef(null);
   const renderedCards = React.useMemo(
     () => {
-      const filteredCards = catalogCards.filter((entry) => {
-        if (!isAdmin && !entry.discovered) return true; // always include undiscovered (shown as unknown)
-        return matchesCardSearch(entry?.card, searchTerm);
-      });
+      // Always filter by search term, even for undiscovered cards
+      const filteredCards = catalogCards.filter((entry) => matchesCardSearch(entry?.card, searchTerm));
 
       return [...filteredCards].sort((a, b) => {
         const applyDirection = (comparison) => (sortDirection === 'asc' ? comparison : -comparison);
