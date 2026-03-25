@@ -1,5 +1,38 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
 
+.leaderboard-top-cards-collapsible {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.leaderboard-cards-toggle-btn {
+  font-family: "Cinzel";
+  font-size: 13px;
+  background: #582f0e;
+  color: whitesmoke;
+  border: 1px solid #b66a2a;
+  border-radius: 6px;
+  padding: 4px 10px;
+  margin-bottom: 2px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.leaderboard-cards-toggle-btn:hover {
+  background: #8e4f1b;
+}
+
+@media (max-width: 640px) {
+  .leaderboard-top-cards {
+    display: none;
+  }
+  .leaderboard-top-cards-collapsible .leaderboard-top-cards {
+    display: flex;
+  }
+}
+
+
 
 html,
 body {
@@ -704,10 +737,11 @@ main {
   font-weight: 600;
 }
 
+
 .leaderboard-top-cards {
   display: flex;
   align-items: flex-start;
-  gap: 12px;
+  gap: 20px;
   flex-wrap: wrap;
 }
 
@@ -716,7 +750,7 @@ main {
   flex-direction: column;
   align-items: center;
   gap: 2px;
-  max-width: 130px;
+  max-width: 210px;
   text-align: center;
 }
 
@@ -778,8 +812,14 @@ main {
 }
 
 @media (max-width: 640px) {
+
   .leaderboard-row {
     grid-template-columns: 1fr;
+    width: calc(100vw - 32px);
+    min-width: 0;
+    padding: 4px 8px 4px;
+    margin: 0;
+    overflow-x: auto;
   }
 
   .leaderboard-meta {
@@ -788,7 +828,34 @@ main {
   }
 
   .leaderboard-top-cards {
-    width: 100%;
+    width: min(100%, 600px);
+    max-width: 100vw;
+    justify-content: flex-start;
+    transform-origin: top left;
+    gap: 8px;
+    margin-left: 8px;
+    margin-right: 8px;
+    padding: 2;
+  }
+
+  .leaderboard-card-item {
+    transform-origin: top left;
+    max-width: 100vw - 20px;
+    margin: 0;
+    border-radius: 7px;
+    padding: 2;
+    gap: 0;
+  }
+
+  .pack-overlay-col {
+    transform-origin: top left;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+  }
+  .pack-overlay-col .fj-card {
+    width: 146.25px;
+    height: 204.75px;
   }
 }
 
@@ -1175,6 +1242,7 @@ main {
   top: 39px;
   -webkit-line-clamp: 4;
   line-clamp: 4;
+  text-align: left;
 }
 
 .pack-overlay-col .fj-card,

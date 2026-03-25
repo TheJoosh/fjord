@@ -1,5 +1,6 @@
 import React from 'react';
 import { Card } from '../data/card';
+import { LeaderboardTopCardsCollapsible } from './LeaderboardTopCardsCollapsible';
 import { gameApiClient } from '../../service/gameApiClient';
 import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
@@ -129,28 +130,7 @@ export function Leaderboard({ userName }) {
                 <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
                 <div className="leaderboard-value">${normalizeWalletValue(row.deckValue).toFixed(2)}</div>
 
-                <div className="leaderboard-top-cards">
-                  {(row.topCards || []).slice(0, 3).map((card, index) => (
-                    <div className="leaderboard-card-item" key={`${row.userName}-${card.name}-${index}`}>
-                      <div className="leaderboard-card-viewport" aria-hidden="true">
-                        <Card
-                          className="leaderboard-mini-card"
-                          image={card.image}
-                          name={card.name}
-                          displayname={card.displayname}
-                          cost={card.cost}
-                          rarity={card.rarity}
-                          cardType={card.cardType}
-                          description={card.description}
-                          strength={card.strength}
-                          endurance={card.endurance}
-                        />
-                      </div>
-                      <small className="leaderboard-card-title">{card.displayname || card.name}</small>
-                      <small className="leaderboard-card-value">Value: ${normalizeWalletValue(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
-                    </div>
-                  ))}
-                </div>
+                <LeaderboardTopCardsCollapsible cards={row.topCards || []} userName={row.userName} />
               </article>
             );
           })}
