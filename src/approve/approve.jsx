@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { addCardToRarity } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 export function Approve({ userName }) {
   const title = "Approve Cards";
@@ -146,6 +147,19 @@ export function Approve({ userName }) {
     (async () => {
       await loadPendingCards();
     })();
+  }, [loadPendingCards]);
+
+  React.useEffect(() => {
+    const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+      if (!event || event.channel !== 'trade') return;
+      if (event.type === 'catalog_updated' || event.type === 'pending_approvals_updated') {
+        loadPendingCards();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
   }, [loadPendingCards]);
 
   React.useEffect(() => {
