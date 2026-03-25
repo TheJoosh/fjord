@@ -243,7 +243,7 @@ export function AdminCards({ isAdmin }) {
   React.useEffect(() => {
     const unsubscribe = tradeRealtimeClient.subscribe((event) => {
       if (!event || event.channel !== 'trade') return;
-      if (event.type !== 'card_values_updated') return;
+      if (event.type !== 'card_values_updated' && event.type !== 'catalog_updated') return;
 
       if (valuesRefreshTimerRef.current) {
         window.clearTimeout(valuesRefreshTimerRef.current);
