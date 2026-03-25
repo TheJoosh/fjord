@@ -2,8 +2,25 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Card } from '../data/card';
 import { cardNameExists } from '../data/cards';
 import { gameApiClient } from '../../service/gameApiClient';
+import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 export function Designer({ userName }) { 
+        // Listen for real-time catalog/pending approval updates
+        useEffect(() => {
+            const unsubscribe = tradeRealtimeClient.subscribe((event) => {
+                if (!event || event.channel !== 'trade') return;
+                // If an admin submits, catalog_updated is sent; if a user submits, catalog_pending_updated could be sent (if implemented)
+                if (event.type === 'catalog_updated') {
+                    // Optionally, show a message or refresh any local catalog state
+                    setSubmitMessage('The card catalog was updated.');
+                }
+                if (event.type === 'catalog_pending_updated') {
+                    // Optionally, show a message or refresh any local pending state
+                    setSubmitMessage('The pending approvals list was updated.');
+                }
+            });
+            return () => unsubscribe();
+        }, []);
     const MAX_IMAGE_DATA_URL_LENGTH = 700000;
     const imageInputRef = useRef(null);
     const [previewImage, setPreviewImage] = useState(null);
