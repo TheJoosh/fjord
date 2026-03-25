@@ -839,19 +839,25 @@ export const gameApiClient = {
   },
 
   async loadDeckSortPreference(userName, fallbackSort = 'Rarity') {
-    if (!userName) return fallbackSort;
+    if (!userName) return { sortBy: fallbackSort, sortDirection: 'desc' };
 
     const response = await requestTradeApi('/api/preferences/deck-sort', { method: 'GET' });
 
-    const sortBy = String(response?.sortBy || fallbackSort);
-    return sortBy === 'Value' || sortBy === 'Name' || sortBy === 'Rarity' ? sortBy : 'Rarity';
+    const validSortOptions = ['Value', 'Name', 'Rarity', 'Author'];
+    const rawSortBy = String(response?.sortBy || fallbackSort);
+    const sortBy = validSortOptions.includes(rawSortBy) ? rawSortBy : 'Rarity';
+
+    const rawDirection = String(response?.sortDirection || '').toLowerCase();
+    const sortDirection = (rawDirection === 'asc' || rawDirection === 'desc') ? rawDirection : 'desc';
+
+    return { sortBy, sortDirection };
   },
 
-  async saveDeckSortPreference(userName, sortBy) {
+  async saveDeckSortPreference(userName, sortBy, sortDirection) {
     if (!userName) return;
     await requestTradeApi('/api/preferences/deck-sort', {
       method: 'PUT',
-      body: JSON.stringify({ sortBy }),
+      body: JSON.stringify({ sortBy, sortDirection }),
     });
   },
 
