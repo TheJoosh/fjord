@@ -675,6 +675,19 @@ main {
   background: rgba(0, 0, 0, 0.2);
 }
 
+.leaderboard-row-gold {
+  background: #6b5400;
+  color: #fff;
+}
+.leaderboard-row-silver {
+  background: #44474a;
+  color: #fff;
+}
+.leaderboard-row-bronze {
+  background: #5a3a1b;
+  color: #fff;
+}
+
 .leaderboard-rank {
   font-size: 18px;
   font-weight: 700;
