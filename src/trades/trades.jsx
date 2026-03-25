@@ -118,18 +118,7 @@ export function Trades({ userName, openTradeMenu }) {
         };
     }, [userName, refreshTradeStateFromServer]);
 
-    React.useEffect(() => {
-        if (suppressNextTradeSavesRef.current > 0) {
-            suppressNextTradeSavesRef.current -= 1;
-            return;
-        }
-
-        setIAccepted(false);
-
-        (async () => {
-            await gameApiClient.saveSelectedTradeCards(selectedTradeCards);
-        })();
-    }, [userName, selectedTradeCards]);
+    // Removed auto-save effect for selectedTradeCards. Save only in handlers below.
 
     // Only save pending trade when the user actually changes the trade partner or offer, not on every state update.
     // This disables the automatic save on mount/refresh, preventing race conditions.
@@ -212,19 +201,29 @@ export function Trades({ userName, openTradeMenu }) {
     const remainingQty = Math.max(0, parseInt(clickedCard?.qty, 10) || 0);
     if (remainingQty <= 0) return;
 
-        setSelectedTradeCards((prev) => ([
-            ...prev,
-            {
-                ...clickedCard,
-                tradeEntryId: `${clickedCard.name}-${Date.now()}-${Math.random()}`,
-            },
-        ]));
+        setSelectedTradeCards((prev) => {
+            const next = [
+                ...prev,
+                {
+                    ...clickedCard,
+                    tradeEntryId: `${clickedCard.name}-${Date.now()}-${Math.random()}`,
+                },
+            ];
+            // Save to backend
+            gameApiClient.saveSelectedTradeCards(next);
+            return next;
+        });
     };
 
     const handleRemoveTradeCard = async (tradeEntryId) => {
         const tradeCard = selectedTradeCards.find((card) => card.tradeEntryId === tradeEntryId);
         if (!tradeCard?.name || !userName) return;
-        setSelectedTradeCards((prev) => prev.filter((card) => card.tradeEntryId !== tradeEntryId));
+        setSelectedTradeCards((prev) => {
+            const next = prev.filter((card) => card.tradeEntryId !== tradeEntryId);
+            // Save to backend
+            gameApiClient.saveSelectedTradeCards(next);
+            return next;
+        });
     };
 
     const userTradeValue = selectedTradeCards.reduce((sum, card) => {
