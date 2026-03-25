@@ -100,10 +100,16 @@ function normalizePacksMap(packs) {
 
 function normalizeDeckSort(value) {
   const next = String(value || 'Rarity');
-  if (next === 'Value' || next === 'Name' || next === 'Rarity') {
+  if (next === 'Value' || next === 'Name' || next === 'Rarity' || next === 'Author') {
     return next;
   }
   return 'Rarity';
+}
+
+function normalizeSortDirection(value) {
+  const next = String(value || '').trim().toLowerCase();
+  if (next === 'asc' || next === 'desc') return next;
+  return 'desc';
 }
 
 function normalizeShowDuplicates(value) {
@@ -618,32 +624,39 @@ async function renamePendingApproval(originalName, nextName, card) {
   await collection.updateOne({ _id: nextName }, { $set: { card: { ...card } } }, { upsert: true });
 }
 
-async function ensureDeckSortPreference(userName, fallbackSort) {
-  if (!userName) return normalizeDeckSort(fallbackSort);
+async function ensureDeckSortPreference(userName, fallbackSort, fallbackDirection) {
+  if (!userName) {
+    return {
+      sortBy: normalizeDeckSort(fallbackSort),
+      sortDirection: normalizeSortDirection(fallbackDirection),
+    };
+  }
 
   const db = await getDb();
   const prefs = db.collection('deck_preferences');
-  const fallback = normalizeDeckSort(fallbackSort);
+  const fallbackSortNorm = normalizeDeckSort(fallbackSort);
+  const fallbackDirNorm = normalizeSortDirection(fallbackDirection);
 
   await prefs.updateOne(
     { _id: userName },
-    { $setOnInsert: { sortBy: fallback } },
+    { $setOnInsert: { sortBy: fallbackSortNorm, sortDirection: fallbackDirNorm } },
     { upsert: true }
   );
 
   const doc = await prefs.findOne({ _id: userName });
   const sortBy = normalizeDeckSort(doc?.sortBy);
-  await prefs.updateOne({ _id: userName }, { $set: { sortBy } });
+  const sortDirection = doc?.sortDirection ? normalizeSortDirection(doc.sortDirection) : fallbackDirNorm;
+  await prefs.updateOne({ _id: userName }, { $set: { sortBy, sortDirection } });
 
-  return sortBy;
+  return { sortBy, sortDirection };
 }
 
-async function setDeckSortPreference(userName, sortBy) {
+async function setDeckSortPreference(userName, sortBy, sortDirection) {
   if (!userName) return;
   const db = await getDb();
   await db.collection('deck_preferences').updateOne(
     { _id: userName },
-    { $set: { sortBy: normalizeDeckSort(sortBy) } },
+    { $set: { sortBy: normalizeDeckSort(sortBy), sortDirection: normalizeSortDirection(sortDirection) } },
     { upsert: true }
   );
 }
