@@ -1819,12 +1819,11 @@ async function resolveTradeUserName(rawName) {
   if (!target) return null;
 
   const names = await persistence.listTradeProfileNames();
+  // Only allow exact, case-sensitive match
   const exact = names.find((name) => name === target);
   if (exact) return exact;
 
-  const insensitive = names.find((name) => name.toLowerCase() === target.toLowerCase());
-  if (insensitive) return insensitive;
-
+  // No fallback to case-insensitive match
   return null;
 }
 
