@@ -1116,6 +1116,11 @@ app.post('/api/approvals/pending', async (req, res) => {
     await recalculateCardValuesInDb();
     await persistence.deletePendingApproval(name);
 
+    // Grant the card to the author in discovered cards
+    if (card.author) {
+      await persistence.addDiscoveredCards(card.author, [name]);
+    }
+
     res.send({
       ok: true,
       bypassedApproval: true,
@@ -1212,6 +1217,12 @@ app.delete('/api/approvals/pending', async (req, res) => {
   await persistence.upsertCardCatalogEntries([{ name, rarity: approvedRarity }]);
   await recalculateCardValuesInDb();
   await persistence.deletePendingApproval(name);
+
+  // Grant the card to the author in discovered cards
+  if (card.author) {
+    await persistence.addDiscoveredCards(card.author, [name]);
+  }
+
   emitCatalogUpdated({ reason: 'card_approved', cardName: name });
 
   res.send({
