@@ -1272,8 +1272,8 @@ app.get('/api/preferences/deck-sort', async (req, res) => {
   const userName = await getAuthUserName(req, res);
   if (!userName) return;
 
-  const current = await ensureDeckSortPreference(userName, 'Rarity');
-  res.send({ sortBy: current });
+  const current = await ensureDeckSortPreference(userName, 'Rarity', 'desc');
+  res.send({ sortBy: current.sortBy, sortDirection: current.sortDirection });
 });
 
 app.put('/api/preferences/deck-sort', async (req, res) => {
@@ -1281,9 +1281,10 @@ app.put('/api/preferences/deck-sort', async (req, res) => {
   if (!userName) return;
 
   const sortBy = normalizeDeckSort(req.body?.sortBy);
-  await persistence.setDeckSortPreference(userName, sortBy);
-  const current = await ensureDeckSortPreference(userName, sortBy);
-  res.send({ ok: true, sortBy: current });
+  const sortDirection = normalizeSortDirection(req.body?.sortDirection);
+  await persistence.setDeckSortPreference(userName, sortBy, sortDirection);
+  const current = await ensureDeckSortPreference(userName, sortBy, sortDirection);
+  res.send({ ok: true, sortBy: current.sortBy, sortDirection: current.sortDirection });
 });
 
 app.get('/api/preferences/deck-duplicates', async (req, res) => {
@@ -1541,10 +1542,16 @@ async function ensureDesignedCount(userName, fallbackDesigned) {
 
 function normalizeDeckSort(value) {
   const next = String(value || 'Rarity');
-  if (next === 'Value' || next === 'Name' || next === 'Rarity') {
+  if (next === 'Value' || next === 'Name' || next === 'Rarity' || next === 'Author') {
     return next;
   }
   return 'Rarity';
+}
+
+function normalizeSortDirection(value) {
+  const next = String(value || '').trim().toLowerCase();
+  if (next === 'asc' || next === 'desc') return next;
+  return 'desc';
 }
 
 function normalizeShowDuplicates(value) {
@@ -1572,12 +1579,15 @@ function normalizeRarity(value) {
   return 'Common';
 }
 
-async function ensureDeckSortPreference(userName, fallbackSort) {
+async function ensureDeckSortPreference(userName, fallbackSort, fallbackDirection = 'desc') {
   if (!userName) {
-    return normalizeDeckSort(fallbackSort);
+    return {
+      sortBy: normalizeDeckSort(fallbackSort),
+      sortDirection: normalizeSortDirection(fallbackDirection),
+    };
   }
 
-  return await persistence.ensureDeckSortPreference(userName, fallbackSort);
+  return await persistence.ensureDeckSortPreference(userName, fallbackSort, fallbackDirection);
 }
 
 async function ensureDeckShowDuplicatesPreference(userName, fallbackShowDuplicates) {
