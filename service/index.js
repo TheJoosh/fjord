@@ -75,6 +75,21 @@ function emitCardValuesUpdated(payload = {}) {
   }
 }
 
+
+function emitCatalogUpdated(payload = {}) {
+  const connectedUsers = Array.from(wsClientsByUser.keys());
+  for (const connectedUserName of connectedUsers) {
+    emitTradeEvent(connectedUserName, 'catalog_updated', payload);
+  }
+}
+
+function emitPendingApprovalsUpdated(payload = {}) {
+  const connectedUsers = Array.from(wsClientsByUser.keys());
+  for (const connectedUserName of connectedUsers) {
+    emitTradeEvent(connectedUserName, 'pending_approvals_updated', payload);
+  }
+}
+
 function parseCookieHeader(cookieHeader) {
   const source = String(cookieHeader || '').trim();
   if (!source) return {};
@@ -1052,6 +1067,7 @@ app.get('/api/approvals/pending', async (req, res) => {
   res.send({ pendingCards });
 });
 
+
 app.post('/api/approvals/pending', async (req, res) => {
   const authUser = await getAuthUser(req);
   if (!authUser) {
@@ -1090,6 +1106,7 @@ app.post('/api/approvals/pending', async (req, res) => {
         },
       },
     });
+    emitCatalogUpdated({ reason: 'card_approved', cardName: name });
     return;
   }
 
@@ -1099,8 +1116,10 @@ app.post('/api/approvals/pending', async (req, res) => {
   }
 
   await persistence.setPendingApproval(name, card);
+  emitPendingApprovalsUpdated({ reason: 'pending_card_submitted', cardName: name });
   res.send({ ok: true });
 });
+
 
 app.put('/api/approvals/pending', async (req, res) => {
   const authUser = await requireAdminUser(req, res);
@@ -1128,9 +1147,10 @@ app.put('/api/approvals/pending', async (req, res) => {
   }
 
   await persistence.renamePendingApproval(originalName, nextName, nextCard);
-
+  emitPendingApprovalsUpdated({ reason: 'pending_card_edited', cardName: nextName });
   res.send({ ok: true });
 });
+
 
 app.delete('/api/approvals/pending', async (req, res) => {
   const authUser = await requireAdminUser(req, res);
@@ -1143,10 +1163,11 @@ app.delete('/api/approvals/pending', async (req, res) => {
   }
 
   await persistence.deletePendingApproval(name);
+  emitPendingApprovalsUpdated({ reason: 'pending_card_discarded', cardName: name });
   res.send({ ok: true });
 });
 
-app.post('/api/approvals/approve', async (req, res) => {
+  app.post('/api/approvals/approve', async (req, res) => {
   const authUser = await requireAdminUser(req, res);
   if (!authUser) return;
 
@@ -1170,6 +1191,7 @@ app.post('/api/approvals/approve', async (req, res) => {
   await persistence.upsertCardCatalogEntries([{ name, rarity: approvedRarity }]);
   await recalculateCardValuesInDb();
   await persistence.deletePendingApproval(name);
+  emitCatalogUpdated({ reason: 'card_approved', cardName: name });
 
   res.send({
     ok: true,
