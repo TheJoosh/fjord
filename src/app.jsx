@@ -326,7 +326,10 @@ export default function App() {
 
                 <nav>
                     <menu>
-                    <li><NavLink to="/">Deck</NavLink></li>
+                        
+                    {authState === AuthState.Authenticated && (
+                        <li><NavLink to="/">Deck</NavLink></li>
+                    )}
 
                     {authState === AuthState.Authenticated && (
                         <li><NavLink to="/packs">Open Card Packs</NavLink></li>
