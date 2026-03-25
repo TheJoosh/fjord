@@ -121,7 +121,7 @@ export function Leaderboard({ userName }) {
             const rank = Number.isFinite(row.absoluteRank) ? row.absoluteRank : null;
             return (
               <article className="leaderboard-row" key={row.userName || rank}>
-                <div className="leaderboard-rank">{(typeof rank === 'number' && rank > 0) ? `#${rank}` : ''}</div>
+                <div className="leaderboard-rank">{Number.isFinite(rank) ? `#${rank}` : ''}</div>
                 <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
                 <div className="leaderboard-value">${normalizeWalletValue(row.deckValue).toFixed(2)}</div>
 

@@ -210,6 +210,7 @@ export const gameApiClient = {
       rows: rows.map((row) => ({
         userName: String(row?.userName || '').trim(),
         deckValue: normalizeWalletValue(row?.deckValue),
+        absoluteRank: row?.absoluteRank,
         topCards: hydrateCards(Array.isArray(row?.topCards) ? row.topCards : []).slice(0, 3).map((card) => ({
           ...card,
           qty: normalizeQty(card?.qty),
