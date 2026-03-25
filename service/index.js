@@ -201,6 +201,7 @@ app.get('/api/user/profile', async (req, res) => {
   });
 });
 
+
 app.get('/api/leaderboard', async (req, res) => {
   const userName = await getAuthUserName(req, res);
   if (!userName) return;
@@ -209,17 +210,21 @@ app.get('/api/leaderboard', async (req, res) => {
   const requestedPage = Math.max(1, parseInt(req.query?.page, 10) || 1);
   const pageSize = 20;
 
-  const allUserNames = await persistence.listAuthUserNames(search);
+  // Get all usernames for global rank
+  const allUserNamesGlobal = await persistence.listAuthUserNames('');
+  // Get usernames matching search for filtering
+  const filteredUserNames = search ? await persistence.listAuthUserNames(search) : allUserNamesGlobal;
 
-  const [profilesByUserName, cardValuesState] = await Promise.all([
-    persistence.getTradeProfilesByUserNames(allUserNames),
+  // Get all profiles for global rank
+  const [profilesByUserNameGlobal, cardValuesState] = await Promise.all([
+    persistence.getTradeProfilesByUserNames(allUserNamesGlobal),
     persistence.getCardValuesMap(),
   ]);
-
   const valuesByName = cardValuesState?.valuesByName || {};
 
-  const allRows = allUserNames.map((targetUserName) => {
-    const cardsMap = profilesByUserName[targetUserName] || {};
+  // Build global leaderboard
+  let globalRows = allUserNamesGlobal.map((targetUserName) => {
+    const cardsMap = profilesByUserNameGlobal[targetUserName] || {};
     const ownedEntries = Object.entries(cardsMap)
       .map(([name, qty]) => ({ name: sanitizeCardName(name), qty: normalizeQty(qty) }))
       .filter((entry) => entry.name && entry.qty > 0);
@@ -253,17 +258,32 @@ app.get('/api/leaderboard', async (req, res) => {
     };
   });
 
-  allRows.sort((a, b) => {
+
+  // Sort and assign absoluteRank globally
+  globalRows.sort((a, b) => {
     const valueDiff = b.deckValue - a.deckValue;
     if (valueDiff !== 0) return valueDiff;
     return a.userName.localeCompare(b.userName);
   });
+  // Build a map from userName to global leaderboard row (with absoluteRank)
+  const globalRowMap = new Map();
+  globalRows.forEach((row, idx) => {
+    globalRowMap.set(row.userName, { ...row, absoluteRank: idx + 1 });
+  });
 
-  const totalUsers = allRows.length;
+
+  // Filter for search, but always use global absoluteRank
+  let filteredRows = filteredUserNames
+    .map(userName => globalRowMap.get(userName))
+    .filter(Boolean);
+  // Always sort filteredRows by absoluteRank so the first page is the best global ranks in the filtered set
+  filteredRows = filteredRows.sort((a, b) => (a.absoluteRank || 0) - (b.absoluteRank || 0));
+
+  const totalUsers = filteredRows.length;
   const totalPages = Math.max(1, Math.ceil(totalUsers / pageSize));
   const page = Math.min(requestedPage, totalPages);
   const pageStart = (page - 1) * pageSize;
-  const pagedRows = allRows.slice(pageStart, pageStart + pageSize);
+  const pagedRows = filteredRows.slice(pageStart, pageStart + pageSize);
 
   const topCardNames = Array.from(new Set(
     pagedRows.flatMap((row) => (row.topCards || []).map((card) => card.name).filter(Boolean))
@@ -273,6 +293,7 @@ app.get('/api/leaderboard', async (req, res) => {
   const rows = pagedRows.map((row) => ({
     userName: row.userName,
     deckValue: normalizeWalletValue(row.deckValue),
+    absoluteRank: row.absoluteRank,
     topCards: (row.topCards || []).map((card) => {
       const details = detailsByName[card.name] || {};
       const displayname = String(details.displayname || card.name || '').trim() || card.name;

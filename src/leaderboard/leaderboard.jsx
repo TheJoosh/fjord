@@ -116,39 +116,40 @@ export function Leaderboard({ userName }) {
           <div className="leaderboard-empty">No matching users found.</div>
         )}
 
-        {rows.map((row, rowIndex) => {
-          const rank = ((page - 1) * pageSize) + rowIndex + 1;
-          return (
-            <article className="leaderboard-row" key={row.userName || rank}>
-              <div className="leaderboard-rank">#{rank}</div>
-              <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
-              <div className="leaderboard-value">${normalizeWalletValue(row.deckValue).toFixed(2)}</div>
+        {rows.map((row) => {
+            // Always display the global absoluteRank as the rank number
+            const rank = Number.isFinite(row.absoluteRank) ? row.absoluteRank : null;
+            return (
+              <article className="leaderboard-row" key={row.userName || rank}>
+                <div className="leaderboard-rank">{(typeof rank === 'number' && rank > 0) ? `#${rank}` : ''}</div>
+                <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
+                <div className="leaderboard-value">${normalizeWalletValue(row.deckValue).toFixed(2)}</div>
 
-              <div className="leaderboard-top-cards">
-                {(row.topCards || []).slice(0, 3).map((card, index) => (
-                  <div className="leaderboard-card-item" key={`${row.userName}-${card.name}-${index}`}>
-                    <div className="leaderboard-card-viewport" aria-hidden="true">
-                      <Card
-                        className="leaderboard-mini-card"
-                        image={card.image}
-                        name={card.name}
-                        displayname={card.displayname}
-                        cost={card.cost}
-                        rarity={card.rarity}
-                        cardType={card.cardType}
-                        description={card.description}
-                        strength={card.strength}
-                        endurance={card.endurance}
-                      />
+                <div className="leaderboard-top-cards">
+                  {(row.topCards || []).slice(0, 3).map((card, index) => (
+                    <div className="leaderboard-card-item" key={`${row.userName}-${card.name}-${index}`}>
+                      <div className="leaderboard-card-viewport" aria-hidden="true">
+                        <Card
+                          className="leaderboard-mini-card"
+                          image={card.image}
+                          name={card.name}
+                          displayname={card.displayname}
+                          cost={card.cost}
+                          rarity={card.rarity}
+                          cardType={card.cardType}
+                          description={card.description}
+                          strength={card.strength}
+                          endurance={card.endurance}
+                        />
+                      </div>
+                      <small className="leaderboard-card-title">{card.displayname || card.name}</small>
+                      <small className="leaderboard-card-value">Value: ${normalizeWalletValue(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
                     </div>
-                    <small className="leaderboard-card-title">{card.displayname || card.name}</small>
-                    <small className="leaderboard-card-value">Value: ${normalizeWalletValue(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
-                  </div>
-                ))}
-              </div>
-            </article>
-          );
-        })}
+                  ))}
+                </div>
+              </article>
+            );
+          })}
       </section>
 
       <div className="deck-pagination-bottom-slot">
