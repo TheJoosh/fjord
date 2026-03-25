@@ -119,8 +119,12 @@ export function Leaderboard({ userName }) {
         {rows.map((row) => {
             // Always display the global absoluteRank as the rank number
             const rank = Number.isFinite(row.absoluteRank) ? row.absoluteRank : null;
+            let rowClass = '';
+            if (rank === 1) rowClass = 'leaderboard-row-gold';
+            else if (rank === 2) rowClass = 'leaderboard-row-silver';
+            else if (rank === 3) rowClass = 'leaderboard-row-bronze';
             return (
-              <article className="leaderboard-row" key={row.userName || rank}>
+              <article className={`leaderboard-row${rowClass ? ' ' + rowClass : ''}`} key={row.userName || rank}>
                 <div className="leaderboard-rank">{Number.isFinite(rank) ? `#${rank}` : ''}</div>
                 <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
                 <div className="leaderboard-value">${normalizeWalletValue(row.deckValue).toFixed(2)}</div>
