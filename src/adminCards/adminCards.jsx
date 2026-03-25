@@ -272,11 +272,21 @@ export function AdminCards({ isAdmin }) {
     }
   }, [currentPage, totalPages]);
 
+  // Count discovered and total cards for non-admins
+  const discoveredCount = isAdmin ? null : catalogCards.filter((entry) => entry.discovered).length;
+  const totalCount = isAdmin ? null : catalogCards.length;
+
   return (
     <main>
       <div className="user">
         <div className="user-header-row">
-          <h2>{title}</h2>
+          <h2>{title}
+            {!isAdmin && (
+                <span style={{ fontSize: '1.5rem', fontWeight: 'normal', marginLeft: '1em' }}>
+                  - {discoveredCount} out of {totalCount} cards unlocked
+                </span>
+            )}
+          </h2>
           <div className="deck-controls">
             <label className="sort-by-control">
               <span>Sort By {sortDirection === 'asc' ? '↑' : '↓'}</span>
