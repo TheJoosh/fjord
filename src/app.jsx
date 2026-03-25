@@ -2,7 +2,7 @@ import React from 'react';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import './app.css';
 import './utils/tilt';
-import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
+import { Navigate, NavLink, Route, Routes, useNavigate, useLocation } from 'react-router-dom';
 import { Login } from './login/login';
 import { AuthState } from './login/authState';
 import { Deck } from './deck/deck';
@@ -22,6 +22,7 @@ const TRADE_REQUEST_STORAGE_KEY = 'fjord:incomingTradeRequest';
 const TRADE_REQUEST_DISMISS_STORAGE_KEY = 'fjord:incomingTradeDismissed';
 
 export default function App() {
+    const location = useLocation();
 
         const [userName, setUserName] = React.useState('');
     const [authState, setAuthState] = React.useState(AuthState.Unknown);
@@ -302,7 +303,13 @@ export default function App() {
         hasIncomingTradeRequest && dismissedTradeFromUserName === incomingTradeRequest.fromUserName;
 
     const handleOpenTradeFromBanner = async () => {
-        if (!userName || !incomingTradeRequest.fromUserName) {
+        // Wait until userName and authentication are available
+        while (!userName || authState !== AuthState.Authenticated) {
+            // eslint-disable-next-line no-await-in-loop
+            await new Promise((resolve) => setTimeout(resolve, 50));
+        }
+
+        if (!incomingTradeRequest.fromUserName) {
             navigate('/trades');
             return;
         }
@@ -391,17 +398,15 @@ export default function App() {
 
             <Routes>
                 <Route path='/' element={<Login 
-                
                     userName={userName}
                     authState={authState}
                     onAuthChange={async (userName, authState) => {
-                    setAuthState(authState);
-                    setUserName(userName);
+                        setAuthState(authState);
+                        setUserName(userName);
                     }}
-
                 />} exact />
                 <Route path='/deck' element={<Deck userName={userName} />} />
-                                <Route path='/designer' element={<Designer userName={userName} />} />
+                <Route path='/designer' element={<Designer userName={userName} />} />
                 <Route path='/trades' element={<Trades userName={userName} />} />
                 <Route path='/packs' element={<Packs userName={userName} />} />
                 <Route path='/bank' element={<Bank userName={userName} />} />

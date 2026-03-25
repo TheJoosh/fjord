@@ -3,10 +3,15 @@ import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
 import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
-export function Trades({ userName }) {
+export function Trades({ userName, openTradeMenu }) {
     const currentUserLabel = userName || 'User';
     const requestUserInputRef = React.useRef(null);
-    const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(false);
+    const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(Boolean(openTradeMenu));
+
+    // Open the trade menu if openTradeMenu prop is set
+    React.useEffect(() => {
+        if (openTradeMenu) setIsRequestOverlayOpen(true);
+    }, [openTradeMenu]);
     const [requestUserInput, setRequestUserInput] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
     const [tradeSuccessMessage, setTradeSuccessMessage] = React.useState('');
@@ -60,10 +65,11 @@ export function Trades({ userName }) {
     }, [isDeckOverlayOpen, buildOwnedDeckCards]);
 
     React.useEffect(() => {
+        if (!userName) return;
         (async () => {
             await refreshTradeStateFromServer();
         })();
-    }, [refreshTradeStateFromServer]);
+    }, [userName, refreshTradeStateFromServer]);
 
     React.useEffect(() => {
         if (!userName) return;
@@ -125,20 +131,9 @@ export function Trades({ userName }) {
         })();
     }, [userName, selectedTradeCards]);
 
-    React.useEffect(() => {
-        if (suppressNextTradeSavesRef.current > 0) {
-            suppressNextTradeSavesRef.current -= 1;
-            return;
-        }
-
-        (async () => {
-            await gameApiClient.savePendingTrade({
-                otherUserName,
-                otherUserLabel,
-                otherTradeCards,
-            });
-        })();
-    }, [userName, otherUserName, otherUserLabel, otherTradeCards]);
+    // Only save pending trade when the user actually changes the trade partner or offer, not on every state update.
+    // This disables the automatic save on mount/refresh, preventing race conditions.
+    // You can trigger a save manually in handlers where the user makes changes (e.g., handleRequestTradeUser, handleCancelTrade, etc.)
 
     React.useEffect(() => {
         if (!isRequestOverlayOpen && !isDeckOverlayOpen) return;
