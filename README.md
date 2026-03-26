@@ -136,8 +136,8 @@ For this deliverable I did the following. I checked the box `[x]` and added a de
 
 For this deliverable I did the following. I checked the box `[x]` and added a description for things I completed.
 
-- [ ] **Backend listens for WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **Frontend makes WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **Data sent over WebSocket connection** - I did not complete this part of the deliverable.
-- [ ] **WebSocket data displayed** - I did not complete this part of the deliverable.
-- [ ] **Application is fully functional** - I did not complete this part of the deliverable.
+- [x] **Backend listens for WebSocket connection** - Backend now listens for websocket connection
+- [x] **Frontend makes WebSocket connection** - Frontend now makes websocket connection
+- [x] **Data sent over WebSocket connection** - Data is now sent over websocket connection
+- [x] **WebSocket data displayed** - The trades page now instantly updates to display users' offers and whether or now they have accepted, a notification is visible instantly on every page when a user receives a trade request, and the leaderboard page updates in real time when users draw, buy, sell, or trade cards
+- [x] **Application is fully functional** - All parts of the application are now functional
