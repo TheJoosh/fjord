@@ -990,6 +990,9 @@ app.post('/api/packs/open', async (req, res) => {
     return;
   }
 
+  // Get discovered cards BEFORE adding new ones
+  const previouslyDiscovered = new Set(await persistence.getDiscoveredCards(userName));
+
   packs[packName] = Math.max(0, currentCount - 1);
   const profile = await ensureTradeProfile(userName, {});
   for (const cardName of generatedCardNames) {
@@ -1010,6 +1013,7 @@ app.post('/api/packs/open', async (req, res) => {
   const openedCards = generatedCards.map((entry) => {
     const details = detailsByName[entry.name] || {};
     const liveState = nextState.valuesByName?.[entry.name] || {};
+    const isNew = !previouslyDiscovered.has(entry.name);
     return {
       name: entry.name,
       displayname: details.displayname || entry.name,
@@ -1026,6 +1030,7 @@ app.post('/api/packs/open', async (req, res) => {
       population: Number.isFinite(Number(liveState.population))
         ? Math.max(0, parseInt(liveState.population, 10) || 0)
         : Math.max(0, parseInt(details.population, 10) || 0),
+      isNew,
     };
   });
 
