@@ -1,5 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400..900&display=swap');
 
+.new-card-unlocked-overlay {
+  position: absolute;
+  top: -20px;
+  left: -20px;
+  z-index: 10;
+  color: #a40a0a;
+  background-color: #fff8e8c0;
+  transform: rotate(-30deg);
+  font-family: "Cinzel";
+  font-size: 12px;
+  font-weight: 900;
+  border-radius: 50%;
+  padding: 10px 12px 10px 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+  border: 7px outset #a40a0a;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  max-width: 90px;
+  min-height: 60px;
+  text-align: center;
+  white-space: pre-line;
+}
+
 .leaderboard-top-cards-collapsible {
   display: flex;
   flex-direction: column;
