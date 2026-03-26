@@ -294,7 +294,13 @@ export function Packs({ userName }) {
                             </div>
                         )}
                         {!isOpeningPack && openedCards.map((card, index) => (
-                            <div key={`${card.name}-${index}`} className="col deck-col pack-overlay-col">
+                            <div key={`${card.name}-${index}`} className="col deck-col pack-overlay-col" style={{ position: 'relative' }}>
+                                {/* Overlay for new card unlocked */}
+                                {card.isNew || card.discovered === false ? (
+                                    <div className="new-card-unlocked-overlay">
+                                        New Card Unlocked
+                                    </div>
+                                ) : null}
                                 <Card
                                     image={card.image}
                                     name={card.name}
