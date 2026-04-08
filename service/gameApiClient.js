@@ -188,12 +188,14 @@ export const gameApiClient = {
     };
   },
 
-  async loadLeaderboard({ page = 1, search = '' } = {}) {
+  async loadLeaderboard({ page = 1, search = '', sortBy = 'deckValue' } = {}) {
     const normalizedPage = Math.max(1, parseInt(page, 10) || 1);
     const normalizedSearch = String(search || '').trim();
+    const normalizedSortBy = String(sortBy || 'deckValue').trim();
     const params = new URLSearchParams({
       page: String(normalizedPage),
       search: normalizedSearch,
+      sortBy: normalizedSortBy,
     });
 
     const response = await requestTradeApi(`/api/leaderboard?${params.toString()}`, {
@@ -207,9 +209,11 @@ export const gameApiClient = {
       pageSize: Math.max(1, parseInt(response?.pageSize, 10) || 20),
       totalUsers: Math.max(0, parseInt(response?.totalUsers, 10) || 0),
       totalPages: Math.max(1, parseInt(response?.totalPages, 10) || 1),
+      sortBy: String(response?.sortBy || normalizedSortBy).trim(),
       rows: rows.map((row) => ({
         userName: String(row?.userName || '').trim(),
         deckValue: normalizeWalletValue(row?.deckValue),
+        cardsDesigned: Math.max(0, parseInt(row?.cardsDesigned, 10) || 0),
         absoluteRank: row?.absoluteRank,
         topCards: hydrateCards(Array.isArray(row?.topCards) ? row.topCards : []).slice(0, 3).map((card) => ({
           ...card,
