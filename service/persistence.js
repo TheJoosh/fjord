@@ -546,6 +546,25 @@ async function getDesignedCountsByUserNames(userNames) {
   return result;
 }
 
+async function addDesignedCard(userName, cardName) {
+  if (!userName || !cardName) return;
+
+  const db = await getDb();
+  await db.collection('designed_cards').updateOne(
+    { _id: userName },
+    { $addToSet: { cards: cardName } },
+    { upsert: true }
+  );
+}
+
+async function getDesignedCards(userName) {
+  if (!userName) return [];
+
+  const db = await getDb();
+  const doc = await db.collection('designed_cards').findOne({ _id: userName });
+  return Array.isArray(doc?.cards) ? doc.cards : [];
+}
+
 async function listPendingApprovals() {
   const db = await getDb();
   return db
@@ -1555,6 +1574,8 @@ module.exports = {
   ensureDesignedCount,
   setDesignedCount,
   getDesignedCountsByUserNames,
+  addDesignedCard,
+  getDesignedCards,
   listPendingApprovals,
   getPendingApproval,
   setPendingApproval,

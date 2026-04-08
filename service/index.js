@@ -1241,6 +1241,8 @@ app.delete('/api/approvals/pending', async (req, res) => {
   // Grant the card to the author in discovered cards
   if (card.author) {
     await persistence.addDiscoveredCards(card.author, [name]);
+    // Track that this user designed this card
+    await persistence.addDesignedCard(card.author, name);
   }
 
   emitCatalogUpdated({ reason: 'card_approved', cardName: name });
