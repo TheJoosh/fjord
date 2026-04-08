@@ -392,10 +392,13 @@ app.get('/api/card-images/:id', async (req, res) => {
 });
 
 app.post('/api/trades/owned', async (req, res) => {
-  const userName = await getAuthUserName(req, res);
-  if (!userName) return;
+  const authUserName = await getAuthUserName(req, res);
+  if (!authUserName) return;
 
-  const profile = await ensureTradeProfile(userName, {});
+  // Allow viewing another user's deck if userName is provided in request body
+  const requestedUserName = req.body?.userName || authUserName;
+
+  const profile = await ensureTradeProfile(requestedUserName, {});
   const ownedEntries = toOwnedEntries(profile.cards);
   const detailsByName = await persistence.getCardDetailsByNames(ownedEntries.map((entry) => entry.name));
   const ownedCards = ownedEntries.map((entry) => ({
