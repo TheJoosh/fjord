@@ -763,6 +763,23 @@ main {
   font-weight: 600;
 }
 
+.view-deck-button {
+  font-size: 12px;
+  padding: 2px 6px;
+  width: fit-content;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background 0.15s;
+  margin-left: 8px;
+}
+
+.view-deck-button:hover {
+  background: rgba(255, 255, 255, 0.2);
+}
+
 
 .leaderboard-top-cards {
   display: flex;

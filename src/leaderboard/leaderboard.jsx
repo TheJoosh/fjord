@@ -3,6 +3,7 @@ import { Card } from '../data/card';
 import { LeaderboardTopCardsCollapsible } from './LeaderboardTopCardsCollapsible';
 import { gameApiClient } from '../../service/gameApiClient';
 import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
+import { useNavigate } from 'react-router-dom';
 
 function normalizeWalletValue(value) {
   const parsed = Number(value);
@@ -11,6 +12,7 @@ function normalizeWalletValue(value) {
 }
 
 export function Leaderboard({ userName }) {
+  const navigate = useNavigate();
   const [searchInput, setSearchInput] = React.useState('');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [sortBy, setSortBy] = React.useState('deckValue');
@@ -164,6 +166,15 @@ export function Leaderboard({ userName }) {
                     ? `${row.cardsDesigned || 0} cards` 
                     : `$${normalizeWalletValue(row.deckValue).toFixed(2)}`
                   }
+                  {row.topCards && row.topCards.length > 0 && (
+                    <button
+                      type="button"
+                      className="view-deck-button"
+                      onClick={() => navigate('/deck?user=' + encodeURIComponent(row.userName))}
+                    >
+                      View Deck
+                    </button>
+                  )}
                 </div>
 
                 <LeaderboardTopCardsCollapsible cards={row.topCards || []} userName={row.userName} />

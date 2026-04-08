@@ -2,6 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
 import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
+import { useSearchParams } from 'react-router-dom';
 
 function normalizeWalletValue(value) {
   const parsed = Number(value);
@@ -26,7 +27,9 @@ function matchesCardSearch(card, searchTerm) {
 }
 
 export function Deck({ userName }) {
-  const title = userName ? `${userName}'s Deck` : "User's Deck";
+  const [searchParams] = useSearchParams();
+  const viewUser = searchParams.get('user') || userName;
+  const title = viewUser ? `${viewUser}'s Deck` : "User's Deck";
   const sortOptions = ['Value', 'Rarity', 'Name', 'Author'];
   const getDefaultSortDirection = React.useCallback((option) => (option === 'Name' || option === 'Author' ? 'asc' : 'desc'), []);
   const cardsPerPage = 40;
@@ -180,22 +183,22 @@ export function Deck({ userName }) {
   };
 
   React.useEffect(() => {
-    if (!userName) {
+    if (!viewUser) {
       setOwnedDeckCards([]);
       return;
     }
 
     (async () => {
-      const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(userName);
+      const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(viewUser);
       setOwnedDeckCards(nextOwnedDeckCards);
     })();
-  }, [userName, valuesRefreshNonce]);
+  }, [viewUser, valuesRefreshNonce]);
 
   React.useEffect(() => {
     (async () => {
       await gameApiClient.loadCardValues();
     })();
-  }, [userName, valuesRefreshNonce]);
+  }, [viewUser, valuesRefreshNonce]);
 
   React.useEffect(() => {
     if (!userName) return () => {};
@@ -225,14 +228,14 @@ export function Deck({ userName }) {
 
   React.useEffect(() => {
     (async () => {
-      if (!userName) {
+      if (!userName || viewUser !== userName) {
         setWalletBalance(0);
         return;
       }
       const profile = await gameApiClient.loadUserProfile();
       setWalletBalance(normalizeWalletValue(profile.wallet));
     })();
-  }, [userName]);
+  }, [userName, viewUser]);
 
   React.useEffect(() => {
     (async () => {
@@ -378,8 +381,12 @@ export function Deck({ userName }) {
           <div className="deck-value-row">
             <div className="deck-value">
               Deck Value: ${deckValue.toFixed(2)}
-              <br></br>
-              Wallet: ${walletValue.toFixed(2)}
+              {viewUser === userName && (
+                <>
+                  <br></br>
+                  Wallet: ${walletValue.toFixed(2)}
+                </>
+              )}
             </div>
             <div className="deck-value">
             </div>
