@@ -13,6 +13,7 @@ function normalizeWalletValue(value) {
 export function Leaderboard({ userName }) {
   const [searchInput, setSearchInput] = React.useState('');
   const [searchTerm, setSearchTerm] = React.useState('');
+  const [sortBy, setSortBy] = React.useState('deckValue');
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(20);
   const [totalUsers, setTotalUsers] = React.useState(0);
@@ -32,6 +33,10 @@ export function Leaderboard({ userName }) {
   }, [searchInput]);
 
   React.useEffect(() => {
+    setPage(1);
+  }, [sortBy]);
+
+  React.useEffect(() => {
     let isActive = true;
 
     (async () => {
@@ -44,7 +49,7 @@ export function Leaderboard({ userName }) {
       }
 
       setIsLoading(true);
-      const nextState = await gameApiClient.loadLeaderboard({ page, search: searchTerm });
+      const nextState = await gameApiClient.loadLeaderboard({ page, search: searchTerm, sortBy });
       if (!isActive) return;
 
       setRows(Array.isArray(nextState.rows) ? nextState.rows : []);
@@ -58,7 +63,7 @@ export function Leaderboard({ userName }) {
     return () => {
       isActive = false;
     };
-  }, [userName, page, searchTerm, refreshNonce]);
+  }, [userName, page, searchTerm, sortBy, refreshNonce]);
 
   React.useEffect(() => {
     if (!userName) return () => {};
@@ -94,8 +99,19 @@ export function Leaderboard({ userName }) {
   return (
     <main className="leaderboard-page">
       <section className="leaderboard-header">
-        <h2>Deck Value Leaderboard</h2>
+        <h2>{sortBy === 'cardsDesigned' ? 'Cards Designed Leaderboard' : 'Deck Value Leaderboard'}</h2>
         <div className="leaderboard-controls">
+          <label className="sort-by-control">
+            <span>Sort by</span>
+            <select
+              value={sortBy}
+              onChange={(event) => setSortBy(event.target.value)}
+              aria-label="Sort leaderboard"
+            >
+              <option value="deckValue">Deck Value</option>
+              <option value="cardsDesigned">Cards Designed</option>
+            </select>
+          </label>
           <label className="search-control">
             <span>Search Users</span>
             <input
@@ -128,7 +144,12 @@ export function Leaderboard({ userName }) {
               <article className={`leaderboard-row${rowClass ? ' ' + rowClass : ''}`} key={row.userName || rank}>
                 <div className="leaderboard-rank">{Number.isFinite(rank) ? `#${rank}` : ''}</div>
                 <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
-                <div className="leaderboard-value">${normalizeWalletValue(row.deckValue).toFixed(2)}</div>
+                <div className="leaderboard-value">
+                  {sortBy === 'cardsDesigned' 
+                    ? `${row.cardsDesigned || 0} cards` 
+                    : `$${normalizeWalletValue(row.deckValue).toFixed(2)}`
+                  }
+                </div>
 
                 <LeaderboardTopCardsCollapsible cards={row.topCards || []} userName={row.userName} />
               </article>
