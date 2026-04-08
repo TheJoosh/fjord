@@ -213,21 +213,23 @@ app.get('/api/leaderboard', async (req, res) => {
 
   // Get all usernames for global rank
   const allUserNamesGlobal = await persistence.listAuthUserNames('');
+  // Filter out the "Fjord" user from leaderboard
+  const filteredUserNamesGlobal = allUserNamesGlobal.filter(userName => userName !== 'Fjord');
   // Get usernames matching search for filtering
-  const filteredUserNames = search ? await persistence.listAuthUserNames(search) : allUserNamesGlobal;
+  const filteredUserNames = search ? await persistence.listAuthUserNames(search) : filteredUserNamesGlobal;
 
   // Get designed counts for all users
-  const designedCountsByUser = await persistence.getDesignedCountsByUserNames(allUserNamesGlobal);
+  const designedCountsByUser = await persistence.getDesignedCountsByUserNames(filteredUserNamesGlobal);
 
   // Get all profiles for global rank
   const [profilesByUserNameGlobal, cardValuesState] = await Promise.all([
-    persistence.getTradeProfilesByUserNames(allUserNamesGlobal),
+    persistence.getTradeProfilesByUserNames(filteredUserNamesGlobal),
     persistence.getCardValuesMap(),
   ]);
   const valuesByName = cardValuesState?.valuesByName || {};
 
   // Build global leaderboard
-  let globalRows = allUserNamesGlobal.map((targetUserName) => {
+  let globalRows = filteredUserNamesGlobal.map((targetUserName) => {
     const cardsMap = profilesByUserNameGlobal[targetUserName] || {};
     const ownedEntries = Object.entries(cardsMap)
       .map(([name, qty]) => ({ name: sanitizeCardName(name), qty: normalizeQty(qty) }))
