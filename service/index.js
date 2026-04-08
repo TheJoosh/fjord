@@ -1403,6 +1403,24 @@ app.put('/api/preferences/deck-duplicates', async (req, res) => {
   res.send({ ok: true, showDuplicates: current });
 });
 
+app.get('/api/preferences/leaderboard-sort', async (req, res) => {
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
+
+  const current = await persistence.ensureLeaderboardSortPreference(userName, 'deckValue');
+  res.send({ leaderboardSort: current });
+});
+
+app.put('/api/preferences/leaderboard-sort', async (req, res) => {
+  const userName = await getAuthUserName(req, res);
+  if (!userName) return;
+
+  const leaderboardSort = normalizeLeaderboardSort(req.body?.leaderboardSort);
+  await persistence.setLeaderboardSortPreference(userName, leaderboardSort);
+  const current = await persistence.ensureLeaderboardSortPreference(userName, leaderboardSort);
+  res.send({ ok: true, leaderboardSort: current });
+});
+
 async function createUser(username, password) {
   const passwordHash = await bcrypt.hash(password, 10);
   const user = await persistence.createUser(username, passwordHash);
@@ -1660,6 +1678,14 @@ function normalizeShowDuplicates(value) {
     if (next === 'false') return false;
   }
   return true;
+}
+
+function normalizeLeaderboardSort(value) {
+  const next = String(value || 'deckValue');
+  if (next === 'deckValue' || next === 'cardsDesigned') {
+    return next;
+  }
+  return 'deckValue';
 }
 
 function normalizeRarity(value) {

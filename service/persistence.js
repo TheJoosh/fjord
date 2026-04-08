@@ -122,6 +122,14 @@ function normalizeShowDuplicates(value) {
   return true;
 }
 
+function normalizeLeaderboardSort(value) {
+  const next = String(value || 'deckValue');
+  if (next === 'deckValue' || next === 'cardsDesigned') {
+    return next;
+  }
+  return 'deckValue';
+}
+
 function normalizeRarity(value) {
   const rarity = String(value || '').trim();
   if (Object.prototype.hasOwnProperty.call(RARITY_SCORES, rarity)) {
@@ -731,6 +739,36 @@ async function setDeckShowDuplicatesPreference(userName, showDuplicates) {
   await db.collection('deck_preferences').updateOne(
     { _id: userName },
     { $set: { showDuplicates: normalizeShowDuplicates(showDuplicates) } },
+    { upsert: true }
+  );
+}
+
+async function ensureLeaderboardSortPreference(userName, fallbackSort) {
+  if (!userName) return normalizeLeaderboardSort(fallbackSort);
+
+  const db = await getDb();
+  const prefs = db.collection('deck_preferences');
+  const fallback = normalizeLeaderboardSort(fallbackSort);
+
+  await prefs.updateOne(
+    { _id: userName },
+    { $setOnInsert: { leaderboardSort: fallback } },
+    { upsert: true }
+  );
+
+  const doc = await prefs.findOne({ _id: userName });
+  const leaderboardSort = normalizeLeaderboardSort(doc?.leaderboardSort);
+  await prefs.updateOne({ _id: userName }, { $set: { leaderboardSort } });
+
+  return leaderboardSort;
+}
+
+async function setLeaderboardSortPreference(userName, leaderboardSort) {
+  if (!userName) return;
+  const db = await getDb();
+  await db.collection('deck_preferences').updateOne(
+    { _id: userName },
+    { $set: { leaderboardSort: normalizeLeaderboardSort(leaderboardSort) } },
     { upsert: true }
   );
 }
@@ -1587,6 +1625,8 @@ module.exports = {
   setDeckSortPreference,
   ensureDeckShowDuplicatesPreference,
   setDeckShowDuplicatesPreference,
+  ensureLeaderboardSortPreference,
+  setLeaderboardSortPreference,
   upsertCardCatalogEntries,
   getCardValuesMap,
   getCardsPoolByRarity,

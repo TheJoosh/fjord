@@ -885,4 +885,22 @@ export const gameApiClient = {
       body: JSON.stringify({ showDuplicates: Boolean(showDuplicates) }),
     });
   },
+
+  async loadLeaderboardSortPreference(userName, fallbackSort = 'deckValue') {
+    if (!userName) return fallbackSort;
+
+    const response = await requestTradeApi('/api/preferences/leaderboard-sort', { method: 'GET' });
+
+    const validSortOptions = ['deckValue', 'cardsDesigned'];
+    const rawSort = String(response?.leaderboardSort || fallbackSort);
+    return validSortOptions.includes(rawSort) ? rawSort : 'deckValue';
+  },
+
+  async saveLeaderboardSortPreference(userName, leaderboardSort) {
+    if (!userName) return;
+    await requestTradeApi('/api/preferences/leaderboard-sort', {
+      method: 'PUT',
+      body: JSON.stringify({ leaderboardSort }),
+    });
+  },
 };

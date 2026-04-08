@@ -33,6 +33,15 @@ export function Leaderboard({ userName }) {
   }, [searchInput]);
 
   React.useEffect(() => {
+    const loadPreference = async () => {
+      if (!userName) return;
+      const preference = await gameApiClient.loadLeaderboardSortPreference(userName, 'deckValue');
+      setSortBy(preference);
+    };
+    loadPreference();
+  }, [userName]);
+
+  React.useEffect(() => {
     setPage(1);
   }, [sortBy]);
 
@@ -105,7 +114,13 @@ export function Leaderboard({ userName }) {
             <span>Sort by</span>
             <select
               value={sortBy}
-              onChange={(event) => setSortBy(event.target.value)}
+              onChange={(event) => {
+                const newSortBy = event.target.value;
+                setSortBy(newSortBy);
+                if (userName) {
+                  gameApiClient.saveLeaderboardSortPreference(userName, newSortBy);
+                }
+              }}
               aria-label="Sort leaderboard"
             >
               <option value="deckValue">Deck Value</option>
