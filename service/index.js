@@ -1080,9 +1080,15 @@ app.post('/api/designer/submit', async (req, res) => {
     return;
   }
 
-  const currentDesigned = await ensureDesignedCount(userName, 0);
-  const nextDesigned = currentDesigned + 1;
-  await persistence.setDesignedCount(userName, nextDesigned);
+  // Exclude 'Fjord' user from designed count tracking
+  const shouldTrackDesigns = userName !== 'Fjord';
+
+  const currentDesigned = shouldTrackDesigns ? await ensureDesignedCount(userName, 0) : 0;
+  const nextDesigned = shouldTrackDesigns ? currentDesigned + 1 : 0;
+
+  if (shouldTrackDesigns) {
+    await persistence.setDesignedCount(userName, nextDesigned);
+  }
 
   const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
   const packs = await ensureUserPacks(userName, {});
@@ -1241,8 +1247,10 @@ app.delete('/api/approvals/pending', async (req, res) => {
   // Grant the card to the author in discovered cards
   if (card.author) {
     await persistence.addDiscoveredCards(card.author, [name]);
-    // Track that this user designed this card
-    await persistence.addDesignedCard(card.author, name);
+    // Track that this user designed this card (exclude 'Fjord' user)
+    if (card.author !== 'Fjord') {
+      await persistence.addDesignedCard(card.author, name);
+    }
   }
 
   emitCatalogUpdated({ reason: 'card_approved', cardName: name });
