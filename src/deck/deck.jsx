@@ -2,7 +2,7 @@ import React from 'react';
 import { Card } from '../data/card';
 import { gameApiClient } from '../../service/gameApiClient';
 import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 function normalizeWalletValue(value) {
   const parsed = Number(value);
@@ -28,6 +28,7 @@ function matchesCardSearch(card, searchTerm) {
 
 export function Deck({ userName }) {
   const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
   const viewUser = searchParams.get('user') || userName;
   const title = viewUser ? `${viewUser}'s Deck` : "User's Deck";
   const sortOptions = ['Value', 'Rarity', 'Name', 'Author'];
@@ -377,6 +378,17 @@ export function Deck({ userName }) {
             </label>
           </div>
         </div>
+        {viewUser !== userName && (
+          <div className="return-to-leaderboard-container">
+            <button
+              type="button"
+              className="return-to-leaderboard-button"
+              onClick={() => navigate('/leaderboard')}
+            >
+              Return to Leaderboard
+            </button>
+          </div>
+        )}
         {userName && (
           <div className="deck-value-row">
             <div className="deck-value">

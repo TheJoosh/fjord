@@ -780,6 +780,34 @@ main {
   background: rgba(255, 255, 255, 0.2);
 }
 
+.return-to-leaderboard-container {
+  display: flex;
+  justify-content: center;
+  margin: 20px 0;
+}
+
+.return-to-leaderboard-button {
+  font-family: "Cinzel";
+  font-size: 18px;
+  font-weight: bold;
+  padding: 12px 24px;
+  background-image: url("/wood.jpg");
+  background-size: cover;
+  background-position: center;
+  background-color: #582f0e;
+  background-blend-mode: multiply;
+  color: whitesmoke;
+  border: 1px solid #b66a2a;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.return-to-leaderboard-button:hover {
+  background-blend-mode: multiply;
+  background-color: #8e4f1b;
+}
+
 
 .leaderboard-top-cards {
   display: flex;
