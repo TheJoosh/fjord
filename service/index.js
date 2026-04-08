@@ -207,6 +207,7 @@ app.get('/api/leaderboard', async (req, res) => {
   if (!userName) return;
 
   const search = String(req.query?.search || '').trim();
+  const sortBy = String(req.query?.sortBy || 'deckValue').trim();
   const requestedPage = Math.max(1, parseInt(req.query?.page, 10) || 1);
   const pageSize = 20;
 
@@ -214,6 +215,15 @@ app.get('/api/leaderboard', async (req, res) => {
   const allUserNamesGlobal = await persistence.listAuthUserNames('');
   // Get usernames matching search for filtering
   const filteredUserNames = search ? await persistence.listAuthUserNames(search) : allUserNamesGlobal;
+
+  // Get all card details to count designed cards
+  const allCardNames = await persistence.listCardNames();
+  const allCardDetails = await persistence.getCardDetailsByNames(allCardNames);
+  const cardsDesignedByAuthor = {};
+  for (const [cardName, details] of Object.entries(allCardDetails)) {
+    const author = String(details?.author || 'Unknown').trim();
+    cardsDesignedByAuthor[author] = (cardsDesignedByAuthor[author] || 0) + 1;
+  }
 
   // Get all profiles for global rank
   const [profilesByUserNameGlobal, cardValuesState] = await Promise.all([
@@ -254,6 +264,7 @@ app.get('/api/leaderboard', async (req, res) => {
     return {
       userName: targetUserName,
       deckValue: normalizeWalletValue(deckValue),
+      cardsDesigned: cardsDesignedByAuthor[targetUserName] || 0,
       topCards: cardValueRows.slice(0, 3),
     };
   });
@@ -261,8 +272,14 @@ app.get('/api/leaderboard', async (req, res) => {
 
   // Sort and assign absoluteRank globally
   globalRows.sort((a, b) => {
-    const valueDiff = b.deckValue - a.deckValue;
-    if (valueDiff !== 0) return valueDiff;
+    if (sortBy === 'cardsDesigned') {
+      const designedDiff = b.cardsDesigned - a.cardsDesigned;
+      if (designedDiff !== 0) return designedDiff;
+    } else {
+      // Default to deckValue sorting
+      const valueDiff = b.deckValue - a.deckValue;
+      if (valueDiff !== 0) return valueDiff;
+    }
     return a.userName.localeCompare(b.userName);
   });
   // Build a map from userName to global leaderboard row (with absoluteRank)
@@ -293,6 +310,7 @@ app.get('/api/leaderboard', async (req, res) => {
   const rows = pagedRows.map((row) => ({
     userName: row.userName,
     deckValue: normalizeWalletValue(row.deckValue),
+    cardsDesigned: row.cardsDesigned || 0,
     absoluteRank: row.absoluteRank,
     topCards: (row.topCards || []).map((card) => {
       const details = detailsByName[card.name] || {};
@@ -316,6 +334,7 @@ app.get('/api/leaderboard', async (req, res) => {
 
   res.send({
     search,
+    sortBy,
     page,
     pageSize,
     totalUsers,
