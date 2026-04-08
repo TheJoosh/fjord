@@ -1148,9 +1148,15 @@ app.post('/api/approvals/pending', async (req, res) => {
     await recalculateCardValuesInDb();
     await persistence.deletePendingApproval(name);
 
-    // Grant the card to the author in discovered cards and track design counts
-    if (card.author && card.author !== 'Fjord') {
-      await approvalHelpers.trackDesignApprovalForAuthor(card.author, name);
+    // Grant the card to the author in discovered cards
+    if (card.author) {
+      await persistence.addDiscoveredCards(card.author, [name]);
+      // Track that this user designed this card (exclude 'Fjord' user)
+      if (card.author !== 'Fjord') {
+        await persistence.addDesignedCard(card.author, name);
+        const currentDesigned = await persistence.ensureDesignedCount(card.author, 0);
+        await persistence.setDesignedCount(card.author, currentDesigned + 1);
+      }
     }
 
     res.send({
@@ -1250,9 +1256,15 @@ app.delete('/api/approvals/pending', async (req, res) => {
   await recalculateCardValuesInDb();
   await persistence.deletePendingApproval(name);
 
-  // Grant the card to the author in discovered cards and track design counts
-  if (card.author && card.author !== 'Fjord') {
-    await approvalHelpers.trackDesignApprovalForAuthor(card.author, name);
+  // Grant the card to the author in discovered cards
+  if (card.author) {
+    await persistence.addDiscoveredCards(card.author, [name]);
+    // Track that this user designed this card (exclude 'Fjord' user)
+    if (card.author !== 'Fjord') {
+      await persistence.addDesignedCard(card.author, name);
+      const currentDesigned = await persistence.ensureDesignedCount(card.author, 0);
+      await persistence.setDesignedCount(card.author, currentDesigned + 1);
+    }
   }
 
   emitCatalogUpdated({ reason: 'card_approved', cardName: name });
