@@ -1010,13 +1010,17 @@ app.post('/api/packs/open', async (req, res) => {
 
   packs[packName] = Math.max(0, currentCount - 1);
   const profile = await ensureTradeProfile(userName, {});
-  for (const cardName of generatedCardNames) {
-    profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
+  if (userName !== 'Fjord') {
+    for (const cardName of generatedCardNames) {
+      profile.cards[cardName] = normalizeQty(profile.cards[cardName]) + 1;
+    }
   }
 
   await persistence.setUserPacks(userName, packs);
-  await persistence.setTradeProfileCards(userName, profile.cards);
-  await persistence.addDiscoveredCards(userName, generatedCardNames);
+  if (userName !== 'Fjord') {
+    await persistence.setTradeProfileCards(userName, profile.cards);
+    await persistence.addDiscoveredCards(userName, generatedCardNames);
+  }
   await persistence.incrementCardsPopulation(generatedCards);
   const nextState = await recalculateCardValuesInDb();
   emitLeaderboardUpdated({
@@ -1092,8 +1096,10 @@ app.post('/api/designer/submit', async (req, res) => {
 
   const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
   const packs = await ensureUserPacks(userName, {});
-  packs[rewardPackKey] = normalizeQty(packs[rewardPackKey]) + 1;
-  await persistence.setUserPacks(userName, packs);
+  if (shouldTrackDesigns) {
+    packs[rewardPackKey] = normalizeQty(packs[rewardPackKey]) + 1;
+    await persistence.setUserPacks(userName, packs);
+  }
 
   res.send({
     ok: true,
@@ -1143,7 +1149,7 @@ app.post('/api/approvals/pending', async (req, res) => {
     await persistence.deletePendingApproval(name);
 
     // Grant the card to the author in discovered cards
-    if (card.author) {
+    if (card.author && card.author !== 'Fjord') {
       await persistence.addDiscoveredCards(card.author, [name]);
     }
 
@@ -1245,7 +1251,7 @@ app.delete('/api/approvals/pending', async (req, res) => {
   await persistence.deletePendingApproval(name);
 
   // Grant the card to the author in discovered cards
-  if (card.author) {
+  if (card.author && card.author !== 'Fjord') {
     await persistence.addDiscoveredCards(card.author, [name]);
     // Track that this user designed this card (exclude 'Fjord' user)
     if (card.author !== 'Fjord') {
