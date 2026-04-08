@@ -216,14 +216,8 @@ app.get('/api/leaderboard', async (req, res) => {
   // Get usernames matching search for filtering
   const filteredUserNames = search ? await persistence.listAuthUserNames(search) : allUserNamesGlobal;
 
-  // Get all card details to count designed cards
-  const allCardNames = await persistence.listCardNames();
-  const allCardDetails = await persistence.getCardDetailsByNames(allCardNames);
-  const cardsDesignedByAuthor = {};
-  for (const [cardName, details] of Object.entries(allCardDetails)) {
-    const author = String(details?.author || 'Unknown').trim();
-    cardsDesignedByAuthor[author] = (cardsDesignedByAuthor[author] || 0) + 1;
-  }
+  // Get designed counts for all users
+  const designedCountsByUser = await persistence.getDesignedCountsByUserNames(allUserNamesGlobal);
 
   // Get all profiles for global rank
   const [profilesByUserNameGlobal, cardValuesState] = await Promise.all([
@@ -264,7 +258,7 @@ app.get('/api/leaderboard', async (req, res) => {
     return {
       userName: targetUserName,
       deckValue: normalizeWalletValue(deckValue),
-      cardsDesigned: cardsDesignedByAuthor[targetUserName] || 0,
+      cardsDesigned: designedCountsByUser[targetUserName] || 0,
       topCards: cardValueRows.slice(0, 3),
     };
   });
