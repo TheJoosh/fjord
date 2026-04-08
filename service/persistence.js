@@ -521,6 +521,31 @@ async function setDesignedCount(userName, count) {
   );
 }
 
+async function getDesignedCountsByUserNames(userNames) {
+  if (!Array.isArray(userNames) || userNames.length === 0) return {};
+
+  const db = await getDb();
+  const designed = db.collection('designed_counts');
+
+  const docs = await designed.find({
+    _id: { $in: userNames }
+  }).toArray();
+
+  const result = {};
+  for (const doc of docs) {
+    result[doc._id] = normalizeQty(doc.count || 0);
+  }
+
+  // Ensure all requested users have an entry (defaulting to 0)
+  for (const userName of userNames) {
+    if (!(userName in result)) {
+      result[userName] = 0;
+    }
+  }
+
+  return result;
+}
+
 async function listPendingApprovals() {
   const db = await getDb();
   return db
@@ -1529,6 +1554,7 @@ module.exports = {
   setUserPacks,
   ensureDesignedCount,
   setDesignedCount,
+  getDesignedCountsByUserNames,
   listPendingApprovals,
   getPendingApproval,
   setPendingApproval,
