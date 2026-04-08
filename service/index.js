@@ -7,7 +7,6 @@ const cookieParser = require('cookie-parser');
 const crypto = require('crypto');
 const bcrypt = require('bcryptjs');
 const persistence = require('./persistence');
-const approvalHelpers = require('./approvalHelpers');
 const { WebSocketServer, WebSocket } = require('ws');
 
 app.use(express.json({ limit: '50mb' }));
