@@ -171,11 +171,17 @@ export function Deck({ userName }) {
   const showPreviousPageArrow = currentPage > 1;
   const showNextPageArrow = currentPage < totalPages;
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   const goToPreviousPage = () => {
+    scrollToTop();
     setCurrentPage((previousPage) => Math.max(1, previousPage - 1));
   };
 
   const goToNextPage = () => {
+    scrollToTop();
     setCurrentPage((previousPage) => (previousPage >= totalPages ? 1 : previousPage + 1));
   };
 

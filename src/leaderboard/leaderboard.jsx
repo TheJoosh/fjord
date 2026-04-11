@@ -107,6 +107,10 @@ export function Leaderboard({ userName }) {
   const rangeStart = totalUsers === 0 ? 0 : ((page - 1) * pageSize) + 1;
   const rangeEnd = Math.min(page * pageSize, totalUsers);
 
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
   return (
     <main className="leaderboard-page">
       <section className="leaderboard-header">
@@ -193,7 +197,10 @@ export function Leaderboard({ userName }) {
             type="button"
             className="deck-pagination-arrow"
             disabled={!canGoPrevious}
-            onClick={() => setPage((previous) => Math.max(1, previous - 1))}
+            onClick={() => {
+              scrollToTop();
+              setPage((previous) => Math.max(1, previous - 1));
+            }}
             aria-label="Previous leaderboard page"
           >
             ←
@@ -203,7 +210,10 @@ export function Leaderboard({ userName }) {
             type="button"
             className="deck-pagination-arrow"
             disabled={!canGoNext}
-            onClick={() => setPage((previous) => previous + 1)}
+            onClick={() => {
+              scrollToTop();
+              setPage((previous) => previous + 1);
+            }}
             aria-label="Next leaderboard page"
           >
             →
