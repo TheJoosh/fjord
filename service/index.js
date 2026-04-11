@@ -228,6 +228,20 @@ app.get('/api/leaderboard', async (req, res) => {
   ]);
   const valuesByName = cardValuesState?.valuesByName || {};
 
+  // Get designed cards for all users (only needed when sorting by cardsDesigned)
+  let designedCardsByUser = {};
+  if (sortBy === 'cardsDesigned') {
+    const designedCardsPromises = filteredUserNamesGlobal.map(async (userName) => {
+      const cards = await persistence.getCardsDesignedByUser(userName);
+      return { userName, cards };
+    });
+    const designedCardsResults = await Promise.all(designedCardsPromises);
+    designedCardsByUser = designedCardsResults.reduce((acc, { userName, cards }) => {
+      acc[userName] = cards;
+      return acc;
+    }, {});
+  }
+
   // Build global leaderboard
   let globalRows = filteredUserNamesGlobal.map((targetUserName) => {
     const cardsMap = profilesByUserNameGlobal[targetUserName] || {};
@@ -257,11 +271,28 @@ app.get('/api/leaderboard', async (req, res) => {
         return a.name.localeCompare(b.name);
       });
 
+    // Determine topCards based on sortBy
+    let topCards;
+    if (sortBy === 'cardsDesigned') {
+      // Show top 3 highest valued cards designed by this user
+      const userDesignedCards = designedCardsByUser[targetUserName] || [];
+      topCards = userDesignedCards
+        .map(card => ({
+          ...card,
+          qty: 1, // Designed cards don't have quantities in the same way
+        }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 3);
+    } else {
+      // Default: show top 3 highest valued cards owned by this user
+      topCards = cardValueRows.slice(0, 3);
+    }
+
     return {
       userName: targetUserName,
       deckValue: normalizeWalletValue(deckValue),
       cardsDesigned: designedCountsByUser[targetUserName] || 0,
-      topCards: cardValueRows.slice(0, 3),
+      topCards,
     };
   });
 
