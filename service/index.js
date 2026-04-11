@@ -1123,11 +1123,7 @@ app.post('/api/designer/submit', async (req, res) => {
   const shouldTrackDesigns = userName !== 'Fjord';
 
   const currentDesigned = shouldTrackDesigns ? await ensureDesignedCount(userName, 0) : 0;
-  const nextDesigned = shouldTrackDesigns ? currentDesigned + 1 : 0;
-
-  if (shouldTrackDesigns) {
-    await persistence.setDesignedCount(userName, nextDesigned);
-  }
+  const nextDesigned = currentDesigned;
 
   const rewardPackKey = getRewardPackKeyForDesignCount(nextDesigned);
   const packs = await ensureUserPacks(userName, {});
