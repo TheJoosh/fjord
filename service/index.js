@@ -297,6 +297,15 @@ app.get('/api/leaderboard', async (req, res) => {
     };
   });
 
+  // Hide users with zero in the currently selected leaderboard metric.
+  globalRows = globalRows.filter((row) => {
+    if (sortBy === 'cardsDesigned') {
+      return normalizeQty(row.cardsDesigned) > 0;
+    }
+
+    return normalizeWalletValue(row.deckValue) > 0;
+  });
+
 
   // Sort and assign absoluteRank globally
   globalRows.sort((a, b) => {
