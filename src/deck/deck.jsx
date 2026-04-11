@@ -30,9 +30,13 @@ export function Deck({ userName }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const viewUser = searchParams.get('user') || userName;
+  const viewMode = searchParams.get('mode') === 'designed' ? 'designed' : 'deck';
+  const isDesignView = viewMode === 'designed';
   const isViewingOwnDeck = viewUser === userName;
-  const title = viewUser ? `${viewUser}'s Deck` : "User's Deck";
-  const sortOptions = ['Value', 'Rarity', 'Name', 'Author'];
+  const title = viewUser ? `${viewUser}'s ${isDesignView ? 'Designs' : 'Deck'}` : `User's ${isDesignView ? 'Designs' : 'Deck'}`;
+  const sortOptions = isDesignView
+    ? ['Value', 'Rarity', 'Name']
+    : ['Value', 'Rarity', 'Name', 'Author'];
   const getDefaultSortDirection = React.useCallback((option) => (option === 'Name' || option === 'Author' ? 'asc' : 'desc'), []);
   const cardsPerPage = 40;
   const [showDuplicates, setShowDuplicates] = React.useState(true);
@@ -134,6 +138,13 @@ export function Deck({ userName }) {
     setSortSelectValue(sortBy);
   }, [sortBy]);
 
+  React.useEffect(() => {
+    if (isDesignView && sortBy === 'Author') {
+      setSortBy('Rarity');
+      setSortDirection(getDefaultSortDirection('Rarity'));
+    }
+  }, [isDesignView, sortBy, getDefaultSortDirection]);
+
   const renderedCards = sortedOwned.flatMap((entry) => {
     const card = entry.card;
     if (!card) return [];
@@ -191,10 +202,10 @@ export function Deck({ userName }) {
     }
 
     (async () => {
-      const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(viewUser);
+      const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(viewUser, viewMode);
       setOwnedDeckCards(nextOwnedDeckCards);
     })();
-  }, [viewUser, valuesRefreshNonce]);
+  }, [viewUser, viewMode, valuesRefreshNonce]);
 
   React.useEffect(() => {
     (async () => {
@@ -369,27 +380,31 @@ export function Deck({ userName }) {
                 aria-label="Search cards"
               />
             </label>
-            <label className="show-duplicates-control">
-              <input
-                type="checkbox"
-                checked={showDuplicates}
-                onChange={(e) => setShowDuplicates(e.target.checked)}
-              />
-              <span>Show duplicates</span>
-            </label>
+            {!isDesignView && (
+              <label className="show-duplicates-control">
+                <input
+                  type="checkbox"
+                  checked={showDuplicates}
+                  onChange={(e) => setShowDuplicates(e.target.checked)}
+                />
+                <span>Show duplicates</span>
+              </label>
+            )}
           </div>
         </div>
         {userName && (
           <div className="deck-value-row">
-            <div className="deck-value">
-              Deck Value: ${deckValue.toFixed(2)}
-              {viewUser === userName && (
-                <>
-                  <br></br>
-                  Wallet: ${walletValue.toFixed(2)}
-                </>
-              )}
-            </div>
+            {!isDesignView && (
+              <div className="deck-value">
+                Deck Value: ${deckValue.toFixed(2)}
+                {viewUser === userName && (
+                  <>
+                    <br></br>
+                    Wallet: ${walletValue.toFixed(2)}
+                  </>
+                )}
+              </div>
+            )}
             <div className="deck-value">
             </div>
             <div className="deck-value-pagination-slot" aria-hidden={!showPagination}>
@@ -412,7 +427,7 @@ export function Deck({ userName }) {
 
       <div className="container-fluid">
         {userName && paginatedCards.length === 0 ? (
-          <div className="deck-value">Open card packs to get cards!</div>
+          <div className="deck-value">{isDesignView ? 'No designed cards yet.' : 'Open card packs to get cards!'}</div>
         ) : (
         <>
         <div className="row deck-row">
