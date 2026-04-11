@@ -155,14 +155,14 @@ function isPlaceholderCardEntry(name, card) {
   return false;
 }
 
-function computeCardValue(rarity, totalOwned, totalPopulation) {
+function computeCardValue(rarity, totalOwned, totalPopulation, valueMultiplier = 1) {
   const R = RARITY_SCORES[normalizeRarity(rarity)] || 0;
   const T = normalizeQty(totalOwned);
   const N = normalizeQty(totalPopulation);
   const logTerm = Math.log(1 + N / (T + 3));
   const rarityFactor = Math.pow(1 + (R * R) / 10, RARITY_SPREAD_EXPONENT);
-  const raw = BASE_VALUE_SCALE * rarityFactor * Math.pow(logTerm, 1.5);
-  return Number(raw.toFixed(2));
+  const raw = BASE_VALUE_SCALE * rarityFactor * Math.pow(logTerm, 1.5) * valueMultiplier;
+  return normalizeWalletValue(raw);
 }
 
 function generateCardValueMultiplier() {
@@ -1358,6 +1358,7 @@ async function recalculateAndStoreCardValues() {
   }
 
   const existingCardsPathByName = {};
+  const valueMultiplierByName = {};
   for (const rarity of Object.keys(RARITY_SCORES)) {
     const bucket = cardsRootDoc?.[rarity];
     if (!bucket || typeof bucket !== 'object') continue;
@@ -1374,6 +1375,12 @@ async function recalculateAndStoreCardValues() {
       }
 
       existingCardsPathByName[normalizedName].push({ rarity, key });
+      const cardDoc = bucket[key];
+      if (cardDoc && typeof cardDoc === 'object' && valueMultiplierByName[normalizedName] == null) {
+        valueMultiplierByName[normalizedName] = Number.isFinite(Number(cardDoc.valuemultiplier))
+          ? Number(cardDoc.valuemultiplier)
+          : 1;
+      }
       if (!rarityByName[normalizedName]) {
         rarityByName[normalizedName] = rarity;
       }
@@ -1398,7 +1405,10 @@ async function recalculateAndStoreCardValues() {
     const population = normalizeQty(ownedTotalsByName[name]);
     const rarity = normalizeRarity(rarityByName[name]);
     const scarcity = totalPopulation / (population + 3);
-    const value = computeCardValue(rarity, population, totalPopulation);
+    const valueMultiplier = Number.isFinite(Number(valueMultiplierByName[name]))
+      ? Number(valueMultiplierByName[name])
+      : 1;
+    const value = computeCardValue(rarity, population, totalPopulation, valueMultiplier);
 
     valuesMap[name] = {
       value,
