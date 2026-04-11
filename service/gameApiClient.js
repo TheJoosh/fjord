@@ -239,14 +239,14 @@ export const gameApiClient = {
     return 0;
   },
 
-  async buildOwnedDeckCards(userName) {
+  async buildOwnedDeckCards(userName, mode = 'deck') {
     if (!userName) return [];
 
     await this.loadCardValues();
 
     const response = await requestTradeApi('/api/trades/owned', {
       method: 'POST',
-      body: JSON.stringify({ userName }),
+      body: JSON.stringify({ userName, mode }),
     });
 
     const sourceCards = Array.isArray(response?.ownedCards) ? response.ownedCards : [];
