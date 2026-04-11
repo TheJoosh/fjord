@@ -10,6 +10,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "optimize:images": "node scripts/optimize-card-images.mjs",
+    "reconcile:designed-counts": "node scripts/reconcile-designed-counts.js",
     "migrate:card-images:dry": "node scripts/migrate-card-image-data-urls.js --dry-run",
     "migrate:card-images": "node scripts/migrate-card-image-data-urls.js",
     "cleanup:placeholders:dry": "node scripts/cleanup-placeholder-cards.js --dry-run",
