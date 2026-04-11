@@ -246,7 +246,7 @@ export const gameApiClient = {
 
     const response = await requestTradeApi('/api/trades/owned', {
       method: 'POST',
-      body: JSON.stringify({}),
+      body: JSON.stringify({ userName }),
     });
 
     const sourceCards = Array.isArray(response?.ownedCards) ? response.ownedCards : [];
