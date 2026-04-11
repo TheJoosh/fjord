@@ -170,9 +170,13 @@ export function Leaderboard({ userName }) {
                     <button
                       type="button"
                       className="view-deck-button"
-                      onClick={() => navigate('/deck?user=' + encodeURIComponent(row.userName))}
+                      onClick={() => {
+                        const targetUser = encodeURIComponent(row.userName || '');
+                        const modeQuery = sortBy === 'cardsDesigned' ? '&mode=designed' : '';
+                        navigate('/deck?user=' + targetUser + modeQuery);
+                      }}
                     >
-                      View Deck
+                      {sortBy === 'cardsDesigned' ? 'View Designs' : 'View Deck'}
                     </button>
                   )}
                 </div>
