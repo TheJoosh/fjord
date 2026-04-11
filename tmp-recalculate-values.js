@@ -1,4 +1,4 @@
-﻿const persistence = require("./persistence");
+﻿const persistence = require("./service/persistence");
 
 async function run() {
   const nextState = await persistence.recalculateAndStoreCardValues();

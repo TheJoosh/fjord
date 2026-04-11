@@ -279,6 +279,7 @@ app.get('/api/leaderboard', async (req, res) => {
       topCards = userDesignedCards
         .map(card => ({
           ...card,
+          value: normalizeWalletValue(valuesByName?.[card.name]?.value || card.value),
           qty: 1, // Designed cards don't have quantities in the same way
         }))
         .sort((a, b) => b.value - a.value)
