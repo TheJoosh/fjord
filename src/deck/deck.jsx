@@ -42,8 +42,6 @@ export function Deck({ userName }) {
   const [sortSelectValue, setSortSelectValue] = React.useState('Rarity');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [ownedDeckCards, setOwnedDeckCards] = React.useState([]);
-  const [topCards, setTopCards] = React.useState([]);
-  const [viewedUserDeckValue, setViewedUserDeckValue] = React.useState(0);
   const [walletBalance, setWalletBalance] = React.useState(0);
   const [hasLoadedSortPreference, setHasLoadedSortPreference] = React.useState(false);
   const [hasLoadedShowDuplicatesPreference, setHasLoadedShowDuplicatesPreference] = React.useState(false);
@@ -64,12 +62,8 @@ export function Deck({ userName }) {
   // calculate total deck value
   let deckValue = 0;
   const walletValue = normalizeWalletValue(walletBalance);
-  if (isViewingOwnDeck) {
-    for (const card of Object.values(combinedCardsByName)) {
-      deckValue += (typeof card.value === 'number' ? card.value : 0) * (parseInt(card.qty, 10) || 0);
-    }
-  } else {
-    deckValue = viewedUserDeckValue;
+  for (const card of Object.values(combinedCardsByName)) {
+    deckValue += (typeof card.value === 'number' ? card.value : 0) * (parseInt(card.qty, 10) || 0);
   }
 
   // build list of owned cards with quantities
@@ -193,39 +187,14 @@ export function Deck({ userName }) {
   React.useEffect(() => {
     if (!viewUser) {
       setOwnedDeckCards([]);
-      setTopCards([]);
       return;
     }
 
-    if (viewUser === userName) {
-      // Load full deck for current user
-      (async () => {
-        const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(viewUser);
-        setOwnedDeckCards(nextOwnedDeckCards);
-        setTopCards([]);
-      })();
-    } else {
-      // Load top cards from leaderboard for other users
-      (async () => {
-        const leaderboardData = await gameApiClient.loadLeaderboard({ search: viewUser, page: 1, sortBy: 'deckValue' });
-        const userRow = leaderboardData.rows.find(row => row.userName === viewUser);
-        if (userRow && userRow.topCards) {
-          setTopCards(userRow.topCards);
-          setViewedUserDeckValue(userRow.deckValue || 0);
-          // Convert top cards to owned deck format for display
-          const topCardsAsOwned = userRow.topCards.map(card => ({
-            ...card,
-            qty: card.qty || 1,
-          }));
-          setOwnedDeckCards(topCardsAsOwned);
-        } else {
-          setTopCards([]);
-          setViewedUserDeckValue(0);
-          setOwnedDeckCards([]);
-        }
-      })();
-    }
-  }, [viewUser, userName, valuesRefreshNonce]);
+    (async () => {
+      const nextOwnedDeckCards = await gameApiClient.buildOwnedDeckCards(viewUser);
+      setOwnedDeckCards(nextOwnedDeckCards);
+    })();
+  }, [viewUser, valuesRefreshNonce]);
 
   React.useEffect(() => {
     (async () => {
@@ -443,9 +412,7 @@ export function Deck({ userName }) {
 
       <div className="container-fluid">
         {userName && paginatedCards.length === 0 ? (
-          <div className="deck-value">
-            {isViewingOwnDeck ? "Open card packs to get cards!" : "This user has no cards."}
-          </div>
+          <div className="deck-value">Open card packs to get cards!</div>
         ) : (
         <>
         <div className="row deck-row">
