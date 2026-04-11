@@ -428,7 +428,38 @@ app.post('/api/trades/owned', async (req, res) => {
   if (!authUserName) return;
 
   // Allow viewing another user's deck if userName is provided in request body
-  const requestedUserName = req.body?.userName || authUserName;
+  const requestedUserName = sanitizeUsername(req.body?.userName) || authUserName;
+  const mode = String(req.body?.mode || 'deck').trim().toLowerCase();
+
+  if (mode === 'designed') {
+    const designedCardNames = await persistence.getDesignedCards(requestedUserName);
+    const uniqueDesignedNames = Array.from(new Set(
+      designedCardNames.map((name) => sanitizeCardName(name)).filter(Boolean)
+    ));
+    const designedEntries = uniqueDesignedNames.map((name) => ({ name, qty: 1 }));
+    const detailsByName = await persistence.getCardDetailsByNames(uniqueDesignedNames);
+
+    const ownedCards = designedEntries.map((entry) => ({
+      ...(detailsByName[entry.name] || {
+        name: entry.name,
+        displayname: entry.name,
+        image: 'Default.png',
+        cost: '-',
+        rarity: 'Common',
+        cardType: 'Type',
+        description: '',
+        strength: '-',
+        endurance: '-',
+        author: 'Unknown',
+        value: 0,
+        population: 0,
+      }),
+      qty: 1,
+    }));
+
+    res.send({ ownedEntries: designedEntries, ownedCards });
+    return;
+  }
 
   const profile = await ensureTradeProfile(requestedUserName, {});
   const ownedEntries = toOwnedEntries(profile.cards);
