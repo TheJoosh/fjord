@@ -1232,6 +1232,60 @@ async function getCardDetailsByNames(cardNames) {
   return byName;
 }
 
+async function getCardsDesignedByUser(userName) {
+  if (!userName || typeof userName !== 'string') return [];
+
+  const db = await getDb();
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsRootDoc = await db.collection('cards').findOne(cardsRootFilter, {
+    projection: {
+      Common: 1,
+      Uncommon: 1,
+      Rare: 1,
+      Loric: 1,
+      Mythical: 1,
+      Legendary: 1,
+    },
+  });
+
+  if (!cardsRootDoc) return [];
+
+  const designedCards = [];
+
+  for (const rarity of Object.keys(RARITY_SCORES)) {
+    const bucket = cardsRootDoc[rarity];
+    if (!bucket || typeof bucket !== 'object') continue;
+
+    for (const [cardName, cardData] of Object.entries(bucket)) {
+      if (cardData && typeof cardData === 'object' && cardData.author === userName) {
+        designedCards.push({
+          name: cardName,
+          displayname: normalizeDisplayName(cardData.displayname, cardName),
+          image: cardData.image || 'Default.png',
+          cost: cardData.cost != null ? cardData.cost : '-',
+          rarity: normalizeRarity(cardData.rarity || rarity),
+          cardType: cardData.cardType || 'Type',
+          description: cardData.description || '',
+          strength: cardData.strength != null ? cardData.strength : '-',
+          endurance: cardData.endurance != null ? cardData.endurance : '-',
+          author: cardData.author || 'Unknown',
+          value: Number.isFinite(Number(cardData.value)) ? Number(cardData.value) : 0,
+          population: normalizeQty(cardData.population),
+        });
+      }
+    }
+  }
+
+  return designedCards;
+}
+
 async function recalculateAndStoreCardValues() {
   const db = await getDb();
 
@@ -1639,4 +1693,5 @@ module.exports = {
   incrementCardsPopulation,
   getDiscoveredCards,
   addDiscoveredCards,
+  getCardsDesignedByUser,
 };
