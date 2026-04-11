@@ -444,6 +444,11 @@ function ensurePopulationFields(source) {
   }
 }
 
+function generateCardValueMultiplier() {
+  const steps = Math.floor(Math.random() * 41);
+  return Number((0.8 + steps * 0.01).toFixed(2));
+}
+
 export function persistCardsByRarity() {
   // Step 3: local client persistence removed; backend is the source of truth.
 }
@@ -461,6 +466,9 @@ export function addCardToRarity(rarity, name, cardData) {
 
   cardsByRarity[rarity][name] = {
     ...cardData,
+    valuemultiplier: Number.isFinite(Number(cardData.valuemultiplier))
+      ? Number(cardData.valuemultiplier)
+      : generateCardValueMultiplier(),
     population: normalizePopulationValue(cardData.population),
   };
   persistCardsByRarity();

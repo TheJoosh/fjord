@@ -165,6 +165,11 @@ function computeCardValue(rarity, totalOwned, totalPopulation) {
   return Number(raw.toFixed(2));
 }
 
+function generateCardValueMultiplier() {
+  const steps = Math.floor(Math.random() * 41);
+  return Number((0.8 + steps * 0.01).toFixed(2));
+}
+
 async function initPersistence() {
   const db = await getDb();
 
@@ -1148,6 +1153,9 @@ async function upsertApprovedCardToCards(name, card) {
     endurance: card.endurance != null ? card.endurance : '-',
     author: card.author || 'Unknown',
     value: Number.isFinite(Number(card.value)) ? Number(card.value) : 0,
+    valuemultiplier: Number.isFinite(Number(card.valuemultiplier))
+      ? Number(card.valuemultiplier)
+      : generateCardValueMultiplier(),
     population: currentPopulation,
   };
 
@@ -1168,6 +1176,8 @@ async function upsertApprovedCardToCards(name, card) {
     },
     { upsert: true }
   );
+
+  return cardDoc;
 }
 
 async function getCardDetailsByNames(cardNames) {

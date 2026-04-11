@@ -1319,7 +1319,7 @@ app.delete('/api/approvals/pending', async (req, res) => {
   };
   const approvedRarity = normalizeRarity(card?.rarity);
 
-  await persistence.upsertApprovedCardToCards(name, {
+  const approvedCard = await persistence.upsertApprovedCardToCards(name, {
     ...card,
     rarity: approvedRarity,
   });
@@ -1345,7 +1345,7 @@ app.delete('/api/approvals/pending', async (req, res) => {
     approvedCard: {
       name,
       card: {
-        ...card,
+        ...approvedCard,
         rarity: approvedRarity,
       },
     },
