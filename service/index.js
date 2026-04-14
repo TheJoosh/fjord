@@ -1289,6 +1289,11 @@ app.post('/api/approvals/pending', async (req, res) => {
       },
     });
     emitCatalogUpdated({ reason: 'card_approved', cardName: name });
+    emitLeaderboardUpdated({
+      actorUserName: authUser.username,
+      reason: 'card_approved',
+      cardName: name,
+    });
     return;
   }
 
@@ -1386,6 +1391,11 @@ app.delete('/api/approvals/pending', async (req, res) => {
   }
 
   emitCatalogUpdated({ reason: 'card_approved', cardName: name });
+  emitLeaderboardUpdated({
+    actorUserName: authUser.username,
+    reason: 'card_approved',
+    cardName: name,
+  });
 
   res.send({
     ok: true,
