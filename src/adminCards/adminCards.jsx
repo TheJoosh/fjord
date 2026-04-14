@@ -19,6 +19,13 @@ function matchesCardSearch(card, searchTerm) {
   return searchableFields.some((value) => String(value || '').toLowerCase().includes(normalizedQuery));
 }
 
+function formatPercent(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '0';
+  const clamped = Math.max(0, Number(parsed.toFixed(2)));
+  return clamped.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+}
+
 export function AdminCards({ isAdmin }) {
   const title = 'Card Catalog';
   const sortOptions = ['Name', 'Rarity', 'Author', 'Value'];
@@ -281,6 +288,9 @@ export function AdminCards({ isAdmin }) {
   // Count discovered and total cards for non-admins
   const discoveredCount = isAdmin ? null : catalogCards.filter((entry) => entry.discovered).length;
   const totalCount = isAdmin ? null : catalogCards.length;
+  const unlockedPercent = !isAdmin && totalCount > 0
+    ? formatPercent((discoveredCount / totalCount) * 100)
+    : '0';
 
   return (
     <main>
@@ -289,7 +299,7 @@ export function AdminCards({ isAdmin }) {
           <h2>{title}
             {!isAdmin && (
                 <span style={{ fontSize: '1.5rem', fontWeight: 'normal', marginLeft: '1em' }}>
-                  - {discoveredCount} out of {totalCount} cards unlocked
+                  - {discoveredCount} out of {totalCount} cards unlocked ({unlockedPercent}%)
                 </span>
             )}
           </h2>
