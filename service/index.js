@@ -249,11 +249,18 @@ app.get('/api/leaderboard', async (req, res) => {
 
   let unlockedCountsByUser = {};
   let discoveredCardsByUser = {};
+  let designedCardNameSetsByUser = {};
   if (sortBy === 'cardsUnlocked') {
     const unlockedCountsPromises = filteredUserNamesGlobal.map(async (targetUserName) => {
-      const discoveredCards = await persistence.getDiscoveredCards(targetUserName);
+      const [discoveredCards, designedCards] = await Promise.all([
+        persistence.getDiscoveredCards(targetUserName),
+        persistence.getCardsDesignedByUser(targetUserName),
+      ]);
       const normalizedDiscovered = Array.isArray(discoveredCards)
         ? Array.from(new Set(discoveredCards.map((name) => String(name || '').trim()).filter(Boolean)))
+        : [];
+      const designedNames = Array.isArray(designedCards)
+        ? Array.from(new Set(designedCards.map((card) => String(card?.name || '').trim()).filter(Boolean)))
         : [];
 
       const knownDiscovered = normalizedDiscovered.filter((name) => allCardNameSet.has(name));
@@ -262,7 +269,7 @@ app.get('/api/leaderboard', async (req, res) => {
         ? knownDiscovered.length
         : 0;
 
-      return { targetUserName, unlockedCount, knownDiscovered };
+      return { targetUserName, unlockedCount, knownDiscovered, designedNames };
     });
 
     const unlockedCountResults = await Promise.all(unlockedCountsPromises);
@@ -273,6 +280,11 @@ app.get('/api/leaderboard', async (req, res) => {
 
     discoveredCardsByUser = unlockedCountResults.reduce((acc, { targetUserName, knownDiscovered }) => {
       acc[targetUserName] = knownDiscovered;
+      return acc;
+    }, {});
+
+    designedCardNameSetsByUser = unlockedCountResults.reduce((acc, { targetUserName, designedNames }) => {
+      acc[targetUserName] = new Set(designedNames || []);
       return acc;
     }, {});
   }
@@ -322,7 +334,9 @@ app.get('/api/leaderboard', async (req, res) => {
     } else if (sortBy === 'cardsUnlocked') {
       // Show top 3 discovered cards by scarcity for this user.
       const discoveredNames = discoveredCardsByUser[targetUserName] || [];
+      const designedNameSet = designedCardNameSetsByUser[targetUserName] || new Set();
       topCards = discoveredNames
+        .filter((name) => !designedNameSet.has(name))
         .map((name) => {
           const liveState = valuesByName?.[name] || {};
           const scarcity = Number(liveState.scarcity);
