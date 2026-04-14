@@ -481,11 +481,13 @@ export function Deck({ userName }) {
                 <div className="card-value mt-1">
                   <div className="card-meta-row">
                     <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
-                    {!showDuplicates && (
+                    {!showDuplicates && !isDesignView && !isUnlockedView && (
                       <small className="card-quantity">Quantity: {qty}</small>
                     )}
                   </div>
-                  <small>Author: {card.author || 'Unknown'}</small>
+                  {!isDesignView && (
+                    <small>Author: {card.author || 'Unknown'}</small>
+                  )}
                 </div>
               </div>
             ))}
