@@ -442,6 +442,17 @@ export function Deck({ userName }) {
               : isUnlockedView
                 ? 'No unlocked cards yet.'
                 : 'Open card packs to get cards!'}
+            {!isDesignView && !isUnlockedView && (
+              <div className="return-to-leaderboard-container">
+                <button
+                  type="button"
+                  className="return-to-leaderboard-button"
+                  onClick={() => navigate('/packs')}
+                >
+                  Get Some Cards
+                </button>
+              </div>
+            )}
           </div>
         ) : (
         <>
