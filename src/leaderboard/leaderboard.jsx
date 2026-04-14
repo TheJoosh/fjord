@@ -191,11 +191,19 @@ export function Leaderboard({ userName }) {
                       className="view-deck-button"
                       onClick={() => {
                         const targetUser = encodeURIComponent(row.userName || '');
-                        const modeQuery = sortBy === 'cardsDesigned' ? '&mode=designed' : '';
+                        const modeQuery = sortBy === 'cardsDesigned'
+                          ? '&mode=designed'
+                          : sortBy === 'cardsUnlocked'
+                            ? '&mode=unlocked'
+                            : '';
                         navigate('/deck?user=' + targetUser + modeQuery);
                       }}
                     >
-                      {sortBy === 'cardsDesigned' ? 'View Designs' : 'View Deck'}
+                      {sortBy === 'cardsDesigned'
+                        ? 'View Designs'
+                        : sortBy === 'cardsUnlocked'
+                          ? 'View Unlocked Cards'
+                          : 'View Deck'}
                     </button>
                   )}
                 </div>
@@ -203,7 +211,7 @@ export function Leaderboard({ userName }) {
                 <LeaderboardTopCardsCollapsible
                   cards={row.topCards || []}
                   userName={row.userName}
-                  showValues={sortBy !== 'cardsDesigned'}
+                  showValues={sortBy !== 'cardsDesigned' && sortBy !== 'cardsUnlocked'}
                 />
               </article>
             );
