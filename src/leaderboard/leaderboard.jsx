@@ -114,7 +114,13 @@ export function Leaderboard({ userName }) {
   return (
     <main className="leaderboard-page">
       <section className="leaderboard-header">
-        <h2>{sortBy === 'cardsDesigned' ? 'Cards Designed Leaderboard' : 'Deck Value Leaderboard'}</h2>
+        <h2>
+          {sortBy === 'cardsDesigned'
+            ? 'Cards Designed Leaderboard'
+            : sortBy === 'cardsUnlocked'
+              ? 'Cards Unlocked Leaderboard'
+              : 'Deck Value Leaderboard'}
+        </h2>
         <div className="leaderboard-controls">
           <label className="sort-by-control">
             <span>Sort by</span>
@@ -131,6 +137,7 @@ export function Leaderboard({ userName }) {
             >
               <option value="deckValue">Deck Value</option>
               <option value="cardsDesigned">Cards Designed</option>
+              <option value="cardsUnlocked" disabled>Cards Unlocked</option>
             </select>
           </label>
           <label className="search-control">
