@@ -975,6 +975,12 @@ app.post('/api/trades/accept', async (req, res) => {
   const activeProfile = await ensureTradeProfile(activeUserName, {});
   const otherProfile = await ensureTradeProfile(otherUserName, {});
   const activeReceivedNames = [];
+  const activePreviouslyDiscovered = new Set(
+    (await persistence.getDiscoveredCards(activeUserName)).map((name) => String(name || '').trim()).filter(Boolean)
+  );
+  const otherPreviouslyDiscovered = new Set(
+    (await persistence.getDiscoveredCards(otherUserName)).map((name) => String(name || '').trim()).filter(Boolean)
+  );
 
   const selectedCounts = {};
   for (const card of activeSelectedCards) {
@@ -1015,6 +1021,28 @@ app.post('/api/trades/accept', async (req, res) => {
   }
 
   const otherReceivedNames = Object.keys(selectedCounts).filter((name) => normalizeQty(selectedCounts[name]) > 0);
+  const activeDiscoveredCards = Array.from(new Set(activeReceivedNames.filter(Boolean))).filter(
+    (name) => !activePreviouslyDiscovered.has(name)
+  );
+  const otherDiscoveredCards = Array.from(new Set(otherReceivedNames.filter(Boolean))).filter(
+    (name) => !otherPreviouslyDiscovered.has(name)
+  );
+
+  if (activeDiscoveredCards.length > 0) {
+    emitTradeEvent(activeUserName, 'trade_cards_unlocked', {
+      actorUserName: activeUserName,
+      withUserName: otherUserName,
+      discoveredCards: activeDiscoveredCards,
+    });
+  }
+
+  if (otherDiscoveredCards.length > 0) {
+    emitTradeEvent(otherUserName, 'trade_cards_unlocked', {
+      actorUserName: activeUserName,
+      withUserName: activeUserName,
+      discoveredCards: otherDiscoveredCards,
+    });
+  }
 
   await Promise.all([
     persistence.setSelectedTradeCards(activeUserName, []),
@@ -1035,10 +1063,12 @@ app.post('/api/trades/accept', async (req, res) => {
   emitTradeEvent(activeUserName, 'trade_completed', {
     actorUserName: activeUserName,
     withUserName: otherUserName,
+    discoveredCards: activeDiscoveredCards,
   });
   emitTradeEvent(otherUserName, 'trade_completed', {
     actorUserName: activeUserName,
     withUserName: activeUserName,
+    discoveredCards: otherDiscoveredCards,
   });
 
   res.send({
@@ -1046,6 +1076,8 @@ app.post('/api/trades/accept', async (req, res) => {
     waiting: false,
     nextActiveOwned: toOwnedEntries(activeProfile.cards),
     nextTargetOwned: toOwnedEntries(otherProfile.cards),
+    activeDiscoveredCards,
+    otherDiscoveredCards,
   });
 });
 
