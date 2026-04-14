@@ -1142,9 +1142,11 @@ async function upsertApprovedCardToCards(name, card) {
 
   const projection = {
     [`${rarity}.${safeName}.population`]: 1,
+    [`${rarity}.${safeName}.approvedAt`]: 1,
   };
   const existing = await cardsCollection.findOne(cardsRootFilter, { projection });
   const currentPopulation = normalizeQty(existing?.[rarity]?.[safeName]?.population);
+  const nowIso = new Date().toISOString();
 
   const cardDoc = {
     displayname: normalizeDisplayName(card.displayname, cardName),
@@ -1161,6 +1163,7 @@ async function upsertApprovedCardToCards(name, card) {
       ? Number(card.valuemultiplier)
       : generateCardValueMultiplier(),
     population: currentPopulation,
+    approvedAt: nowIso,
   };
 
   const unset = {};
@@ -1292,6 +1295,7 @@ async function getCardsDesignedByUser(userName) {
           author: cardData.author || 'Unknown',
           value: Number.isFinite(Number(cardData.value)) ? Number(cardData.value) : 0,
           population: normalizeQty(cardData.population),
+          approvedAt: cardData.approvedAt || null,
         });
       }
     }
