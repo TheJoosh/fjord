@@ -30,10 +30,13 @@ export function Deck({ userName }) {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const viewUser = searchParams.get('user') || userName;
-  const viewMode = searchParams.get('mode') === 'designed' ? 'designed' : 'deck';
+  const rawMode = String(searchParams.get('mode') || '').trim().toLowerCase();
+  const viewMode = rawMode === 'designed' || rawMode === 'unlocked' ? rawMode : 'deck';
   const isDesignView = viewMode === 'designed';
+  const isUnlockedView = viewMode === 'unlocked';
   const isViewingOwnDeck = viewUser === userName;
-  const title = viewUser ? `${viewUser}'s ${isDesignView ? 'Designs' : 'Deck'}` : `User's ${isDesignView ? 'Designs' : 'Deck'}`;
+  const titleSuffix = isDesignView ? 'Designs' : isUnlockedView ? 'Unlocked Cards' : 'Deck';
+  const title = viewUser ? `${viewUser}'s ${titleSuffix}` : `User's ${titleSuffix}`;
   const sortOptions = isDesignView
     ? ['Value', 'Rarity', 'Name']
     : ['Value', 'Rarity', 'Name', 'Author'];
@@ -386,7 +389,7 @@ export function Deck({ userName }) {
                 aria-label="Search cards"
               />
             </label>
-            {!isDesignView && (
+            {!isDesignView && !isUnlockedView && (
               <label className="show-duplicates-control">
                 <input
                   type="checkbox"
@@ -433,7 +436,13 @@ export function Deck({ userName }) {
 
       <div className="container-fluid">
         {userName && paginatedCards.length === 0 ? (
-          <div className="deck-value">{isDesignView ? 'No designed cards yet.' : 'Open card packs to get cards!'}</div>
+          <div className="deck-value">
+            {isDesignView
+              ? 'No designed cards yet.'
+              : isUnlockedView
+                ? 'No unlocked cards yet.'
+                : 'Open card packs to get cards!'}
+          </div>
         ) : (
         <>
         <div className="row deck-row">
