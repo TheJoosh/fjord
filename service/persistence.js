@@ -418,6 +418,31 @@ async function deletePendingTrade(userName) {
   await db.collection('pending_trades').deleteOne({ _id: userName });
 }
 
+async function listPendingTradeUserNamesInvolvingUser(userName) {
+  const normalizedUserName = String(userName || '').trim();
+  if (!normalizedUserName) return [];
+
+  const db = await getDb();
+  const docs = await db
+    .collection('pending_trades')
+    .find(
+      {
+        $or: [
+          { _id: normalizedUserName },
+          { otherUserName: normalizedUserName },
+        ],
+      },
+      { projection: { _id: 1 } }
+    )
+    .toArray();
+
+  return Array.from(new Set(
+    docs
+      .map((doc) => String(doc?._id || '').trim())
+      .filter(Boolean)
+  ));
+}
+
 async function getSelectedTradeCards(userName) {
   if (!userName) return [];
   const db = await getDb();
@@ -1721,6 +1746,7 @@ module.exports = {
   getPendingTrade,
   setPendingTrade,
   deletePendingTrade,
+  listPendingTradeUserNamesInvolvingUser,
   getSelectedTradeCards,
   setSelectedTradeCards,
   setTradeAccepted,
