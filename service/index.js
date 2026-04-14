@@ -573,6 +573,36 @@ app.post('/api/trades/owned', async (req, res) => {
     return;
   }
 
+  if (mode === 'unlocked') {
+    const discoveredCardNames = await persistence.getDiscoveredCards(requestedUserName);
+    const uniqueUnlockedNames = Array.from(new Set(
+      discoveredCardNames.map((name) => sanitizeCardName(name)).filter(Boolean)
+    ));
+    const unlockedEntries = uniqueUnlockedNames.map((name) => ({ name, qty: 1 }));
+    const detailsByName = await persistence.getCardDetailsByNames(uniqueUnlockedNames);
+
+    const ownedCards = unlockedEntries.map((entry) => ({
+      ...(detailsByName[entry.name] || {
+        name: entry.name,
+        displayname: entry.name,
+        image: 'Default.png',
+        cost: '-',
+        rarity: 'Common',
+        cardType: 'Type',
+        description: '',
+        strength: '-',
+        endurance: '-',
+        author: 'Unknown',
+        value: 0,
+        population: 0,
+      }),
+      qty: 1,
+    }));
+
+    res.send({ ownedEntries: unlockedEntries, ownedCards });
+    return;
+  }
+
   const profile = await ensureTradeProfile(requestedUserName, {});
   const ownedEntries = toOwnedEntries(profile.cards);
   const detailsByName = await persistence.getCardDetailsByNames(ownedEntries.map((entry) => entry.name));
