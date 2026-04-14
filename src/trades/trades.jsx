@@ -26,6 +26,7 @@ export function Trades({ userName, openTradeMenu }) {
     const [iAccepted, setIAccepted] = React.useState(false);
     const [otherAccepted, setOtherAccepted] = React.useState(false);
     const suppressNextTradeSavesRef = React.useRef(0);
+    const deferTradeClearAfterUnlockRef = React.useRef(false);
     const hasValidTradePartner = Boolean(otherUserName);
 
     const getDisplayCardValue = React.useCallback((cardLike) => {
@@ -146,16 +147,27 @@ export function Trades({ userName, openTradeMenu }) {
                 }
 
                 if (event.type === 'trade_cancelled') {
+                    deferTradeClearAfterUnlockRef.current = false;
                     setTradeSuccessMessage('Trade was cancelled.');
                     setTradeErrorMessage('');
                     await refreshTradeStateFromServer();
                     return;
                 }
 
+                if (event.type === 'trade_cards_unlocked') {
+                    const discoveredCards = Array.isArray(event.discoveredCards) ? event.discoveredCards : [];
+                    deferTradeClearAfterUnlockRef.current = discoveredCards.length > 0;
+                    return;
+                }
+
                 if (event.type === 'trade_completed') {
+                    const discoveredCards = Array.isArray(event.discoveredCards) ? event.discoveredCards : [];
+                    deferTradeClearAfterUnlockRef.current = deferTradeClearAfterUnlockRef.current || discoveredCards.length > 0;
                     setTradeSuccessMessage('Trade completed successfully.');
                     setTradeErrorMessage('');
-                    await refreshTradeStateFromServer();
+                    if (!deferTradeClearAfterUnlockRef.current) {
+                        await refreshTradeStateFromServer();
+                    }
                 }
 
                 if (event.type === 'trade_accepted') {
@@ -168,6 +180,18 @@ export function Trades({ userName, openTradeMenu }) {
             unsubscribe();
         };
     }, [userName, refreshTradeStateFromServer, refreshOnlineTradeUsers]);
+
+    React.useEffect(() => {
+        const handleTradeUnlockedDismissed = async () => {
+            if (!deferTradeClearAfterUnlockRef.current) return;
+
+            deferTradeClearAfterUnlockRef.current = false;
+            await refreshTradeStateFromServer();
+        };
+
+        window.addEventListener('fjord:trade-unlocked-dismissed', handleTradeUnlockedDismissed);
+        return () => window.removeEventListener('fjord:trade-unlocked-dismissed', handleTradeUnlockedDismissed);
+    }, [refreshTradeStateFromServer]);
 
     // Removed auto-save effect for selectedTradeCards. Save only in handlers below.
 
@@ -319,17 +343,33 @@ export function Trades({ userName, openTradeMenu }) {
             return;
         }
 
+        if (Array.isArray(result.activeDiscoveredCards) && result.activeDiscoveredCards.length > 0) {
+            deferTradeClearAfterUnlockRef.current = true;
+            window.dispatchEvent(new CustomEvent('fjord:trade-unlocked', {
+                detail: {
+                    discoveredCards: result.activeDiscoveredCards,
+                },
+            }));
+        } else {
+            deferTradeClearAfterUnlockRef.current = false;
+        }
+
         // Both players accepted — trade is complete.
-        setSelectedTradeCards([]);
-        setOtherTradeCards([]);
-        setOtherUserName('');
-        setOtherUserLabel('Other User');
-        setIAccepted(false);
-        setOtherAccepted(false);
-        setTradeSuccessMessage('Your trade was successful!');
-        setTradeErrorMessage('');
-        if (isDeckOverlayOpen) {
-            setOwnedDeckCards(await buildOwnedDeckCards());
+        if (!deferTradeClearAfterUnlockRef.current) {
+            setSelectedTradeCards([]);
+            setOtherTradeCards([]);
+            setOtherUserName('');
+            setOtherUserLabel('Other User');
+            setIAccepted(false);
+            setOtherAccepted(false);
+            setTradeSuccessMessage('Your trade was successful!');
+            setTradeErrorMessage('');
+            if (isDeckOverlayOpen) {
+                setOwnedDeckCards(await buildOwnedDeckCards());
+            }
+        } else {
+            setTradeSuccessMessage('Your trade was successful!');
+            setTradeErrorMessage('');
         }
     };
 
