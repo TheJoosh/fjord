@@ -214,6 +214,11 @@ export const gameApiClient = {
         userName: String(row?.userName || '').trim(),
         deckValue: normalizeWalletValue(row?.deckValue),
         cardsDesigned: Math.max(0, parseInt(row?.cardsDesigned, 10) || 0),
+        cardsUnlocked: Math.max(0, parseInt(row?.cardsUnlocked, 10) || 0),
+        totalUniqueCards: Math.max(0, parseInt(row?.totalUniqueCards, 10) || 0),
+        unlockedPercentage: Number.isFinite(Number(row?.unlockedPercentage))
+          ? Math.max(0, Number(Number(row.unlockedPercentage).toFixed(2)))
+          : 0,
         absoluteRank: row?.absoluteRank,
         topCards: hydrateCards(Array.isArray(row?.topCards) ? row.topCards : []).slice(0, 3).map((card) => ({
           ...card,
@@ -891,7 +896,7 @@ export const gameApiClient = {
 
     const response = await requestTradeApi('/api/preferences/leaderboard-sort', { method: 'GET' });
 
-    const validSortOptions = ['deckValue', 'cardsDesigned'];
+    const validSortOptions = ['deckValue', 'cardsDesigned', 'cardsUnlocked'];
     const rawSort = String(response?.leaderboardSort || fallbackSort);
     return validSortOptions.includes(rawSort) ? rawSort : 'deckValue';
   },
