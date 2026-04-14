@@ -1328,8 +1328,10 @@ async function getAllCardNames() {
     const bucket = cardsRootDoc[rarity];
     if (!bucket || typeof bucket !== 'object') continue;
 
-    for (const key of Object.keys(bucket)) {
+    for (const [key, card] of Object.entries(bucket)) {
+      if (!key || key === 'totalPopulation') continue;
       const decoded = decodeSafeCardName(key).trim();
+      if (isPlaceholderCardEntry(decoded, card)) continue;
       if (decoded) allNames.add(decoded);
     }
   }
