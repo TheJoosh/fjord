@@ -13,6 +13,8 @@ import { Bank } from './bank/bank';
 import { Leaderboard } from './leaderboard/leaderboard';
 import { Approve } from './approve/approve';
 import { AdminCards } from './adminCards/adminCards';
+import { Card } from './data/card';
+import { getCardByName } from './data/cards';
 import { getMe, getProfile, logoutAuth } from './login/authService';
 import { gameApiClient } from '../service/gameApiClient';
 import { tradeRealtimeClient } from '../service/tradeRealtimeClient';
@@ -20,6 +22,21 @@ import { tradeRealtimeClient } from '../service/tradeRealtimeClient';
 const EMPTY_TRADE_REQUEST = { fromUserName: '', fromUserLabel: '' };
 const TRADE_REQUEST_STORAGE_KEY = 'fjord:incomingTradeRequest';
 const TRADE_REQUEST_DISMISS_STORAGE_KEY = 'fjord:incomingTradeDismissed';
+
+function buildTradeUnlockedCards(cardNames) {
+    return Array.from(new Set(Array.isArray(cardNames) ? cardNames : []))
+        .map((cardName) => {
+            const staticCard = getCardByName(cardName);
+            if (!staticCard?.name) return null;
+
+            return {
+                ...staticCard,
+                value: gameApiClient.getCurrentCardValue(staticCard),
+            };
+        })
+        .filter(Boolean)
+        .sort((a, b) => a.name.localeCompare(b.name));
+}
 
 export default function App() {
     const location = useLocation();
@@ -29,6 +46,8 @@ export default function App() {
     const [profile, setProfile] = React.useState({ username: '', admin: false, wallet: 0 });
         const [incomingTradeRequest, setIncomingTradeRequest] = React.useState(EMPTY_TRADE_REQUEST);
         const [dismissedTradeFromUserName, setDismissedTradeFromUserName] = React.useState('');
+        const [tradeUnlockedCards, setTradeUnlockedCards] = React.useState([]);
+        const [isTradeUnlockedOverlayOpen, setIsTradeUnlockedOverlayOpen] = React.useState(false);
     const isAdminUser = Boolean(profile?.admin);
   const navigate = useNavigate();
 
@@ -38,6 +57,11 @@ export default function App() {
 
         const clearDismissedTradeNoticeStateOnly = React.useCallback(() => {
             setDismissedTradeFromUserName('');
+        }, []);
+
+        const clearTradeUnlockedOverlayStateOnly = React.useCallback(() => {
+            setTradeUnlockedCards([]);
+            setIsTradeUnlockedOverlayOpen(false);
         }, []);
 
         const setDismissedTradeNoticeAndPersist = React.useCallback((fromUserName) => {
@@ -199,6 +223,7 @@ export default function App() {
     setProfile({ username: '', admin: false, wallet: 0 });
     clearIncomingTradeRequestStateOnly();
         clearDismissedTradeNoticeStateOnly();
+        clearTradeUnlockedOverlayStateOnly();
     navigate('/');
   };
 
@@ -246,6 +271,7 @@ export default function App() {
             tradeRealtimeClient.disconnect();
             clearIncomingTradeRequestStateOnly();
             clearDismissedTradeNoticeStateOnly();
+            clearTradeUnlockedOverlayStateOnly();
             return;
         }
 
@@ -271,8 +297,21 @@ export default function App() {
                 return;
             }
 
-            if (event.type === 'trade_cancelled' || event.type === 'trade_completed') {
-                clearIncomingTradeRequest();
+            if (event.type === 'trade_cancelled' || event.type === 'trade_completed' || event.type === 'trade_cards_unlocked') {
+                if (event.type === 'trade_cancelled') {
+                    clearIncomingTradeRequest();
+                    return;
+                }
+
+                const nextUnlockedCards = buildTradeUnlockedCards(event.discoveredCards);
+                if (nextUnlockedCards.length > 0) {
+                    setTradeUnlockedCards(nextUnlockedCards);
+                    setIsTradeUnlockedOverlayOpen(true);
+                }
+
+                if (event.type === 'trade_completed') {
+                    clearIncomingTradeRequest();
+                }
                 return;
             }
 
@@ -296,6 +335,22 @@ export default function App() {
         setDismissedTradeNoticeAndPersist,
         setIncomingTradeRequestAndPersist,
     ]);
+
+    React.useEffect(() => {
+        const handleTradeUnlocked = (event) => {
+            const discoveredCards = Array.isArray(event?.detail?.discoveredCards)
+                ? event.detail.discoveredCards
+                : [];
+            const nextUnlockedCards = buildTradeUnlockedCards(discoveredCards);
+            if (nextUnlockedCards.length === 0) return;
+
+            setTradeUnlockedCards(nextUnlockedCards);
+            setIsTradeUnlockedOverlayOpen(true);
+        };
+
+        window.addEventListener('fjord:trade-unlocked', handleTradeUnlocked);
+        return () => window.removeEventListener('fjord:trade-unlocked', handleTradeUnlocked);
+    }, []);
 
     const incomingTradeLabel = incomingTradeRequest.fromUserLabel || incomingTradeRequest.fromUserName;
     const hasIncomingTradeRequest = Boolean(incomingTradeRequest.fromUserName);
@@ -324,6 +379,11 @@ export default function App() {
             otherTradeCards: [],
         });
         navigate('/trades');
+    };
+
+    const closeTradeUnlockedOverlay = () => {
+        setIsTradeUnlockedOverlayOpen(false);
+        window.dispatchEvent(new CustomEvent('fjord:trade-unlocked-dismissed'));
     };
 
   return (
@@ -392,6 +452,39 @@ export default function App() {
                         >
                             Dismiss
                         </button>
+                    </div>
+                </div>
+            )}
+
+            {authState === AuthState.Authenticated && isTradeUnlockedOverlayOpen && (
+                <div className="pexels-overlay" onClick={closeTradeUnlockedOverlay}>
+                    <div className="pexels-overlay-panel pack-overlay-panel" onClick={(event) => event.stopPropagation()}>
+                        <div className="pexels-overlay-header">
+                            <h3>{tradeUnlockedCards.length > 1 ? 'Cards Unlocked' : 'Card Unlocked'}</h3>
+                            <button type="button" className="pexels-overlay-close" onClick={closeTradeUnlockedOverlay}>Close</button>
+                        </div>
+
+                        <div className="row deck-row pack-overlay-cards">
+                            {tradeUnlockedCards.map((card, index) => (
+                                <div key={`${card.name}-${index}`} className="col deck-col pack-overlay-col" style={{ position: 'relative' }}>
+                                    <div className="new-card-unlocked-overlay">New Card Unlocked</div>
+                                    <Card
+                                        image={card.image}
+                                        name={card.name}
+                                        displayname={card.displayname}
+                                        cost={card.cost}
+                                        rarity={card.rarity}
+                                        cardType={card.cardType}
+                                        description={card.description}
+                                        strength={card.strength}
+                                        endurance={card.endurance}
+                                    />
+                                    <div className="card-value mt-1">
+                                        <small>Value: ${card.value != null ? card.value.toFixed(2) : '0.00'}</small>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 </div>
             )}
