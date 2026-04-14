@@ -321,7 +321,7 @@ app.get('/api/leaderboard', async (req, res) => {
     // Determine topCards based on sortBy
     let topCards;
     if (sortBy === 'cardsDesigned') {
-      // Show top 3 highest valued cards designed by this user
+      // Show top 3 most recently approved cards designed by this user.
       const userDesignedCards = designedCardsByUser[targetUserName] || [];
       topCards = userDesignedCards
         .map(card => ({
@@ -329,7 +329,17 @@ app.get('/api/leaderboard', async (req, res) => {
           value: normalizeWalletValue(valuesByName?.[card.name]?.value || card.value),
           qty: 1, // Designed cards don't have quantities in the same way
         }))
-        .sort((a, b) => b.value - a.value)
+        .sort((a, b) => {
+          const aApprovedAt = Date.parse(a.approvedAt || '') || 0;
+          const bApprovedAt = Date.parse(b.approvedAt || '') || 0;
+          const approvedDiff = bApprovedAt - aApprovedAt;
+          if (approvedDiff !== 0) return approvedDiff;
+
+          const valueDiff = b.value - a.value;
+          if (valueDiff !== 0) return valueDiff;
+
+          return String(a.name || '').localeCompare(String(b.name || ''));
+        })
         .slice(0, 3);
     } else if (sortBy === 'cardsUnlocked') {
       // Show top 3 discovered cards by scarcity for this user.
