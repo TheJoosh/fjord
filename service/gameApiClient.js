@@ -439,7 +439,7 @@ export const gameApiClient = {
 
   async acceptTrade(otherUserName) {
     if (!otherUserName) {
-      return { ok: false, waiting: false, error: 'Missing trade users', nextActiveOwned: [], nextTargetOwned: [] };
+      return { ok: false, waiting: false, error: 'Missing trade users', nextActiveOwned: [], nextTargetOwned: [], activeDiscoveredCards: [], otherDiscoveredCards: [] };
     }
 
     const response = await requestTradeApi('/api/trades/accept', {
@@ -448,7 +448,7 @@ export const gameApiClient = {
     });
 
     if (!response) {
-      return { ok: false, waiting: false, error: 'Unable to accept trade', nextActiveOwned: [], nextTargetOwned: [] };
+      return { ok: false, waiting: false, error: 'Unable to accept trade', nextActiveOwned: [], nextTargetOwned: [], activeDiscoveredCards: [], otherDiscoveredCards: [] };
     }
 
     const nextActiveOwned = Array.isArray(response?.nextActiveOwned) ? response.nextActiveOwned : [];
@@ -460,6 +460,8 @@ export const gameApiClient = {
       error: response?.error || '',
       nextActiveOwned: hydrateCards(nextActiveOwned),
       nextTargetOwned: hydrateCards(nextTargetOwned),
+      activeDiscoveredCards: Array.isArray(response?.activeDiscoveredCards) ? response.activeDiscoveredCards : [],
+      otherDiscoveredCards: Array.isArray(response?.otherDiscoveredCards) ? response.otherDiscoveredCards : [],
     };
   },
 
