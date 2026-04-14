@@ -5,14 +5,15 @@ import { tradeRealtimeClient } from '../../service/tradeRealtimeClient';
 
 export function Trades({ userName, openTradeMenu }) {
     const currentUserLabel = userName || 'User';
-    const requestUserInputRef = React.useRef(null);
+    const requestUserSelectRef = React.useRef(null);
     const [isRequestOverlayOpen, setIsRequestOverlayOpen] = React.useState(Boolean(openTradeMenu));
 
     // Open the trade menu if openTradeMenu prop is set
     React.useEffect(() => {
         if (openTradeMenu) setIsRequestOverlayOpen(true);
     }, [openTradeMenu]);
-    const [requestUserInput, setRequestUserInput] = React.useState('');
+    const [onlineTradeUsers, setOnlineTradeUsers] = React.useState([]);
+    const [selectedOnlineTradeUser, setSelectedOnlineTradeUser] = React.useState('');
     const [requestUserError, setRequestUserError] = React.useState('');
     const [tradeSuccessMessage, setTradeSuccessMessage] = React.useState('');
     const [tradeErrorMessage, setTradeErrorMessage] = React.useState('');
@@ -34,6 +35,20 @@ export function Trades({ userName, openTradeMenu }) {
 
     const buildOwnedDeckCards = React.useCallback(async () => {
         return await gameApiClient.buildOwnedDeckCards(userName);
+    }, [userName]);
+
+    const refreshOnlineTradeUsers = React.useCallback(async () => {
+        if (!userName) {
+            setOnlineTradeUsers([]);
+            setSelectedOnlineTradeUser('');
+            return;
+        }
+
+        const nextUsers = await gameApiClient.loadOnlineTradeUsers();
+        const normalizedUsers = nextUsers
+            .map((name) => String(name || '').trim())
+            .filter((name) => Boolean(name) && name.toLowerCase() !== String(userName || '').toLowerCase());
+        setOnlineTradeUsers(normalizedUsers);
     }, [userName]);
 
     const refreshTradeStateFromServer = React.useCallback(async () => {
@@ -72,12 +87,48 @@ export function Trades({ userName, openTradeMenu }) {
     }, [userName, refreshTradeStateFromServer]);
 
     React.useEffect(() => {
+        if (!isRequestOverlayOpen) return;
+        (async () => {
+            await refreshOnlineTradeUsers();
+        })();
+    }, [isRequestOverlayOpen, refreshOnlineTradeUsers]);
+
+    React.useEffect(() => {
+        if (!onlineTradeUsers.length) {
+            setSelectedOnlineTradeUser('');
+            return;
+        }
+
+        setSelectedOnlineTradeUser((prev) => {
+            if (prev && onlineTradeUsers.includes(prev)) {
+                return prev;
+            }
+            return onlineTradeUsers[0];
+        });
+    }, [onlineTradeUsers]);
+
+    React.useEffect(() => {
         if (!userName) return;
 
         const unsubscribe = tradeRealtimeClient.subscribe((event) => {
             if (!event || event.channel !== 'trade') return;
 
             (async () => {
+                if (event.type === 'socket_open') {
+                    await refreshOnlineTradeUsers();
+                    return;
+                }
+
+                if (event.type === 'trade_presence_updated') {
+                    const payloadUsers = Array.isArray(event.onlineUsers) ? event.onlineUsers : [];
+                    const normalizedUsers = payloadUsers
+                        .map((name) => String(name || '').trim())
+                        .filter((name) => Boolean(name) && name.toLowerCase() !== String(userName || '').toLowerCase())
+                        .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+                    setOnlineTradeUsers(normalizedUsers);
+                    return;
+                }
+
                 if (event.type === 'trade_request_received') {
                     // New incoming requests are surfaced by the global app banner.
                     // Do not auto-open on the trades page.
@@ -116,7 +167,7 @@ export function Trades({ userName, openTradeMenu }) {
         return () => {
             unsubscribe();
         };
-    }, [userName, refreshTradeStateFromServer]);
+    }, [userName, refreshTradeStateFromServer, refreshOnlineTradeUsers]);
 
     // Removed auto-save effect for selectedTradeCards. Save only in handlers below.
 
@@ -141,8 +192,7 @@ export function Trades({ userName, openTradeMenu }) {
         if (!isRequestOverlayOpen) return;
 
         const frame = window.requestAnimationFrame(() => {
-            requestUserInputRef.current?.focus();
-            requestUserInputRef.current?.select();
+            requestUserSelectRef.current?.focus();
         });
 
         return () => window.cancelAnimationFrame(frame);
@@ -174,7 +224,12 @@ export function Trades({ userName, openTradeMenu }) {
     }, [ownedDeckCards, selectedCountsByName]);
 
     const handleRequestTradeUser = async () => {
-        const response = await gameApiClient.requestTradeUser(requestUserInput);
+        if (!selectedOnlineTradeUser) {
+            setRequestUserError('No online players are currently available.');
+            return;
+        }
+
+        const response = await gameApiClient.requestTradeUser(selectedOnlineTradeUser);
         if (response.error) {
             setRequestUserError(response.error);
             return;
@@ -368,14 +423,12 @@ export function Trades({ userName, openTradeMenu }) {
                             <button type="button" className="pexels-overlay-close" onClick={() => setIsRequestOverlayOpen(false)}>Close</button>
                         </div>
                         <div className="pexels-actions">
-                            <input
-                                ref={requestUserInputRef}
-                                type="text"
+                            <select
+                                ref={requestUserSelectRef}
                                 className="pexels-query"
-                                placeholder="Input username"
-                                value={requestUserInput}
+                                value={selectedOnlineTradeUser}
                                 onChange={(e) => {
-                                    setRequestUserInput(e.target.value);
+                                    setSelectedOnlineTradeUser(e.target.value);
                                     if (requestUserError) {
                                         setRequestUserError('');
                                     }
@@ -385,8 +438,16 @@ export function Trades({ userName, openTradeMenu }) {
                                     e.preventDefault();
                                     handleRequestTradeUser();
                                 }}
-                            />
-                            <button type="button" onClick={handleRequestTradeUser}>Request</button>
+                            >
+                                {!onlineTradeUsers.length ? (
+                                    <option value="">No online players available</option>
+                                ) : (
+                                    onlineTradeUsers.map((onlineUser) => (
+                                        <option key={onlineUser} value={onlineUser}>{onlineUser}</option>
+                                    ))
+                                )}
+                            </select>
+                            <button type="button" onClick={handleRequestTradeUser} disabled={!selectedOnlineTradeUser}>Request</button>
                         </div>
                         {requestUserError && <div className="pexels-error">{requestUserError}</div>}
                     </div>

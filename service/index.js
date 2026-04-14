@@ -61,6 +61,22 @@ function emitTradeEvent(userName, type, payload = {}) {
   }
 }
 
+function getConnectedUserNames(excludeUserName = '') {
+  const normalizedExclude = sanitizeUsername(excludeUserName);
+  return Array.from(wsClientsByUser.keys())
+    .filter((name) => name && name !== normalizedExclude)
+    .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+
+function emitTradePresenceUpdated() {
+  const connectedUsers = Array.from(wsClientsByUser.keys());
+  for (const connectedUserName of connectedUsers) {
+    emitTradeEvent(connectedUserName, 'trade_presence_updated', {
+      onlineUsers: getConnectedUserNames(connectedUserName),
+    });
+  }
+}
+
 function emitLeaderboardUpdated(payload = {}) {
   const connectedUsers = Array.from(wsClientsByUser.keys());
   for (const connectedUserName of connectedUsers) {
@@ -659,6 +675,15 @@ app.get('/api/trades/pending', async (req, res) => {
       iAccepted: false,
       otherAccepted: false,
     },
+  });
+});
+
+app.get('/api/trades/online-users', async (req, res) => {
+  const userName = await getTradeAuthUserName(req, res);
+  if (!userName) return;
+
+  res.send({
+    onlineUsers: getConnectedUserNames(userName),
   });
 });
 
@@ -2183,15 +2208,17 @@ server.on('upgrade', async (req, socket, head) => {
 wss.on('connection', (ws, req, userName) => {
   addWsClientForUser(userName, ws);
 
-  ws.on('close', () => {
+  const handleDisconnect = () => {
     removeWsClientForUser(userName, ws);
-  });
+    emitTradePresenceUpdated();
+  };
 
-  ws.on('error', () => {
-    removeWsClientForUser(userName, ws);
-  });
+  ws.on('close', handleDisconnect);
+
+  ws.on('error', handleDisconnect);
 
   emitTradeEvent(userName, 'trade_connected', { actorUserName: userName });
+  emitTradePresenceUpdated();
 });
 
 (async () => {

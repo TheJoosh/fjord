@@ -354,6 +354,18 @@ export const gameApiClient = {
     return Array.isArray(parsed) ? hydrateCards(parsed) : [];
   },
 
+  async loadOnlineTradeUsers() {
+    const response = await requestTradeApi('/api/trades/online-users', {
+      method: 'GET',
+    });
+
+    const onlineUsers = Array.isArray(response?.onlineUsers) ? response.onlineUsers : [];
+    return onlineUsers
+      .map((name) => String(name || '').trim())
+      .filter(Boolean)
+      .sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  },
+
   async saveSelectedTradeCards(selectedTradeCards) {
     await requestTradeApi('/api/trades/selection', {
       method: 'PUT',
