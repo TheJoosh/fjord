@@ -1177,6 +1177,7 @@ main {
 .pexels-overlay-header h3 {
   margin: 0;
   font-size: 20px;
+  font-family: "Cinzel";
 }
 
 .pexels-overlay-close {
@@ -1234,12 +1235,14 @@ main {
   font-size: 12px;
   font-weight: 600;
   padding: 6px 6px 0 6px;
+  font-family: "Cinzel";
 }
 
 .pack-overlay-meta {
   font-size: 11px;
   opacity: 0.9;
   padding: 2px 6px 8px 6px;
+  font-family: "Cinzel";
 }
 
 .pack-overlay-cards {
