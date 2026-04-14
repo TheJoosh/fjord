@@ -221,6 +221,11 @@ app.get('/api/leaderboard', async (req, res) => {
   // Get designed counts for all users
   const designedCountsByUser = await persistence.getDesignedCountsByUserNames(filteredUserNamesGlobal);
 
+  // Needed for cardsUnlocked sorting and display formatting (x/y).
+  const allCardNames = await persistence.getAllCardNames();
+  const allCardNameSet = new Set(allCardNames);
+  const totalUniqueCards = allCardNames.length;
+
   // Get all profiles for global rank
   const [profilesByUserNameGlobal, cardValuesState] = await Promise.all([
     persistence.getTradeProfilesByUserNames(filteredUserNamesGlobal),
@@ -238,6 +243,28 @@ app.get('/api/leaderboard', async (req, res) => {
     const designedCardsResults = await Promise.all(designedCardsPromises);
     designedCardsByUser = designedCardsResults.reduce((acc, { userName, cards }) => {
       acc[userName] = cards;
+      return acc;
+    }, {});
+  }
+
+  let unlockedCountsByUser = {};
+  if (sortBy === 'cardsUnlocked') {
+    const unlockedCountsPromises = filteredUserNamesGlobal.map(async (targetUserName) => {
+      const discoveredCards = await persistence.getDiscoveredCards(targetUserName);
+      const normalizedDiscovered = Array.isArray(discoveredCards)
+        ? discoveredCards.map((name) => String(name || '').trim()).filter(Boolean)
+        : [];
+
+      const unlockedCount = totalUniqueCards > 0
+        ? normalizedDiscovered.reduce((count, name) => count + (allCardNameSet.has(name) ? 1 : 0), 0)
+        : 0;
+
+      return { targetUserName, unlockedCount };
+    });
+
+    const unlockedCountResults = await Promise.all(unlockedCountsPromises);
+    unlockedCountsByUser = unlockedCountResults.reduce((acc, { targetUserName, unlockedCount }) => {
+      acc[targetUserName] = unlockedCount;
       return acc;
     }, {});
   }
@@ -293,6 +320,11 @@ app.get('/api/leaderboard', async (req, res) => {
       userName: targetUserName,
       deckValue: normalizeWalletValue(deckValue),
       cardsDesigned: designedCountsByUser[targetUserName] || 0,
+      cardsUnlocked: Math.max(0, parseInt(unlockedCountsByUser[targetUserName], 10) || 0),
+      totalUniqueCards,
+      unlockedPercentage: totalUniqueCards > 0
+        ? Number((((Math.max(0, parseInt(unlockedCountsByUser[targetUserName], 10) || 0)) / totalUniqueCards) * 100).toFixed(2))
+        : 0,
       topCards,
     };
   });
@@ -301,6 +333,10 @@ app.get('/api/leaderboard', async (req, res) => {
   globalRows = globalRows.filter((row) => {
     if (sortBy === 'cardsDesigned') {
       return normalizeQty(row.cardsDesigned) > 0;
+    }
+
+    if (sortBy === 'cardsUnlocked') {
+      return normalizeQty(row.cardsUnlocked) > 0;
     }
 
     return normalizeWalletValue(row.deckValue) > 0;
@@ -312,6 +348,12 @@ app.get('/api/leaderboard', async (req, res) => {
     if (sortBy === 'cardsDesigned') {
       const designedDiff = b.cardsDesigned - a.cardsDesigned;
       if (designedDiff !== 0) return designedDiff;
+    } else if (sortBy === 'cardsUnlocked') {
+      const unlockedPercentDiff = (b.unlockedPercentage || 0) - (a.unlockedPercentage || 0);
+      if (unlockedPercentDiff !== 0) return unlockedPercentDiff;
+
+      const unlockedCountDiff = (b.cardsUnlocked || 0) - (a.cardsUnlocked || 0);
+      if (unlockedCountDiff !== 0) return unlockedCountDiff;
     } else {
       // Default to deckValue sorting
       const valueDiff = b.deckValue - a.deckValue;
@@ -348,6 +390,11 @@ app.get('/api/leaderboard', async (req, res) => {
     userName: row.userName,
     deckValue: normalizeWalletValue(row.deckValue),
     cardsDesigned: row.cardsDesigned || 0,
+    cardsUnlocked: normalizeQty(row.cardsUnlocked),
+    totalUniqueCards: normalizeQty(row.totalUniqueCards),
+    unlockedPercentage: Number.isFinite(Number(row.unlockedPercentage))
+      ? Math.max(0, Number(Number(row.unlockedPercentage).toFixed(2)))
+      : 0,
     absoluteRank: row.absoluteRank,
     topCards: (row.topCards || []).map((card) => {
       const details = detailsByName[card.name] || {};
@@ -1753,7 +1800,7 @@ function normalizeShowDuplicates(value) {
 
 function normalizeLeaderboardSort(value) {
   const next = String(value || 'deckValue');
-  if (next === 'deckValue' || next === 'cardsDesigned') {
+  if (next === 'deckValue' || next === 'cardsDesigned' || next === 'cardsUnlocked') {
     return next;
   }
   return 'deckValue';
