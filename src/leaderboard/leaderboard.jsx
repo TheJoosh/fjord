@@ -200,7 +200,11 @@ export function Leaderboard({ userName }) {
                   )}
                 </div>
 
-                <LeaderboardTopCardsCollapsible cards={row.topCards || []} userName={row.userName} />
+                <LeaderboardTopCardsCollapsible
+                  cards={row.topCards || []}
+                  userName={row.userName}
+                  showValues={sortBy !== 'cardsDesigned'}
+                />
               </article>
             );
           })}

@@ -1,7 +1,7 @@
 import React from 'react';
 import { Card } from '../data/card';
 
-export function LeaderboardTopCardsCollapsible({ cards, userName }) {
+export function LeaderboardTopCardsCollapsible({ cards, userName, showValues = true }) {
   const [open, setOpen] = React.useState(false);
 
   // Detect if we're on mobile (<=640px)
@@ -36,7 +36,9 @@ export function LeaderboardTopCardsCollapsible({ cards, userName }) {
               />
             </div>
             <small className="leaderboard-card-title">{card.displayname || card.name}</small>
-            <small className="leaderboard-card-value">Value: ${Number(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
+            {showValues && (
+              <small className="leaderboard-card-value">Value: ${Number(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
+            )}
           </div>
         ))}
       </div>
@@ -73,7 +75,9 @@ export function LeaderboardTopCardsCollapsible({ cards, userName }) {
                 />
               </div>
               <small className="leaderboard-card-title">{card.displayname || card.name}</small>
-              <small className="leaderboard-card-value">Value: ${Number(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
+              {showValues && (
+                <small className="leaderboard-card-value">Value: ${Number(card.value).toFixed(2)}{card.qty > 1 ? ` x${card.qty}` : ''}</small>
+              )}
             </div>
           ))}
         </div>
