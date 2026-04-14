@@ -11,6 +11,13 @@ function normalizeWalletValue(value) {
   return Math.max(0, Number(parsed.toFixed(2)));
 }
 
+function formatPercent(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return '0';
+  const clamped = Math.max(0, Number(parsed.toFixed(2)));
+  return clamped.toFixed(2).replace(/\.00$/, '').replace(/(\.\d)0$/, '$1');
+}
+
 export function Leaderboard({ userName }) {
   const navigate = useNavigate();
   const [searchInput, setSearchInput] = React.useState('');
@@ -137,7 +144,7 @@ export function Leaderboard({ userName }) {
             >
               <option value="deckValue">Deck Value</option>
               <option value="cardsDesigned">Cards Designed</option>
-              <option value="cardsUnlocked" disabled>Cards Unlocked</option>
+              <option value="cardsUnlocked">Cards Unlocked</option>
             </select>
           </label>
           <label className="search-control">
@@ -173,10 +180,11 @@ export function Leaderboard({ userName }) {
                 <div className="leaderboard-rank">{Number.isFinite(rank) ? `#${rank}` : ''}</div>
                 <div className="leaderboard-user">{row.userName || 'Unknown User'}</div>
                 <div className="leaderboard-value">
-                  {sortBy === 'cardsDesigned' 
-                    ? `${row.cardsDesigned || 0} cards` 
-                    : `$${normalizeWalletValue(row.deckValue).toFixed(2)}`
-                  }
+                  {sortBy === 'cardsDesigned'
+                    ? `${row.cardsDesigned || 0} cards`
+                    : sortBy === 'cardsUnlocked'
+                      ? `${Math.max(0, parseInt(row.cardsUnlocked, 10) || 0)}/${Math.max(0, parseInt(row.totalUniqueCards, 10) || 0)} (${formatPercent(row.unlockedPercentage)}%)`
+                      : `$${normalizeWalletValue(row.deckValue).toFixed(2)}`}
                   {row.topCards && row.topCards.length > 0 && (
                     <button
                       type="button"
