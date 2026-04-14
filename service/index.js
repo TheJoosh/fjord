@@ -30,12 +30,15 @@ function removeWsClientForUser(userName, socket) {
   if (!userName || !socket) return;
 
   const existing = wsClientsByUser.get(userName);
-  if (!existing) return;
+  if (!existing) return false;
 
   existing.delete(socket);
   if (existing.size === 0) {
     wsClientsByUser.delete(userName);
+    return true;
   }
+
+  return false;
 }
 
 function emitTradeEvent(userName, type, payload = {}) {
@@ -103,6 +106,29 @@ function emitPendingApprovalsUpdated(payload = {}) {
   const connectedUsers = Array.from(wsClientsByUser.keys());
   for (const connectedUserName of connectedUsers) {
     emitTradeEvent(connectedUserName, 'pending_approvals_updated', payload);
+  }
+}
+
+async function cancelPendingTradesInvolvingUser(userName, reason = 'user_offline') {
+  const normalizedUserName = sanitizeUsername(userName);
+  if (!normalizedUserName) return;
+
+  const involvedUserNames = await persistence.listPendingTradeUserNamesInvolvingUser(normalizedUserName);
+  if (!Array.isArray(involvedUserNames) || involvedUserNames.length === 0) return;
+
+  await Promise.all(
+    involvedUserNames.flatMap((involvedUserName) => [
+      persistence.setSelectedTradeCards(involvedUserName, []),
+      persistence.deletePendingTrade(involvedUserName),
+    ])
+  );
+
+  for (const involvedUserName of involvedUserNames) {
+    if (!involvedUserName || involvedUserName === normalizedUserName) continue;
+    emitTradeEvent(involvedUserName, 'trade_cancelled', {
+      actorUserName: normalizedUserName,
+      reason,
+    });
   }
 }
 
@@ -2208,8 +2234,16 @@ server.on('upgrade', async (req, socket, head) => {
 wss.on('connection', (ws, req, userName) => {
   addWsClientForUser(userName, ws);
 
-  const handleDisconnect = () => {
-    removeWsClientForUser(userName, ws);
+  let disconnectedHandled = false;
+
+  const handleDisconnect = async () => {
+    if (disconnectedHandled) return;
+    disconnectedHandled = true;
+
+    const becameOffline = removeWsClientForUser(userName, ws);
+    if (becameOffline) {
+      await cancelPendingTradesInvolvingUser(userName, 'user_offline');
+    }
     emitTradePresenceUpdated();
   };
 
