@@ -7,4 +7,4 @@ package-lock.json
 package.json
 vite.config.js
 deployService.sh
-ssh command
+sshcommand.txt
