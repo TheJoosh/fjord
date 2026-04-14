@@ -248,23 +248,31 @@ app.get('/api/leaderboard', async (req, res) => {
   }
 
   let unlockedCountsByUser = {};
+  let discoveredCardsByUser = {};
   if (sortBy === 'cardsUnlocked') {
     const unlockedCountsPromises = filteredUserNamesGlobal.map(async (targetUserName) => {
       const discoveredCards = await persistence.getDiscoveredCards(targetUserName);
       const normalizedDiscovered = Array.isArray(discoveredCards)
-        ? discoveredCards.map((name) => String(name || '').trim()).filter(Boolean)
+        ? Array.from(new Set(discoveredCards.map((name) => String(name || '').trim()).filter(Boolean)))
         : [];
 
+      const knownDiscovered = normalizedDiscovered.filter((name) => allCardNameSet.has(name));
+
       const unlockedCount = totalUniqueCards > 0
-        ? normalizedDiscovered.reduce((count, name) => count + (allCardNameSet.has(name) ? 1 : 0), 0)
+        ? knownDiscovered.length
         : 0;
 
-      return { targetUserName, unlockedCount };
+      return { targetUserName, unlockedCount, knownDiscovered };
     });
 
     const unlockedCountResults = await Promise.all(unlockedCountsPromises);
     unlockedCountsByUser = unlockedCountResults.reduce((acc, { targetUserName, unlockedCount }) => {
       acc[targetUserName] = unlockedCount;
+      return acc;
+    }, {});
+
+    discoveredCardsByUser = unlockedCountResults.reduce((acc, { targetUserName, knownDiscovered }) => {
+      acc[targetUserName] = knownDiscovered;
       return acc;
     }, {});
   }
@@ -310,6 +318,30 @@ app.get('/api/leaderboard', async (req, res) => {
           qty: 1, // Designed cards don't have quantities in the same way
         }))
         .sort((a, b) => b.value - a.value)
+        .slice(0, 3);
+    } else if (sortBy === 'cardsUnlocked') {
+      // Show top 3 discovered cards by scarcity for this user.
+      const discoveredNames = discoveredCardsByUser[targetUserName] || [];
+      topCards = discoveredNames
+        .map((name) => {
+          const liveState = valuesByName?.[name] || {};
+          const scarcity = Number(liveState.scarcity);
+          return {
+            name,
+            qty: 1,
+            unitValue: normalizeWalletValue(liveState.value),
+            scarcity: Number.isFinite(scarcity) ? scarcity : 0,
+          };
+        })
+        .sort((a, b) => {
+          const scarcityDiff = b.scarcity - a.scarcity;
+          if (scarcityDiff !== 0) return scarcityDiff;
+
+          const valueDiff = b.unitValue - a.unitValue;
+          if (valueDiff !== 0) return valueDiff;
+
+          return a.name.localeCompare(b.name);
+        })
         .slice(0, 3);
     } else {
       // Default: show top 3 highest valued cards owned by this user
