@@ -124,10 +124,14 @@ function normalizeShowDuplicates(value) {
 
 function normalizeLeaderboardSort(value) {
   const next = String(value || 'deckValue');
-  if (next === 'deckValue' || next === 'cardsDesigned') {
+  if (next === 'deckValue' || next === 'cardsDesigned' || next === 'cardsUnlocked') {
     return next;
   }
   return 'deckValue';
+}
+
+function decodeSafeCardName(name) {
+  return String(name || '').replace(/\uFF0E/g, '.').replace(/\uFF04/g, '$');
 }
 
 function normalizeRarity(value) {
@@ -1296,6 +1300,43 @@ async function getCardsDesignedByUser(userName) {
   return designedCards;
 }
 
+async function getAllCardNames() {
+  const db = await getDb();
+
+  let cardsRootFilter;
+  try {
+    cardsRootFilter = { _id: new ObjectId(CARDS_ROOT_DOC_ID) };
+  } catch {
+    cardsRootFilter = { _id: CARDS_ROOT_DOC_ID };
+  }
+
+  const cardsRootDoc = await db.collection('cards').findOne(cardsRootFilter, {
+    projection: {
+      Common: 1,
+      Uncommon: 1,
+      Rare: 1,
+      Loric: 1,
+      Mythical: 1,
+      Legendary: 1,
+    },
+  });
+
+  if (!cardsRootDoc) return [];
+
+  const allNames = new Set();
+  for (const rarity of Object.keys(RARITY_SCORES)) {
+    const bucket = cardsRootDoc[rarity];
+    if (!bucket || typeof bucket !== 'object') continue;
+
+    for (const key of Object.keys(bucket)) {
+      const decoded = decodeSafeCardName(key).trim();
+      if (decoded) allNames.add(decoded);
+    }
+  }
+
+  return Array.from(allNames).sort((a, b) => a.localeCompare(b));
+}
+
 async function recalculateAndStoreCardValues() {
   const db = await getDb();
 
@@ -1714,4 +1755,5 @@ module.exports = {
   getDiscoveredCards,
   addDiscoveredCards,
   getCardsDesignedByUser,
+  getAllCardNames,
 };
